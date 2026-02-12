@@ -14,7 +14,9 @@ import { PatientsModule } from './modules/patients/patients.module';
 import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { ReportingModule } from './modules/reporting/reporting.module';
 import { SalesModule } from './modules/sales/sales.module';
+import { SystemModule } from './modules/system/system.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { SalesModule } from './modules/sales/sales.module';
     AlertsModule,
     AuditModule,
     SalesModule,
+    ReportingModule,
+    SystemModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -7,10 +7,15 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard) // Protect all user routes
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
+    @Get('status/health')
+    health() {
+        return { status: 'ok', timestamp: new Date().toISOString() };
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
     @Post()
     @Roles(UserRole.ADMIN) // Only Admin can create users
     create(@Body() createUserDto: CreateUserDto) {
