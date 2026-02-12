@@ -1,0 +1,27 @@
+# Basics
+node_modules
+dist
+build
+coverage
+
+# Backend
+backend/dist
+backend/node_modules
+backend/.env
+backend/coverage
+
+# Frontend (for later)
+frontend/dist
+frontend/node_modules
+frontend/.env
+frontend/coverage
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
