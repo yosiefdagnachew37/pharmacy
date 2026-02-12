@@ -14,6 +14,7 @@ export enum ReferenceType {
     RETURN = 'RETURN',
     ADJUSTMENT = 'ADJUSTMENT',
     DISPOSAL = 'DISPOSAL',
+    TEST = 'TEST',
 }
 
 @Entity('stock_transactions')

@@ -1,11 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { Medicine } from '../../medicines/entities/medicine.entity';
-import { Batch } from '../../batches/entities/batch.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
 export enum AlertType {
     LOW_STOCK = 'LOW_STOCK',
-    EXPIRY_WARNING = 'EXPIRY_WARNING',
+    EXPIRY = 'EXPIRY',
     EXPIRED = 'EXPIRED',
+}
+
+export enum AlertStatus {
+    ACTIVE = 'ACTIVE',
+    RESOLVED = 'RESOLVED',
 }
 
 @Entity('alerts')
@@ -19,25 +22,18 @@ export class Alert {
     })
     type: AlertType;
 
-    @ManyToOne(() => Medicine, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'medicine_id' })
-    medicine: Medicine;
-
-    @Column({ nullable: true })
-    medicine_id: string;
-
-    @ManyToOne(() => Batch, { nullable: true, onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'batch_id' })
-    batch: Batch;
-
-    @Column({ nullable: true })
-    batch_id: string;
+    @Column({
+        type: 'enum',
+        enum: AlertStatus,
+        default: AlertStatus.ACTIVE,
+    })
+    status: AlertStatus;
 
     @Column()
     message: string;
 
-    @Column({ default: false })
-    is_read: boolean;
+    @Column({ nullable: true })
+    reference_id: string; // Medicine ID, Batch ID, etc.
 
     @CreateDateColumn()
     created_at: Date;

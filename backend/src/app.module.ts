@@ -1,29 +1,45 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './modules/users.module';
 import databaseConfig from './config/database.config';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { MedicinesModule } from './modules/medicines/medicines.module';
+import { BatchesModule } from './modules/batches/batches.module';
+import { StockModule } from './modules/stock/stock.module';
+import { PatientsModule } from './modules/patients/patients.module';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { SalesModule } from './modules/sales/sales.module';
 
 @Module({
   imports: [
-    // 1. Config Module: Loads environment variables and configuration files
     ConfigModule.forRoot({
-      isGlobal: true, // Makes ConfigModule available everywhere without importing it in other modules
-      load: [databaseConfig], // Load our custom database config
+      isGlobal: true,
+      load: [databaseConfig],
     }),
-
-    // 2. TypeORM Module: Database connection
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        ...configService.get('database'), // Get the database config object
+        ...configService.get('database'),
       }),
       inject: [ConfigService],
     }),
-
     UsersModule,
+    AuthModule,
+    MedicinesModule,
+    BatchesModule,
+    StockModule,
+    PatientsModule,
+    PrescriptionsModule,
+    AlertsModule,
+    AuditModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
