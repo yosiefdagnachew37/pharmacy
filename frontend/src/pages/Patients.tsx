@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
-import { Plus, Search, User, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, User, Phone, MapPin, Save, Trash2 } from 'lucide-react';
+import Modal from '../components/Modal';
 
 interface Patient {
   id: string;
@@ -16,31 +17,68 @@ const Patients = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState<Partial<Patient>>({
+    name: '',
+    phone: '',
+    age: 30,
+    gender: 'OTHER',
+    address: '',
+    allergies: []
+  });
+
+  const fetchPatients = async () => {
+    setLoading(true);
+    try {
+      const response = await client.get('/patients');
+      setPatients(response.data);
+    } catch (err) {
+      console.error('Error fetching patients:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await client.get('/patients');
-        setPatients(response.data);
-      } catch (err) {
-        console.error('Error fetching patients:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPatients();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this patient record?')) return;
+    try {
+      await client.delete(`/patients/${id}`);
+      fetchPatients();
+    } catch (err) {
+      alert('Failed to delete patient record.');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await client.post('/patients', formData);
+      setIsModalOpen(false);
+      fetchPatients();
+    } catch (err: any) {
+      console.error('Error registering patient:', err.response?.data || err.message);
+      alert(err.response?.data?.message || 'Error registering patient.');
+    }
+  };
+
   const filteredPatients = patients.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.phone.includes(searchTerm)
+    p.phone?.includes(searchTerm)
   );
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Patient Directory</h1>
-        <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Register Patient
         </button>
@@ -66,7 +104,14 @@ const Patients = () => {
           <div className="col-span-full py-12 text-center text-gray-500 italic">No patients found match your search.</div>
         ) : (
           filteredPatients.map((patient) => (
-            <div key={patient.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div key={patient.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative group">
+               <button 
+                onClick={() => handleDelete(patient.id)}
+                className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+               >
+                <Trash2 className="w-4 h-4" />
+               </button>
+
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
                   <User className="w-6 h-6" />
@@ -103,7 +148,7 @@ const Patients = () => {
                     )}
                   </div>
                 </div>
-                <button className="text-xs font-bold text-indigo-600 hover:indigo-800 px-3 py-1 bg-indigo-50 rounded-lg">
+                <button className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1 bg-indigo-50/50 rounded-lg">
                   History
                 </button>
               </div>
@@ -111,6 +156,88 @@ const Patients = () => {
           ))
         )}
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register New Patient">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input
+              required
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+              <input
+                type="number"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={formData.age}
+                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              >
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <textarea
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Allergies (comma separated)</label>
+            <input
+              type="text"
+              placeholder="e.g. Penicillin, Peanuts"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+              value={formData.allergies?.join(', ')}
+              onChange={(e) => setFormData({ ...formData, allergies: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+            />
+          </div>
+          <div className="pt-4 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 flex items-center shadow-sm"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Register Patient
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -32,7 +32,7 @@ export class ReportingService {
         const totalSalesAmount = salesToday.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
 
         const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
-            .leftJoin('batches', 'b', 'b.medicine_id = m.id AND b.expiry_date >= :now', { now: new Date() })
+            .leftJoin('m.batches', 'b')
             .select('m.id')
             .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
             .groupBy('m.id')

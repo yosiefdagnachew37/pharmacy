@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Save } from 'lucide-react';
+import Modal from '../components/Modal';
 
 interface Medicine {
   id: string;
@@ -9,37 +10,102 @@ interface Medicine {
   category: string;
   total_stock: number;
   minimum_stock_level: number;
+  unit: string;
+  is_controlled: boolean;
 }
 
 const Medicines = () => {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMed, setEditingMed] = useState<Medicine | null>(null);
+  const [formData, setFormData] = useState<Partial<Medicine>>({
+    name: '',
+    generic_name: '',
+    category: '',
+    unit: '',
+    minimum_stock_level: 10,
+    is_controlled: false
+  });
+
+  const fetchMedicines = async () => {
+    setLoading(true);
+    try {
+      const response = await client.get('/medicines');
+      setMedicines(response.data);
+    } catch (error) {
+      console.error('Error fetching medicines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const response = await client.get('/medicines');
-        setMedicines(response.data);
-      } catch (error) {
-        console.error('Error fetching medicines:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchMedicines();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this medicine?')) return;
+    try {
+      await client.delete(`/medicines/${id}`);
+      fetchMedicines();
+    } catch (error) {
+      alert('Failed to delete medicine. It might be linked to other records.');
+    }
+  };
+
+  const handleOpenModal = (med?: Medicine) => {
+    if (med) {
+      setEditingMed(med);
+      setFormData(med);
+    } else {
+      setEditingMed(null);
+      setFormData({
+        name: '',
+        generic_name: '',
+        category: '',
+        unit: 'TAB',
+        minimum_stock_level: 10,
+        is_controlled: false
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Prepare payload by stripping calculated/extra fields
+    const { total_stock, id, ...payload } = formData as any;
+    
+    try {
+      if (editingMed) {
+        await client.patch(`/medicines/${editingMed.id}`, payload);
+      } else {
+        await client.post('/medicines', payload);
+      }
+      setIsModalOpen(false);
+      fetchMedicines();
+    } catch (error: any) {
+      console.error('Error saving medicine:', error.response?.data || error.message);
+      alert(error.response?.data?.message || 'Error saving medicine. Please check all fields.');
+    }
+  };
+
   const filteredMedicines = medicines.filter(m => 
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.generic_name.toLowerCase().includes(searchTerm.toLowerCase())
+    m.generic_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Medicines Inventory</h1>
-        <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors">
+        <button 
+          onClick={() => handleOpenModal()}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Medicine
         </button>
@@ -90,7 +156,7 @@ const Medicines = () => {
                     <td className="px-6 py-4 text-sm text-gray-600">{med.category}</td>
                     <td className="px-6 py-4">
                        <span className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
-                        {med.total_stock}
+                        {med.total_stock} {med.unit}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{med.minimum_stock_level}</td>
@@ -102,8 +168,18 @@ const Medicines = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                       <button className="text-gray-400 hover:text-indigo-600"><Edit2 className="w-4 h-4" /></button>
-                       <button className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                       <button 
+                        onClick={() => handleOpenModal(med)}
+                        className="text-gray-400 hover:text-indigo-600"
+                       >
+                        <Edit2 className="w-4 h-4" />
+                       </button>
+                       <button 
+                        onClick={() => handleDelete(med.id)}
+                        className="text-gray-400 hover:text-red-600"
+                       >
+                        <Trash2 className="w-4 h-4" />
+                       </button>
                     </td>
                   </tr>
                 ))
@@ -112,6 +188,97 @@ const Medicines = () => {
           </table>
         </div>
       </div>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={editingMed ? 'Edit Medicine' : 'Add New Medicine'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
+              <input
+                required
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={formData.generic_name}
+                onChange={(e) => setFormData({ ...formData, generic_name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Antibiotic"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <input
+                  type="text"
+                  placeholder="e.g. TAB, ML"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Min. Stock Level</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  value={formData.minimum_stock_level}
+                  onChange={(e) => setFormData({ ...formData, minimum_stock_level: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div className="flex items-center mt-6">
+                <input
+                  type="checkbox"
+                  id="controlled"
+                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  checked={formData.is_controlled}
+                  onChange={(e) => setFormData({ ...formData, is_controlled: e.target.checked })}
+                />
+                <label htmlFor="controlled" className="ml-2 block text-sm text-gray-900 font-medium">
+                  Controlled Substance
+                </label>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-md hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 flex items-center shadow-sm"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {editingMed ? 'Update' : 'Create'} Medicine
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Index } from 'typeorm';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 
 @Entity('batches')
@@ -16,6 +16,7 @@ export class Batch {
     @Column()
     medicine_id: string; // Foreign key column
 
+    @Index()
     @Column({ type: 'date' })
     expiry_date: Date;
 

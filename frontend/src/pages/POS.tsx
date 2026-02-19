@@ -171,9 +171,12 @@ const POS = () => {
             <ShoppingCart className="w-5 h-5 text-indigo-600 mr-2" />
             <h2 className="font-bold text-gray-800">Current Sale</h2>
           </div>
-          <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold">
-            {cart.length} items
-          </span>
+          <button 
+            onClick={() => setCart([])}
+            className="text-[10px] font-black uppercase text-red-500 hover:text-red-700 tracking-widest bg-red-50 px-2 py-1 rounded transition-colors"
+          >
+            Clear Cart
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, Index } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Prescription } from '../../prescriptions/entities/prescription.entity';
@@ -56,6 +56,7 @@ export class Sale {
     @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
     items: SaleItem[];
 
+    @Index()
     @CreateDateColumn()
     created_at: Date;
 }
