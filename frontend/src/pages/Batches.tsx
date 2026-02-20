@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search } from 'lucide-react';
 import Modal from '../components/Modal';
 
@@ -24,6 +25,7 @@ interface Batch {
 }
 
 const Batches = () => {
+  const { canCreate, canDelete } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,13 +114,15 @@ const Batches = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Batch Management</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Batch
-        </button>
+        {canCreate('batches') && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Batch
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -190,12 +194,14 @@ const Batches = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={() => handleDelete(batch.id)}
-                  className="text-gray-400 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canDelete('batches') && (
+                  <button
+                    onClick={() => handleDelete(batch.id)}
+                    className="text-gray-400 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))

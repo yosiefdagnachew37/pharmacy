@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Medicines from './pages/Medicines';
@@ -14,23 +15,25 @@ import OfflineBanner from './components/OfflineBanner';
 
 function App() {
   return (
-    <BrowserRouter>
-      <OfflineBanner />
-      <Routes>
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="medicines" element={<Medicines />} />
-          <Route path="batches" element={<Batches />} />
-          <Route path="pos" element={<POS />} />
-          <Route path="patients" element={<Patients />} />
-          <Route path="prescriptions" element={<Prescriptions />} />
-          <Route path="alerts" element={<Alerts />} />
-          <Route path="audit" element={<AuditLogs />} />
-          <Route path="system" element={<System />} />
-        </Route>
-        <Route path="/login" element={<Login />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <OfflineBanner />
+        <Routes>
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="medicines" element={<Medicines />} />
+            <Route path="batches" element={<Batches />} />
+            <Route path="pos" element={<POS />} />
+            <Route path="patients" element={<Patients />} />
+            <Route path="prescriptions" element={<Prescriptions />} />
+            <Route path="alerts" element={<Alerts />} />
+            <Route path="audit" element={<AuditLogs />} />
+            <Route path="system" element={<System />} />
+          </Route>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

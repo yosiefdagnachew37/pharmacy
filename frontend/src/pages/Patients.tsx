@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, User, Phone, MapPin, Save, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 
@@ -14,6 +15,7 @@ interface Patient {
 }
 
 const Patients = () => {
+  const { canCreate, canDelete } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -75,13 +77,15 @@ const Patients = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Patient Directory</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Register Patient
-        </button>
+        {canCreate('patients') && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Register Patient
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
@@ -105,12 +109,14 @@ const Patients = () => {
         ) : (
           filteredPatients.map((patient) => (
             <div key={patient.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative group">
-               <button 
-                onClick={() => handleDelete(patient.id)}
-                className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
-               >
-                <Trash2 className="w-4 h-4" />
-               </button>
+               {canDelete('patients') && (
+                 <button 
+                  onClick={() => handleDelete(patient.id)}
+                  className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                 >
+                  <Trash2 className="w-4 h-4" />
+                 </button>
+               )}
 
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">

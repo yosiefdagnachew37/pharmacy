@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   FileText, 
   Plus, 
@@ -40,6 +41,7 @@ interface Prescription {
 }
 
 const Prescriptions = () => {
+  const { canCreate } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -118,13 +120,15 @@ const Prescriptions = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Prescriptions</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Prescription
-        </button>
+        {canCreate('prescriptions') && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Prescription
+          </button>
+        )}
       </div>
 
       <div className="space-y-4">

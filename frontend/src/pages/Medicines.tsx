@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, Save } from 'lucide-react';
 import Modal from '../components/Modal';
 
@@ -15,6 +16,7 @@ interface Medicine {
 }
 
 const Medicines = () => {
+  const { canCreate, canUpdate, canDelete } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,13 +104,15 @@ const Medicines = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Medicines Inventory</h1>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Medicine
-        </button>
+        {canCreate('medicines') && (
+          <button 
+            onClick={() => handleOpenModal()}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Medicine
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -168,18 +172,22 @@ const Medicines = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                       <button 
-                        onClick={() => handleOpenModal(med)}
-                        className="text-gray-400 hover:text-indigo-600"
-                       >
-                        <Edit2 className="w-4 h-4" />
-                       </button>
-                       <button 
-                        onClick={() => handleDelete(med.id)}
-                        className="text-gray-400 hover:text-red-600"
-                       >
-                        <Trash2 className="w-4 h-4" />
-                       </button>
+                       {canUpdate('medicines') && (
+                         <button 
+                          onClick={() => handleOpenModal(med)}
+                          className="text-gray-400 hover:text-indigo-600"
+                         >
+                          <Edit2 className="w-4 h-4" />
+                         </button>
+                       )}
+                       {canDelete('medicines') && (
+                         <button 
+                          onClick={() => handleDelete(med.id)}
+                          className="text-gray-400 hover:text-red-600"
+                         >
+                          <Trash2 className="w-4 h-4" />
+                         </button>
+                       )}
                     </td>
                   </tr>
                 ))
