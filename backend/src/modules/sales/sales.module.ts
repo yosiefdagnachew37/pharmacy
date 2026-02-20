@@ -5,11 +5,13 @@ import { SaleItem } from './entities/sale-item.entity';
 import { SalesService } from './sales.service';
 import { SalesController } from './sales.controller';
 import { StockModule } from '../stock/stock.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Sale, SaleItem]),
         StockModule,
+        AuditModule,
     ],
     controllers: [SalesController],
     providers: [SalesService],

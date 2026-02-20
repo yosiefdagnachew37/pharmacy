@@ -16,6 +16,7 @@ interface Medicine {
   name: string;
   generic_name: string;
   total_stock: number;
+  selling_price: number;
 }
 
 interface CartItem {
@@ -59,7 +60,7 @@ const POS = () => {
         medicine_id: med.id, 
         name: med.name, 
         quantity: 1, 
-        unit_price: 10.0 // Mock price, logic for pricing needed in backend/entity
+        unit_price: med.selling_price || 0
       }]);
     }
   };
@@ -154,7 +155,7 @@ const POS = () => {
               <h3 className="font-bold text-gray-900 truncate">{med.name}</h3>
               <p className="text-xs text-gray-500 mb-3 truncate">{med.generic_name}</p>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-indigo-600">$10.00</span>
+                <span className="text-sm font-semibold text-indigo-600">${Number(med.selling_price || 0).toFixed(2)}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${med.total_stock < 10 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
                   Stock: {med.total_stock}
                 </span>

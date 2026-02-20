@@ -31,6 +31,7 @@ export class MedicinesService {
                     'm.is_controlled'
                 ])
                 .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
+                .addSelect('MAX(b.selling_price)', 'selling_price')
                 .groupBy('m.id')
                 .addGroupBy('m.name')
                 .addGroupBy('m.generic_name')
@@ -48,7 +49,8 @@ export class MedicinesService {
                 unit: res.m_unit,
                 minimum_stock_level: res.m_minimum_stock_level,
                 is_controlled: String(res.m_is_controlled) === 'true',
-                total_stock: Number(res.total_stock || 0)
+                total_stock: Number(res.total_stock || 0),
+                selling_price: Number(res.selling_price || 0)
             }));
         } catch (error) {
             console.error('Error in MedicinesService.findAll:', error);
