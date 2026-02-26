@@ -14,10 +14,10 @@ export class Prescription {
     @Column()
     patient_id: string;
 
-    @Column()
+    @Column({ nullable: true })
     doctor_name: string;
 
-    @Column()
+    @Column({ nullable: true })
     facility: string; // Hospital or Clinic name
 
     @Column({ nullable: true })

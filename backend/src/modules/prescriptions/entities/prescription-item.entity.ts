@@ -24,7 +24,7 @@ export class PrescriptionItem {
     @Column()
     dosage: string; // e.g. "500mg"
 
-    @Column()
+    @Column({ nullable: true })
     frequency: string; // e.g. "Twice a day"
 
     @Column()

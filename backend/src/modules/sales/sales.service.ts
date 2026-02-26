@@ -6,6 +6,7 @@ import { SaleItem } from './entities/sale-item.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { StockService } from '../stock/stock.service';
 import { ReferenceType } from '../stock/entities/stock-transaction.entity';
+import { AlertsService } from '../alerts/alerts.service';
 
 @Injectable()
 export class SalesService {
@@ -14,22 +15,23 @@ export class SalesService {
         private readonly salesRepository: Repository<Sale>,
         @InjectRepository(SaleItem)
         private readonly itemsRepository: Repository<SaleItem>,
-        private stockService: StockService,
+        private readonly stockService: StockService,
+        private readonly alertsService: AlertsService,
         private dataSource: DataSource,
     ) { }
 
     async create(createSaleDto: CreateSaleDto, userId: string): Promise<Sale> {
         const { items, total_price, payment_method, ...rest } = createSaleDto;
 
-        return await this.dataSource.transaction(async (manager) => {
+        const sale = await this.dataSource.transaction(async (manager) => {
             // 1. Create Sale Header
-            const sale = manager.create(Sale, {
+            const saleHeader = manager.create(Sale, {
                 ...rest,
                 total_amount: total_price,
                 payment_method: (payment_method as PaymentMethod) || PaymentMethod.CASH,
                 created_by: userId,
             });
-            const savedSale = await manager.save(sale);
+            const savedSale = await manager.save(saleHeader);
 
             // 2. Process Items and Reduce Stock
             for (const item of items) {
@@ -64,6 +66,13 @@ export class SalesService {
             if (!finalSale) throw new Error('Sale creation failed');
             return finalSale;
         });
+
+        // Trigger low stock check after sale (async)
+        this.alertsService.checkLowStock().catch(err =>
+            console.error('Error in reactive stock check:', err)
+        );
+
+        return sale;
     }
 
     async findAll(): Promise<Sale[]> {

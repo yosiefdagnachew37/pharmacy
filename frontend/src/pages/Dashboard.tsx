@@ -12,7 +12,8 @@ const Dashboard = () => {
     todaySalesCount: 0,
     todaySalesAmount: 0,
     lowStockMedicines: 0,
-    expiringSoonBatches: 0
+    expiringSoonBatches: 0,
+    activeAlertsCount: 0
   });
 
   useEffect(() => {
