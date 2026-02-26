@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, MoreThan } from 'typeorm';
 import { Sale } from '../sales/entities/sale.entity';
 import { Batch } from '../batches/entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
@@ -22,36 +22,50 @@ export class ReportingService {
     ) { }
 
     async getDashboardStats() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        try {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const startOfDay = new Date(todayStr);
+            const endOfDay = new Date(); // right now
 
-        const salesToday = await this.salesRepository.find({
-            where: { created_at: Between(today, new Date()) },
-        });
+            const salesToday = await this.salesRepository.find({
+                where: { created_at: Between(startOfDay, endOfDay) },
+            });
 
-        const totalSalesAmount = salesToday.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
+            const totalSalesAmount = salesToday.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
 
-        const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
-            .leftJoin('m.batches', 'b')
-            .select('m.id')
-            .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
-            .groupBy('m.id')
-            .having('SUM(COALESCE(b.quantity_remaining, 0)) <= m.minimum_stock_level')
-            .getCount();
+            // Count medicines where (non-expired stock) <= minimum_stock_level
+            const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
+                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now', { now: todayStr })
+                .select('m.id')
+                .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
+                .groupBy('m.id')
+                .having('SUM(COALESCE(b.quantity_remaining, 0)) <= m.minimum_stock_level')
+                .getCount();
 
-        const expiringSoon = await this.batchesRepository.count({
-            where: {
-                expiry_date: Between(new Date(), new Date(new Date().setDate(new Date().getDate() + 30))),
-                quantity_remaining: Between(1, 999999)
-            }
-        });
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+            const thirstyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0];
 
-        return {
-            todaySalesCount: salesToday.length,
-            todaySalesAmount: totalSalesAmount,
-            lowStockMedicines: lowStockCount,
-            expiringSoonBatches: expiringSoon,
-        };
+            const startDate = new Date(todayStr);
+            const thirstyDaysDate = new Date(thirstyDaysStr);
+
+            const expiringSoon = await this.batchesRepository.count({
+                where: {
+                    expiry_date: Between(startDate, thirstyDaysDate),
+                    quantity_remaining: MoreThan(0)
+                }
+            });
+
+            return {
+                todaySalesCount: salesToday.length,
+                todaySalesAmount: totalSalesAmount,
+                lowStockMedicines: lowStockCount,
+                expiringSoonBatches: expiringSoon,
+            };
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+            throw error;
+        }
     }
 
     async getSalesReport(startDate: Date, endDate: Date) {

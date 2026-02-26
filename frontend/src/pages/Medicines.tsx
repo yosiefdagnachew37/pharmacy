@@ -78,8 +78,16 @@ const Medicines = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Prepare payload by stripping calculated/extra fields
-    const { total_stock, id, ...payload } = formData as any;
+    
+    // Explicitly pick only the whitelisted fields to avoid 400 Bad Request from backend's forbidNonWhitelisted: true
+    const payload = {
+      name: formData.name,
+      generic_name: formData.generic_name,
+      category: formData.category,
+      unit: formData.unit,
+      minimum_stock_level: Number(formData.minimum_stock_level),
+      is_controlled: formData.is_controlled
+    };
     
     try {
       if (editingMed) {
@@ -96,8 +104,8 @@ const Medicines = () => {
   };
 
   const filteredMedicines = medicines.filter(m => 
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.generic_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    (m.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (m.generic_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (

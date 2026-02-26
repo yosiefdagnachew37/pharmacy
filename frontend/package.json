@@ -1,7 +1,9 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Pharmacy Management System with RBAC and Inventory Tracking",
+  "author": "Yosief",
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
@@ -29,8 +31,8 @@
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.24",
     "concurrently": "^9.1.0",
-    "electron": "^40.4.0",
-    "electron-builder": "^26.7.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
     "electron-is-dev": "^3.0.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -45,7 +47,8 @@
   },
   "build": {
     "appId": "com.pharmacy.system",
-    "productName": "Pharmacy Management System",
+    "productName": "PharmacySystem",
+    "electronVersion": "33.4.11",
     "directories": {
       "output": "dist-electron"
     },
@@ -55,8 +58,11 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "target": [
+        "zip"
+      ],
+      "forceCodeSigning": false,
+      "artifactName": "${productName}-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

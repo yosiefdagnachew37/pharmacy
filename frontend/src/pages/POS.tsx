@@ -88,9 +88,16 @@ const POS = () => {
     if (cart.length === 0) return;
     setLoading(true);
     try {
+      // Map cart to only whitelisted fields for CreateSaleDto
+      const saleItems = cart.map(item => ({
+        medicine_id: item.medicine_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price
+      }));
+
       await client.post('/sales', {
         patient_id: patientId || undefined,
-        items: cart,
+        items: saleItems,
         total_price: total,
         payment_method: 'CASH'
       });
@@ -100,17 +107,17 @@ const POS = () => {
       // Refresh medicines stock
       const response = await client.get('/medicines');
       setMedicines(response.data);
-    } catch (err) {
-      console.error('Checkout failed:', err);
-      alert('Checkout failed. Please check stock availability.');
+    } catch (err: any) {
+      console.error('Checkout failed:', err.response?.data || err.message);
+      alert(err.response?.data?.message || 'Checkout failed. Please check stock availability.');
     } finally {
       setLoading(false);
     }
   };
 
   const filteredMedicines = medicines.filter(m => 
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.generic_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (m.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (m.generic_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   if (success) {

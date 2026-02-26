@@ -69,8 +69,8 @@ const Patients = () => {
   };
 
   const filteredPatients = patients.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.phone?.includes(searchTerm)
+    (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (p.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (

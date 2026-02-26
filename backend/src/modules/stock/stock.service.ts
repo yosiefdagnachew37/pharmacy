@@ -31,6 +31,7 @@ export class StockService {
             if (!batch) throw new NotFoundException('Batch not found');
 
             if (type === TransactionType.OUT && batch.quantity_remaining < quantity) {
+                console.warn(`Stock rejection: Insufficient stock in batch ${batch.batch_number}`);
                 throw new BadRequestException(`Insufficient stock in batch ${batch.batch_number}`);
             }
 
@@ -79,6 +80,7 @@ export class StockService {
 
             const totalAvailable = availableBatches.reduce((sum, b) => sum + b.quantity_remaining, 0);
             if (totalAvailable < requestedQuantity) {
+                console.warn(`Stock rejection: Insufficient total stock for medicine ${medicineId}`);
                 throw new BadRequestException('Insufficient total stock for this medicine');
             }
 
@@ -115,6 +117,7 @@ export class StockService {
             }
 
             if (remainingToIssue > 0) {
+                console.warn(`Stock rejection: Insufficient non-expired stock for medicine ${medicineId}`);
                 throw new BadRequestException('Insufficient non-expired stock available');
             }
 

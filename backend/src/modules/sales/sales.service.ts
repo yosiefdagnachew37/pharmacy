@@ -33,8 +33,8 @@ export class SalesService {
 
             // 2. Process Items and Reduce Stock
             for (const item of items) {
-                // Issue stock using FIFO logic
-                await this.stockService.issueStock(
+                // Issue stock using FIFO logic - returns array of transactions (one per batch)
+                const transactions = await this.stockService.issueStock(
                     item.medicine_id,
                     item.quantity,
                     ReferenceType.SALE,
@@ -42,19 +42,23 @@ export class SalesService {
                     userId
                 );
 
-                // Create SaleItem record
-                const saleItem = manager.create(SaleItem, {
-                    medicine_id: item.medicine_id,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    sale_id: savedSale.id,
-                });
-                await manager.save(saleItem);
+                // Create SaleItem records for each batch transaction involved
+                for (const tx of transactions) {
+                    const saleItem = manager.create(SaleItem, {
+                        sale_id: savedSale.id,
+                        medicine_id: item.medicine_id,
+                        batch_id: tx.batch_id,
+                        quantity: tx.quantity,
+                        unit_price: item.unit_price,
+                        subtotal: tx.quantity * item.unit_price,
+                    });
+                    await manager.save(saleItem);
+                }
             }
 
             const finalSale = await manager.findOne(Sale, {
                 where: { id: savedSale.id },
-                relations: ['items', 'items.medicine', 'patient'],
+                relations: ['items', 'items.medicine', 'items.batch', 'patient'],
             });
 
             if (!finalSale) throw new Error('Sale creation failed');

@@ -20,7 +20,7 @@ export class MedicinesService {
     async findAll() {
         try {
             const results = await this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b')
+                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now', { now: new Date().toISOString().split('T')[0] })
                 .select([
                     'm.id',
                     'm.name',
