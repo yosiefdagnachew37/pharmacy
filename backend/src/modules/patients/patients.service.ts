@@ -49,4 +49,27 @@ export class PatientsService {
             .where('patient.name ILIKE :query OR patient.phone ILIKE :query', { query: `%${query}%` })
             .getMany();
     }
+
+    async getHistory(id: string): Promise<Patient> {
+        const patient = await this.patientsRepository.findOne({
+            where: { id },
+            relations: [
+                'prescriptions',
+                'prescriptions.items',
+                'prescriptions.items.medicine',
+                'sales',
+                'sales.items',
+                'sales.items.medicine'
+            ],
+            order: {
+                prescriptions: { created_at: 'DESC' },
+                sales: { created_at: 'DESC' }
+            }
+        });
+
+        if (!patient) {
+            throw new NotFoundException(`Patient with ID ${id} not found`);
+        }
+        return patient;
+    }
 }

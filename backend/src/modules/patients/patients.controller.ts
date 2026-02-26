@@ -73,4 +73,9 @@ export class PatientsController {
             old_values: { name: patient.name },
         });
     }
+
+    @Get(':id/history')
+    getHistory(@Param('id') id: string) {
+        return this.patientsService.getHistory(id);
+    }
 }

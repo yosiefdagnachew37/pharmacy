@@ -1,4 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Prescription } from '../../prescriptions/entities/prescription.entity';
+import { Sale } from '../../sales/entities/sale.entity';
 
 export enum Gender {
     MALE = 'MALE',
@@ -38,6 +40,12 @@ export class Patient {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @OneToMany(() => Prescription, (prescription) => prescription.patient)
+    prescriptions: Prescription[];
+
+    @OneToMany(() => Sale, (sale) => sale.patient)
+    sales: Sale[];
 
     @UpdateDateColumn()
     updated_at: Date;

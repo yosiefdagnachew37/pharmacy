@@ -112,30 +112,36 @@ const Batches = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Batch Management</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Stock Batches</h1>
+          <p className="text-sm text-gray-500 mt-1 font-medium italic">Track and manage medicine batches, expiry, and inventory levels.</p>
+        </div>
         {canCreate('batches') && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add New Batch
+            Issue New Batch
           </button>
         )}
       </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="relative flex-1 max-w-lg">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5 transition-colors group-focus-within:text-indigo-500" />
           <input
             type="text"
-            placeholder="Search by medicine name or batch number..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Search batches by medicine or number..."
+            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all text-sm placeholder:text-gray-400 font-medium"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        <div className="flex items-center space-x-2 text-xs font-semibold text-gray-400 px-2">
+          <Package className="w-3.5 h-3.5" />
+          <span>{filteredBatches.length} Batches Found</span>
         </div>
       </div>
 
@@ -146,62 +152,88 @@ const Batches = () => {
           <div className="bg-white p-8 rounded-lg text-center text-gray-500">No batches found.</div>
         ) : (
           filteredBatches.map((batch) => (
-            <div key={batch.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between hover:border-indigo-300 transition-colors">
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg mr-4 ${isExpired(batch.expiry_date) ? 'bg-red-100 text-red-600' : isExpiringSoon(batch.expiry_date) ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
-                  <Package className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900">{batch.medicine?.name || 'Unknown'}</h3>
-                  <p className="text-sm text-gray-500">Batch: <span className="font-mono">{batch.batch_number}</span></p>
-                </div>
-              </div>
-
-              <div className="flex space-x-12 items-center">
-                <div className="text-center">
-                  <p className="text-xs text-gray-400 uppercase font-semibold">Qty</p>
-                  <p className="text-lg font-bold text-gray-800">{batch.quantity_remaining}</p>
-                </div>
-
-                <div className="text-center">
-                  <p className="text-xs text-gray-400 uppercase font-semibold">Buy / Sell</p>
-                  <p className="text-sm font-medium text-gray-800">
-                    ${Number(batch.purchase_price || 0).toFixed(2)} / ${Number(batch.selling_price || 0).toFixed(2)}
-                  </p>
-                </div>
-                
-                <div className="text-center">
-                  <p className="text-xs text-gray-400 uppercase font-semibold">Expiry</p>
-                  <div className="flex items-center text-gray-800">
-                    <Calendar className="w-4 h-4 mr-1 text-gray-400" />
-                    <span className="font-medium text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
+            <div 
+              key={batch.id} 
+              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-[1.5fr_100px_140px_120px_140px_40px] items-center gap-6">
+                {/* 1. Medicine & Batch Info */}
+                <div className="flex items-center min-w-0">
+                  <div className={`p-3 rounded-xl mr-4 flex-shrink-0 ${
+                    isExpired(batch.expiry_date) 
+                      ? 'bg-red-50 text-red-500' 
+                      : isExpiringSoon(batch.expiry_date) 
+                        ? 'bg-amber-50 text-amber-500' 
+                        : 'bg-indigo-50 text-indigo-500'
+                  }`}>
+                    <Package className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-gray-900 truncate">{batch.medicine?.name || 'Unknown'}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5 font-medium">
+                      Batch: <span className="text-gray-600 font-mono tracking-tighter">{batch.batch_number}</span>
+                    </p>
                   </div>
                 </div>
 
-                <div>
+                {/* 2. Quantity */}
+                <div className="text-center md:text-left">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Quantity</p>
+                  <p className="text-lg font-extrabold text-gray-800 leading-none">
+                    {batch.quantity_remaining}
+                  </p>
+                </div>
+
+                {/* 3. Pricing */}
+                <div className="text-center md:text-left">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Buy / Sell</p>
+                  <div className="flex items-baseline space-x-1 justify-center md:justify-start">
+                    <span className="text-sm font-bold text-gray-700">${Number(batch.purchase_price || 0).toFixed(2)}</span>
+                    <span className="text-xs text-gray-300">/</span>
+                    <span className="text-sm font-bold text-indigo-600">${Number(batch.selling_price || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                {/* 4. Expiry */}
+                <div className="text-center md:text-left">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Expiry</p>
+                  <div className="flex items-center justify-center md:justify-start text-gray-700">
+                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-300" />
+                    <span className="font-bold text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                {/* 5. Status Badge */}
+                <div className="flex justify-center md:justify-start">
                   {isExpired(batch.expiry_date) ? (
-                    <div className="flex items-center text-red-600 font-medium text-sm">
-                      <AlertTriangle className="w-4 h-4 mr-1" />
-                      EXPIRED
+                    <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100 uppercase tracking-wide">
+                      <AlertTriangle className="w-3 h-3 mr-1.5" />
+                      Expired
                     </div>
                   ) : isExpiringSoon(batch.expiry_date) ? (
-                    <div className="flex items-center text-orange-600 font-medium text-sm">
-                      <Clock className="w-4 h-4 mr-1" />
-                      EXPIRING SOON
+                    <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold border border-amber-100 uppercase tracking-wide">
+                      <Clock className="w-3 h-3 mr-1.5" />
+                      Expiring Soon
                     </div>
                   ) : (
-                    <div className="text-green-600 font-medium text-sm">GOOD</div>
+                    <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100 uppercase tracking-wide">
+                      Good
+                    </div>
                   )}
                 </div>
 
-                {canDelete('batches') && (
-                  <button
-                    onClick={() => handleDelete(batch.id)}
-                    className="text-gray-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                {/* 6. Actions */}
+                <div className="flex justify-end">
+                  {canDelete('batches') && (
+                    <button
+                      onClick={() => handleDelete(batch.id)}
+                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      title="Delete Batch"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))
