@@ -5,6 +5,7 @@ import { Sale } from '../sales/entities/sale.entity';
 import { Batch } from '../batches/entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { StockTransaction } from '../stock/entities/stock-transaction.entity';
+import { Alert, AlertStatus } from '../alerts/entities/alert.entity';
 import * as ExcelJS from 'exceljs';
 import * as PDFDocument from 'pdfkit';
 
@@ -19,16 +20,18 @@ export class ReportingService {
         private readonly medicinesRepository: Repository<Medicine>,
         @InjectRepository(StockTransaction)
         private readonly transactionsRepository: Repository<StockTransaction>,
+        @InjectRepository(Alert)
+        private readonly alertsRepository: Repository<Alert>,
     ) { }
 
     async getDashboardStats() {
         try {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const startOfDay = new Date(todayStr);
-            const endOfDay = new Date(); // right now
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const startOfDay = new Date(todayStr); // Local midnight (approx)
 
             const salesToday = await this.salesRepository.find({
-                where: { created_at: Between(startOfDay, endOfDay) },
+                where: { created_at: Between(startOfDay, now) },
             });
 
             const totalSalesAmount = salesToday.reduce((sum, sale) => sum + Number(sale.total_amount), 0);
@@ -37,23 +40,24 @@ export class ReportingService {
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
                 .leftJoin('m.batches', 'b', 'b.expiry_date >= :now', { now: todayStr })
                 .select('m.id')
-                .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
                 .groupBy('m.id')
+                .addGroupBy('m.minimum_stock_level') // Required for HAVING clause in Postgres
                 .having('SUM(COALESCE(b.quantity_remaining, 0)) <= m.minimum_stock_level')
                 .getCount();
 
             const thirtyDaysFromNow = new Date();
             thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-            const thirstyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0];
-
-            const startDate = new Date(todayStr);
-            const thirstyDaysDate = new Date(thirstyDaysStr);
+            const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0];
 
             const expiringSoon = await this.batchesRepository.count({
                 where: {
-                    expiry_date: Between(startDate, thirstyDaysDate),
+                    expiry_date: Between(startOfDay, new Date(thirtyDaysStr)),
                     quantity_remaining: MoreThan(0)
                 }
+            });
+
+            const activeAlerts = await this.alertsRepository.count({
+                where: { status: AlertStatus.ACTIVE }
             });
 
             return {
@@ -61,6 +65,7 @@ export class ReportingService {
                 todaySalesAmount: totalSalesAmount,
                 lowStockMedicines: lowStockCount,
                 expiringSoonBatches: expiringSoon,
+                activeAlertsCount: activeAlerts,
             };
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);

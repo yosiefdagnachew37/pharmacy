@@ -47,7 +47,7 @@ export class AlertsService {
                 .createQueryBuilder('b')
                 .select('SUM(b.quantity_remaining)', 'total')
                 .where('b.medicine_id = :id', { id: medicine.id })
-                .andWhere('b.expiry_date >= :now', { now: new Date() })
+                .andWhere('b.expiry_date >= :now', { now: new Date().toISOString().split('T')[0] })
                 .getRawOne();
 
             const totalStock = parseInt(stock.total, 10) || 0;

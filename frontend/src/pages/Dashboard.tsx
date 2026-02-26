@@ -51,7 +51,7 @@ const Dashboard = () => {
     },
     { 
       label: "Critical Alerts", 
-      value: "5", 
+      value: stats.activeAlertsCount || 0, 
       desc: "requires attention",
       icon: AlertTriangle,
       color: "bg-indigo-500"
