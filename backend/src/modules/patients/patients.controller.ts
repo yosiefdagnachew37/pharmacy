@@ -18,7 +18,7 @@ export class PatientsController {
     ) { }
 
     @Post()
-    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     async create(@Body() createPatientDto: CreatePatientDto, @Request() req: any) {
         const result = await this.patientsService.create(createPatientDto);
         await this.auditService.log({
@@ -32,16 +32,19 @@ export class PatientsController {
     }
 
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     findAll() {
         return this.patientsService.findAll();
     }
 
     @Get('search')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     search(@Query('q') q: string) {
         return this.patientsService.search(q);
     }
 
     @Get(':id')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     findOne(@Param('id') id: string) {
         return this.patientsService.findOne(id);
     }
@@ -75,6 +78,7 @@ export class PatientsController {
     }
 
     @Get(':id/history')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     getHistory(@Param('id') id: string) {
         return this.patientsService.getHistory(id);
     }

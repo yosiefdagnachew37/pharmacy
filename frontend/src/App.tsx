@@ -12,6 +12,7 @@ import AuditLogs from './pages/AuditLogs';
 import Login from './pages/Login';
 import System from './pages/System';
 import OfflineBanner from './components/OfflineBanner';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -21,14 +22,70 @@ function App() {
         <Routes>
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
-            <Route path="medicines" element={<Medicines />} />
-            <Route path="batches" element={<Batches />} />
-            <Route path="pos" element={<POS />} />
-            <Route path="patients" element={<Patients />} />
-            <Route path="prescriptions" element={<Prescriptions />} />
-            <Route path="alerts" element={<Alerts />} />
-            <Route path="audit" element={<AuditLogs />} />
-            <Route path="system" element={<System />} />
+            <Route
+              path="medicines"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                  <Medicines />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="batches"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <Batches />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="pos"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                  <POS />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="patients"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                  <Patients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="prescriptions"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <Prescriptions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="alerts"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <Alerts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="audit"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'AUDITOR']}>
+                  <AuditLogs />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="system"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <System />
+                </ProtectedRoute>
+              }
+            />
           </Route>
           <Route path="/login" element={<Login />} />
         </Routes>

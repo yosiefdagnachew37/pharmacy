@@ -1,14 +1,15 @@
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../contexts/AuthContext';
-import { 
-  LayoutDashboard, 
-  Pill, 
-  Package, 
-  Users, 
-  FileText, 
-  AlertCircle, 
-  History, 
+import {
+  LayoutDashboard,
+  Pill,
+  Package,
+  Users,
+  FileText,
+  AlertCircle,
+  History,
   ShoppingCart,
   Shield,
   LogOut
@@ -22,22 +23,22 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard',     path: '/',              roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR'] },
-  { icon: Pill,            label: 'Medicines',      path: '/medicines',     roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: Package,         label: 'Batches',        path: '/batches',       roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: ShoppingCart,    label: 'POS / Sales',    path: '/pos',           roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: Users,           label: 'Patients',       path: '/patients',      roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: FileText,        label: 'Prescriptions',  path: '/prescriptions', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: AlertCircle,     label: 'Alerts',         path: '/alerts',        roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: History,         label: 'Audit Logs',     path: '/audit',         roles: ['ADMIN', 'AUDITOR'] },
-  { icon: Shield,          label: 'System',         path: '/system',        roles: ['ADMIN'] },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR'] },
+  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
+  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
+  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
+  { icon: FileText, label: 'Prescriptions', path: '/prescriptions', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR'] },
+  { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN'] },
 ];
 
 const roleBadgeColors: Record<UserRole, string> = {
-  ADMIN:      'bg-red-500',
+  ADMIN: 'bg-red-500',
   PHARMACIST: 'bg-emerald-500',
-  CASHIER:    'bg-amber-500',
-  AUDITOR:    'bg-sky-500',
+  CASHIER: 'bg-amber-500',
+  AUDITOR: 'bg-sky-500',
 };
 
 const DashboardLayout = () => {
@@ -45,13 +46,19 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { user, role, logout } = useAuth();
 
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
   // Filter menu items based on user role
-  const visibleMenuItems = allMenuItems.filter(item => 
+  const visibleMenuItems = allMenuItems.filter(item =>
     role ? item.roles.includes(role) : false
   );
 
@@ -75,20 +82,19 @@ const DashboardLayout = () => {
             </div>
           )}
         </div>
-        
+
         <nav className="flex-1 mt-6">
           {visibleMenuItems.map((item) => {
-            const isActive = location.pathname === item.path || 
+            const isActive = location.pathname === item.path ||
               (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <Link
                 key={item.label}
                 to={item.path}
-                className={`flex items-center px-6 py-3 transition-colors ${
-                  isActive 
-                    ? 'bg-indigo-800 text-white border-r-4 border-indigo-300' 
+                className={`flex items-center px-6 py-3 transition-colors ${isActive
+                    ? 'bg-indigo-800 text-white border-r-4 border-indigo-300'
                     : 'text-indigo-100 hover:bg-indigo-800'
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />
                 {item.label}
@@ -97,7 +103,7 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        <button 
+        <button
           onClick={handleLogout}
           className="flex items-center px-6 py-4 text-indigo-300 hover:bg-indigo-800 hover:text-white transition-colors border-t border-indigo-800"
         >
@@ -116,7 +122,7 @@ const DashboardLayout = () => {
             </span>
           )}
         </header>
-        
+
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
           <Outlet />
         </main>

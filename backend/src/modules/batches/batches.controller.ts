@@ -32,26 +32,31 @@ export class BatchesController {
     }
 
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findAll() {
         return this.batchesService.findAll();
     }
 
     @Get('expiring')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findExpiring(@Query('days') days: string) {
         return this.batchesService.findExpiring(parseInt(days, 10) || 90);
     }
 
     @Get('expired')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findExpired() {
         return this.batchesService.findExpired();
     }
 
     @Get('medicine/:id')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findByMedicine(@Param('id') id: string) {
         return this.batchesService.findByMedicine(id);
     }
 
     @Get(':id')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findOne(@Param('id') id: string) {
         return this.batchesService.findOne(id);
     }

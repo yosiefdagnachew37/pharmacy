@@ -32,11 +32,13 @@ export class MedicinesController {
     }
 
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     findAll() {
         return this.medicinesService.findAll();
     }
 
     @Get(':id')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     findOne(@Param('id') id: string) {
         return this.medicinesService.findOne(id);
     }

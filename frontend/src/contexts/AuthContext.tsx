@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   canCreate: () => false,
   canDelete: () => false,
   canUpdate: () => false,
-  logout: () => {},
+  logout: () => { },
 });
 
 // Permission matrix: entity -> action -> allowed roles
@@ -44,7 +44,7 @@ const permissions: Record<string, Record<string, UserRole[]>> = {
     delete: ['ADMIN'],
   },
   patients: {
-    create: ['ADMIN', 'PHARMACIST', 'CASHIER'],
+    create: ['ADMIN', 'PHARMACIST'],
     update: ['ADMIN', 'PHARMACIST'],
     delete: ['ADMIN'],
   },

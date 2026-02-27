@@ -132,29 +132,21 @@ const Patients = () => {
               onClick={() => fetchHistory(patient.id)}
               className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden"
             >
-               {canDelete('patients') && (
-                 <button 
-                  onClick={(e) => { e.stopPropagation(); handleDelete(patient.id); }}
-                  className="absolute top-4 right-4 p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all z-20"
-                  title="Delete Patient Record"
-                 >
-                  <Trash2 className="w-4 h-4" />
-                 </button>
-               )}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ChevronRight className="w-4 h-4 text-indigo-300" />
+              </div>
 
-              <div className="flex items-start mb-4">
+              <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
                   <User className="w-6 h-6" />
                 </div>
-              </div>
-              
-              <h3 className="text-lg font-bold text-gray-800 mb-0.5">{patient.name}</h3>
-              <div className="flex items-center space-x-2 mb-4">
-                <p className="text-xs font-semibold text-gray-500">{patient.gender}, {patient.age}y</p>
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md">
-                  #{patient.id.slice(0, 8)}
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  ID: {patient.id.slice(0, 8)}
                 </span>
               </div>
+              
+              <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
+              <p className="text-sm text-gray-500 mb-4">{patient.gender}, {patient.age} years old</p>
               
               <div className="space-y-3 mb-6">
                 <div className="flex items-center text-sm text-gray-600">
@@ -180,8 +172,22 @@ const Patients = () => {
                     )}
                   </div>
                 </div>
-                <div className="text-xs font-bold text-indigo-600 flex items-center">
-                  View History <ChevronRight className="w-3 h-3 ml-1" />
+                <div className="flex items-center space-x-3">
+                  {canDelete('patients') && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(patient.id);
+                      }}
+                      className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      title="Delete Patient"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="text-xs font-bold text-indigo-600 flex items-center">
+                    View History <ChevronRight className="w-3 h-3 ml-1" />
+                  </div>
                 </div>
               </div>
             </div>
