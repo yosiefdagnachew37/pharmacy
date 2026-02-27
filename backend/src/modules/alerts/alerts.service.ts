@@ -62,21 +62,38 @@ export class AlertsService {
     }
 
     async checkExpiringMedicines() {
-        const expiringSoon = new Date();
-        expiringSoon.setDate(expiringSoon.getDate() + 30); // 30 days window
+        const now = new Date();
+        const expiringSoonDate = new Date();
+        expiringSoonDate.setDate(expiringSoonDate.getDate() + 30); // 30 days window
 
-        const batches = await this.dataSource.getRepository(Batch).find({
+        // 1. Check Already Expired
+        const expiredBatches = await this.dataSource.getRepository(Batch).find({
             where: {
-                expiry_date: LessThan(expiringSoon),
+                expiry_date: LessThan(now),
                 quantity_remaining: MoreThanOrEqual(1),
             },
             relations: ['medicine'],
         });
 
-        for (const batch of batches) {
+        for (const batch of expiredBatches) {
+            await this.createAlert(
+                AlertType.EXPIRED,
+                `CRITICAL: Batch ${batch.batch_number} of ${batch.medicine.name} has EXPIRED on ${batch.expiry_date}`,
+                batch.medicine_id
+            );
+        }
+
+        // 2. Check Expiring Soon (not yet expired)
+        const soonExpiringBatches = await this.dataSource.getRepository(Batch).createQueryBuilder('b')
+            .leftJoinAndSelect('b.medicine', 'm')
+            .where('b.expiry_date BETWEEN :now AND :soon', { now: now.toISOString().split('T')[0], soon: expiringSoonDate.toISOString().split('T')[0] })
+            .andWhere('b.quantity_remaining >= 1')
+            .getMany();
+
+        for (const batch of soonExpiringBatches) {
             await this.createAlert(
                 AlertType.EXPIRY,
-                `Batch ${batch.batch_number} of ${batch.medicine.name} expires on ${batch.expiry_date}`,
+                `Batch ${batch.batch_number} of ${batch.medicine.name} expires soon on ${batch.expiry_date}`,
                 batch.medicine_id
             );
         }

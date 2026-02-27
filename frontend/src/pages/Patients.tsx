@@ -21,7 +21,7 @@ const Patients = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<Patient | null>(null);
@@ -87,7 +87,7 @@ const Patients = () => {
     }
   };
 
-  const filteredPatients = patients.filter(p => 
+  const filteredPatients = patients.filter(p =>
     (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (p.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
@@ -97,7 +97,7 @@ const Patients = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Patient Directory</h1>
         {canCreate('patients') && (
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
           >
@@ -127,8 +127,8 @@ const Patients = () => {
           <div className="col-span-full py-12 text-center text-gray-500 italic">No patients found match your search.</div>
         ) : (
           filteredPatients.map((patient) => (
-            <div 
-              key={patient.id} 
+            <div
+              key={patient.id}
               onClick={() => fetchHistory(patient.id)}
               className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden"
             >
@@ -137,17 +137,33 @@ const Patients = () => {
               </div>
 
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-                  <User className="w-6 h-6" />
+                <div className="flex items-start space-x-3">
+                  <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+                    <User className="w-6 h-6" />
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  ID: {patient.id.slice(0, 8)}
-                </span>
+                {canDelete('patients') && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(patient.id);
+                    }}
+                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                    title="Delete Patient"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-              
+
               <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
-              <p className="text-sm text-gray-500 mb-4">{patient.gender}, {patient.age} years old</p>
-              
+              <p className="text-sm text-gray-500 mb-4">
+                {patient.gender}, {patient.age} years old
+                <span className="ml-2 px-1.5 py-0.5 bg-gray-50 text-[10px] font-bold text-gray-400 border border-gray-100 rounded">
+                  #{patient.id.slice(0, 8)}
+                </span>
+              </p>
+
               <div className="space-y-3 mb-6">
                 <div className="flex items-center text-sm text-gray-600">
                   <Phone className="w-4 h-4 mr-3 text-gray-400" />
@@ -172,22 +188,8 @@ const Patients = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  {canDelete('patients') && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(patient.id);
-                      }}
-                      className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      title="Delete Patient"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <div className="text-xs font-bold text-indigo-600 flex items-center">
-                    View History <ChevronRight className="w-3 h-3 ml-1" />
-                  </div>
+                <div className="text-xs font-bold text-indigo-600 flex items-center">
+                  View History <ChevronRight className="w-3 h-3 ml-1" />
                 </div>
               </div>
             </div>
@@ -278,9 +280,9 @@ const Patients = () => {
       </Modal>
 
       {/* History Modal */}
-      <Modal 
-        isOpen={isHistoryModalOpen} 
-        onClose={() => setIsHistoryModalOpen(false)} 
+      <Modal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
         title={`${selectedHistory?.name || 'Patient'}'s Full History`}
       >
         <div className="max-h-[70vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
@@ -300,80 +302,78 @@ const Patients = () => {
                 ...(selectedHistory.prescriptions || []).map(p => ({ ...p, type: 'PRESCRIPTION' })),
                 ...(selectedHistory.sales || []).map(s => ({ ...s, type: 'SALE' }))
               ]
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .map((item) => (
-                <div key={`${item.type}-${item.id}`} className="relative pl-8 pb-2">
-                  {/* Timeline Line */}
-                  <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-gray-100 last:hidden" />
-                  
-                  {/* Timeline Indicator */}
-                  <div className={`absolute left-0 top-1 p-1.5 rounded-full z-10 ${
-                    item.type === 'PRESCRIPTION' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'
-                  }`}>
-                    {item.type === 'PRESCRIPTION' ? <FileText className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
-                  </div>
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .map((item) => (
+                  <div key={`${item.type}-${item.id}`} className="relative pl-8 pb-2">
+                    {/* Timeline Line */}
+                    <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-gray-100 last:hidden" />
 
-                  <div className="flex flex-col">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex flex-col">
-                        <span className={`text-[10px] font-extrabold uppercase tracking-widest ${
-                          item.type === 'PRESCRIPTION' ? 'text-indigo-500' : 'text-green-500'
-                        }`}>
-                          {item.type}
-                        </span>
-                        <span className="text-xs text-gray-400 font-medium flex items-center mt-0.5">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      {item.type === 'SALE' && (
-                        <span className="text-sm font-black text-gray-900 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                          ${Number(item.total_amount).toFixed(2)}
-                        </span>
-                      )}
+                    {/* Timeline Indicator */}
+                    <div className={`absolute left-0 top-1 p-1.5 rounded-full z-10 ${item.type === 'PRESCRIPTION' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'
+                      }`}>
+                      {item.type === 'PRESCRIPTION' ? <FileText className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
                     </div>
 
-                    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-                      <div className="space-y-3">
-                        {item.items?.map((detail: any, i: number) => (
-                          <div key={i} className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
-                              <div>
-                                <p className="text-sm font-bold text-gray-800">{detail.medicine?.name || 'Unknown'}</p>
-                                {item.type === 'PRESCRIPTION' && (
-                                  <div className="flex items-center text-[11px] text-gray-500 space-x-3 mt-0.5">
-                                    <span className="flex items-center"><Clock className="w-3 h-3 mr-1 text-gray-300" /> {detail.dosage}</span>
-                                    <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-gray-300" /> {detail.duration}</span>
-                                  </div>
-                                )}
-                                {item.type === 'SALE' && (
-                                  <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                                    Quantity: <span className="text-gray-600">{detail.quantity}</span> × ${Number(detail.unit_price).toFixed(2)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            {item.type === 'SALE' && (
-                              <span className="text-xs font-bold text-gray-500">${Number(detail.subtotal).toFixed(2)}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {item.type === 'PRESCRIPTION' && item.doctor_name && (
-                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-tight">
-                          Prescribed By: <span className="text-indigo-600 ml-1">Dr. {item.doctor_name}</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex flex-col">
+                          <span className={`text-[10px] font-extrabold uppercase tracking-widest ${item.type === 'PRESCRIPTION' ? 'text-indigo-500' : 'text-green-500'
+                            }`}>
+                            {item.type}
+                          </span>
+                          <span className="text-xs text-gray-400 font-medium flex items-center mt-0.5">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
-                      )}
+                        {item.type === 'SALE' && (
+                          <span className="text-sm font-black text-gray-900 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                            ${Number(item.total_amount).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                        <div className="space-y-3">
+                          {item.items?.map((detail: any, i: number) => (
+                            <div key={i} className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3">
+                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
+                                <div>
+                                  <p className="text-sm font-bold text-gray-800">{detail.medicine?.name || 'Unknown'}</p>
+                                  {item.type === 'PRESCRIPTION' && (
+                                    <div className="flex items-center text-[11px] text-gray-500 space-x-3 mt-0.5">
+                                      <span className="flex items-center"><Clock className="w-3 h-3 mr-1 text-gray-300" /> {detail.dosage}</span>
+                                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-gray-300" /> {detail.duration}</span>
+                                    </div>
+                                  )}
+                                  {item.type === 'SALE' && (
+                                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                                      Quantity: <span className="text-gray-600">{detail.quantity}</span> × ${Number(detail.unit_price).toFixed(2)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {item.type === 'SALE' && (
+                                <span className="text-xs font-bold text-gray-500">${Number(detail.subtotal).toFixed(2)}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {item.type === 'PRESCRIPTION' && item.doctor_name && (
+                          <div className="mt-4 pt-4 border-t border-gray-50 flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                            Prescribed By: <span className="text-indigo-600 ml-1">Dr. {item.doctor_name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </div>
       </Modal>
-    </div>
+    </div >
   );
 };
 

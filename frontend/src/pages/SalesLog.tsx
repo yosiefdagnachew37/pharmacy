@@ -127,13 +127,13 @@ const SalesLog = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Date & Time</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Receipt #</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Patient</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Method</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt #</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Patient</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Method</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">

@@ -52,19 +52,25 @@ export class ReportingService {
                 .andWhere('b.quantity_remaining > 0')
                 .getCount();
 
+            // 3.1 Already Expired
+            const expiredBatches = await this.batchesRepository.createQueryBuilder('b')
+                .where('b.expiry_date < CURRENT_DATE')
+                .andWhere('b.quantity_remaining > 0')
+                .getCount();
+
             // 4. Active Alerts
             const activeAlerts = await this.alertsRepository.count({
                 where: { status: AlertStatus.ACTIVE }
             });
 
-            // 5. Recent Sales (Top 5)
+            // 5. Recent Sales (Top 15)
             const recentSales = await this.salesRepository.find({
                 relations: ['patient'],
                 order: { created_at: 'DESC' },
-                take: 5
+                take: 15
             });
 
-            // 6. Inventory Summary (Top 5 Low Stock)
+            // 6. Inventory Summary (Top 15 Low Stock)
             // Note: Medicine entity does not have a total_stock column, we calculate it
             const inventorySummaryRaw = await this.medicinesRepository.createQueryBuilder('m')
                 .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
@@ -78,7 +84,7 @@ export class ReportingService {
                 .addGroupBy('m.name')
                 .addGroupBy('m.minimum_stock_level')
                 .orderBy('total_stock', 'ASC')
-                .take(5)
+                .take(15)
                 .getRawMany();
 
             const totalMedicines = await this.medicinesRepository.count();
@@ -88,6 +94,7 @@ export class ReportingService {
                 todaySalesAmount: parseFloat(salesStats?.total) || 0,
                 lowStockMedicines: lowStockCount.length,
                 expiringSoonBatches: expiringSoon,
+                expiredBatchesCount: expiredBatches,
                 activeAlertsCount: activeAlerts,
                 recentSales,
                 inventorySummary: inventorySummaryRaw.map(item => ({

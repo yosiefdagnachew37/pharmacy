@@ -114,8 +114,8 @@ const Batches = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Stock Batches</h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium italic">Track and manage medicine batches, expiry, and inventory levels.</p>
+          <h1 className="text-2xl font-bold text-gray-800">Stock Batches</h1>
+          <p className="text-sm text-gray-500 mt-1 font-medium">Track and manage medicine batches, expiry, and inventory levels.</p>
         </div>
         {canCreate('batches') && (
           <button
@@ -152,20 +152,19 @@ const Batches = () => {
           <div className="bg-white p-8 rounded-lg text-center text-gray-500">No batches found.</div>
         ) : (
           filteredBatches.map((batch) => (
-            <div 
-              key={batch.id} 
+            <div
+              key={batch.id}
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
             >
               <div className="grid grid-cols-1 md:grid-cols-[1.5fr_100px_140px_120px_140px_40px] items-center gap-6">
                 {/* 1. Medicine & Batch Info */}
                 <div className="flex items-center min-w-0">
-                  <div className={`p-3 rounded-xl mr-4 flex-shrink-0 ${
-                    isExpired(batch.expiry_date) 
-                      ? 'bg-red-50 text-red-500' 
-                      : isExpiringSoon(batch.expiry_date) 
-                        ? 'bg-amber-50 text-amber-500' 
+                  <div className={`p-3 rounded-xl mr-4 flex-shrink-0 ${isExpired(batch.expiry_date)
+                      ? 'bg-red-50 text-red-500'
+                      : isExpiringSoon(batch.expiry_date)
+                        ? 'bg-amber-50 text-amber-500'
                         : 'bg-indigo-50 text-indigo-500'
-                  }`}>
+                    }`}>
                     <Package className="w-6 h-6" />
                   </div>
                   <div className="min-w-0">
@@ -179,7 +178,7 @@ const Batches = () => {
                 {/* 2. Quantity */}
                 <div className="text-center md:text-left">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Quantity</p>
-                  <p className="text-lg font-extrabold text-gray-800 leading-none">
+                  <p className="text-lg font-bold text-gray-800 leading-none">
                     {batch.quantity_remaining}
                   </p>
                 </div>
@@ -193,7 +192,7 @@ const Batches = () => {
                     <span className="text-sm font-bold text-indigo-600">${Number(batch.selling_price || 0).toFixed(2)}</span>
                   </div>
                 </div>
-                
+
                 {/* 4. Expiry */}
                 <div className="text-center md:text-left">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Expiry</p>

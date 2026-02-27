@@ -21,12 +21,15 @@ const Dashboard = () => {
     todaySalesAmount: 0,
     lowStockMedicines: 0,
     expiringSoonBatches: 0,
+    expiredBatchesCount: 0,
     activeAlertsCount: 0,
     recentSales: [] as any[],
     inventorySummary: [] as any[],
     totalMedicines: 0
   });
   const [loading, setLoading] = useState(true);
+  const [expandedSales, setExpandedSales] = useState(false);
+  const [expandedStock, setExpandedStock] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -74,6 +77,16 @@ const Dashboard = () => {
       path: "/batches"
     },
     {
+      label: "Expired Items",
+      value: stats.expiredBatchesCount || 0,
+      desc: "immediate disposal needed",
+      icon: AlertCircle,
+      color: "bg-red-600",
+      secondaryColor: "bg-red-50",
+      textColor: "text-red-600",
+      path: "/batches"
+    },
+    {
       label: "Active Alerts",
       value: stats.activeAlertsCount || 0,
       desc: "system health alerts",
@@ -98,16 +111,16 @@ const Dashboard = () => {
     <div className="space-y-10 pb-12">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-gray-500 mt-1 font-medium">Real-time system performance and inventory status</p>
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+          <p className="text-gray-500 mt-1">Real-time system performance and inventory status</p>
         </div>
         <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">System Live</span>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">System Live</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -121,8 +134,8 @@ const Dashboard = () => {
             </div>
 
             <div className="z-10">
-              <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">{card.label}</p>
-              <h3 className="text-3xl font-black text-gray-800 tracking-tight">{card.value}</h3>
+              <p className="text-xs font-bold uppercase text-gray-400 mb-1">{card.label}</p>
+              <h3 className="text-2xl font-bold text-gray-800">{card.value}</h3>
               <div className="flex items-center justify-between mt-4">
                 <p className="text-xs text-gray-500 font-medium">{card.desc}</p>
                 <div className={`w-6 h-6 rounded-full ${card.secondaryColor} flex items-center justify-center ${card.textColor} group-hover:translate-x-1 transition-transform`}>
@@ -142,7 +155,7 @@ const Dashboard = () => {
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
                 <ShoppingCart className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-black text-gray-800">Recent Transactions</h3>
+              <h3 className="text-xl font-bold text-gray-800">Recent Transactions</h3>
             </div>
             <button
               onClick={() => navigate('/sales')}
@@ -152,7 +165,7 @@ const Dashboard = () => {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className={`space-y-4 overflow-y-auto pr-2 custom-scrollbar transition-all duration-300 ${expandedSales ? 'max-h-[800px]' : 'max-h-[400px]'}`}>
             {stats.recentSales.length > 0 ? (
               stats.recentSales.map((sale: any) => (
                 <div key={sale.id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-transparent hover:border-gray-100 hover:bg-white transition-all group">
@@ -168,7 +181,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-md font-black text-gray-900">${Number(sale.total_amount).toFixed(2)}</p>
+                    <p className="text-md font-bold text-gray-900">${Number(sale.total_amount).toFixed(2)}</p>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Receipt: {sale.receipt_number || 'N/A'}</p>
                   </div>
                 </div>
@@ -179,16 +192,27 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+          {stats.recentSales.length > 5 && (
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setExpandedSales(!expandedSales)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-4 py-2 bg-indigo-50 rounded-xl transition-all flex items-center shadow-sm hover:shadow-md active:scale-95"
+              >
+                {expandedSales ? 'Show Less' : 'Show More Transactions'}
+                <ChevronRight className={`w-4 h-4 ml-2 transform transition-transform duration-300 ${expandedSales ? '-rotate-90' : 'rotate-90'}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Inventory Summary */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50 flex flex-col">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
                 <AlertCircle className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-black text-gray-800">Critical Stock Status</h3>
+              <h3 className="text-xl font-bold text-gray-800">Critical Stock Status</h3>
             </div>
             <button
               onClick={() => navigate('/medicines')}
@@ -198,13 +222,13 @@ const Dashboard = () => {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className={`space-y-4 overflow-y-auto pr-2 custom-scrollbar transition-all duration-300 ${expandedStock ? 'max-h-[800px]' : 'max-h-[400px]'}`}>
             {stats.inventorySummary.length > 0 ? (
               stats.inventorySummary.map((med: any) => (
                 <div key={med.id} className="p-4 rounded-2xl bg-gray-50/50 border border-transparent hover:border-gray-100 hover:bg-white transition-all">
                   <div className="flex justify-between items-start mb-3">
                     <p className="text-sm font-bold text-gray-800">{med.name}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tight ${med.total_stock <= med.minimum_stock_level ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${med.total_stock <= med.minimum_stock_level ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
                       }`}>
                       {med.total_stock <= med.minimum_stock_level ? 'Critically Low' : 'Low Stock'}
                     </span>
@@ -228,6 +252,17 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+          {stats.inventorySummary.length > 5 && (
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setExpandedStock(!expandedStock)}
+                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-4 py-2 bg-rose-50 rounded-xl transition-all flex items-center shadow-sm hover:shadow-md active:scale-95"
+              >
+                {expandedStock ? 'Show Less' : 'Show More Items'}
+                <ChevronRight className={`w-4 h-4 ml-2 transform transition-transform duration-300 ${expandedStock ? '-rotate-90' : 'rotate-90'}`} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
