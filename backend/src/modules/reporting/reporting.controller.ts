@@ -12,13 +12,13 @@ export class ReportingController {
     constructor(private readonly reportingService: ReportingService) { }
 
     @Get('dashboard')
-    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER, UserRole.AUDITOR)
     getDashboardStats() {
         return this.reportingService.getDashboardStats();
     }
 
     @Get('sales')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
     async getSalesReport(
         @Query('start') start: string,
         @Query('end') end: string,
@@ -29,7 +29,7 @@ export class ReportingController {
     }
 
     @Get('sales/export/excel')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
     async exportSalesExcel(
         @Query('start') start: string,
         @Query('end') end: string,
@@ -54,7 +54,7 @@ export class ReportingController {
     }
 
     @Get('sales/export/pdf')
-    @Roles(UserRole.ADMIN)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
     async exportSalesPdf(
         @Query('start') start: string,
         @Query('end') end: string,

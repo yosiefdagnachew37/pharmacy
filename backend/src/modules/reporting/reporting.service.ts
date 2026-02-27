@@ -26,20 +26,23 @@ export class ReportingService {
 
     async getDashboardStats() {
         try {
-            // 1. Today's Sales (Using DB-level DATE() for timezone robustness)
+            // 1. Today's Sales
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+
             const salesStats = await this.salesRepository.createQueryBuilder('s')
-                .where('DATE(s.created_at) = CURRENT_DATE')
+                .where('s.created_at BETWEEN :start AND :end', { start: todayStart, end: todayEnd })
                 .select('COUNT(s.id)', 'count')
                 .addSelect('SUM(s.total_amount)', 'total')
                 .getRawOne();
 
             // 2. Low Stock Count
-            // We use a subquery approach to avoid complex grouping issues with getCount()
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
                 .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
                 .select('m.id')
                 .groupBy('m.id')
-                .addGroupBy('m.minimum_stock_level')
                 .having('COALESCE(SUM(b.quantity_remaining), 0) <= m.minimum_stock_level')
                 .getRawMany();
 
@@ -54,12 +57,46 @@ export class ReportingService {
                 where: { status: AlertStatus.ACTIVE }
             });
 
+            // 5. Recent Sales (Top 5)
+            const recentSales = await this.salesRepository.find({
+                relations: ['patient'],
+                order: { created_at: 'DESC' },
+                take: 5
+            });
+
+            // 6. Inventory Summary (Top 5 Low Stock)
+            // Note: Medicine entity does not have a total_stock column, we calculate it
+            const inventorySummaryRaw = await this.medicinesRepository.createQueryBuilder('m')
+                .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
+                .select([
+                    'm.id AS id',
+                    'm.name AS name',
+                    'm.minimum_stock_level AS minimum_stock_level',
+                    'COALESCE(SUM(b.quantity_remaining), 0) AS total_stock'
+                ])
+                .groupBy('m.id')
+                .addGroupBy('m.name')
+                .addGroupBy('m.minimum_stock_level')
+                .orderBy('total_stock', 'ASC')
+                .take(5)
+                .getRawMany();
+
+            const totalMedicines = await this.medicinesRepository.count();
+
             return {
                 todaySalesCount: parseInt(salesStats?.count, 10) || 0,
                 todaySalesAmount: parseFloat(salesStats?.total) || 0,
                 lowStockMedicines: lowStockCount.length,
                 expiringSoonBatches: expiringSoon,
                 activeAlertsCount: activeAlerts,
+                recentSales,
+                inventorySummary: inventorySummaryRaw.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    total_stock: Number(item.total_stock),
+                    minimum_stock_level: item.minimum_stock_level
+                })),
+                totalMedicines
             };
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);

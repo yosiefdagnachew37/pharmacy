@@ -11,6 +11,7 @@ import Alerts from './pages/Alerts';
 import AuditLogs from './pages/AuditLogs';
 import Login from './pages/Login';
 import System from './pages/System';
+import SalesLog from './pages/SalesLog';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -43,6 +44,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
                   <POS />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="sales"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}>
+                  <SalesLog />
                 </ProtectedRoute>
               }
             />

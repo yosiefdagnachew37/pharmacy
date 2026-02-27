@@ -27,6 +27,7 @@ const allMenuItems: MenuItem[] = [
   { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
   { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
+  { icon: FileText, label: 'Sales Log', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
   { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
   { icon: FileText, label: 'Prescriptions', path: '/prescriptions', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST'] },
@@ -92,8 +93,8 @@ const DashboardLayout = () => {
                 key={item.label}
                 to={item.path}
                 className={`flex items-center px-6 py-3 transition-colors ${isActive
-                    ? 'bg-indigo-800 text-white border-r-4 border-indigo-300'
-                    : 'text-indigo-100 hover:bg-indigo-800'
+                  ? 'bg-indigo-800 text-white border-r-4 border-indigo-300'
+                  : 'text-indigo-100 hover:bg-indigo-800'
                   }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />
