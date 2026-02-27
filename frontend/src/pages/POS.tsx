@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { 
-  Search, 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  User, 
-  CreditCard, 
-  CheckCircle 
+import {
+  Search,
+  ShoppingCart,
+  Plus,
+  Minus,
+  Trash2,
+  User,
+  CreditCard,
+  CheckCircle
 } from 'lucide-react';
 
 interface Medicine {
@@ -48,18 +48,18 @@ const POS = () => {
 
   const addToCart = (med: Medicine) => {
     if (med.total_stock <= 0) return;
-    
+
     const existing = cart.find(item => item.medicine_id === med.id);
     if (existing) {
       if (existing.quantity >= med.total_stock) return;
-      setCart(cart.map(item => 
+      setCart(cart.map(item =>
         item.medicine_id === med.id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
-      setCart([...cart, { 
-        medicine_id: med.id, 
-        name: med.name, 
-        quantity: 1, 
+      setCart([...cart, {
+        medicine_id: med.id,
+        name: med.name,
+        quantity: 1,
         unit_price: med.selling_price || 0
       }]);
     }
@@ -115,7 +115,7 @@ const POS = () => {
     }
   };
 
-  const filteredMedicines = medicines.filter(m => 
+  const filteredMedicines = medicines.filter(m =>
     (m.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (m.generic_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
@@ -126,7 +126,7 @@ const POS = () => {
         <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
         <h2 className="text-3xl font-bold text-gray-800">Sale Completed!</h2>
         <p className="text-gray-500 mt-2">Inventory has been updated and transaction logged.</p>
-        <button 
+        <button
           onClick={() => setSuccess(false)}
           className="mt-8 bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700"
         >
@@ -137,15 +137,15 @@ const POS = () => {
   }
 
   return (
-    <div className="flex h-full gap-8">
+    <div className="flex flex-col lg:flex-row h-full gap-8">
       {/* Product Selection */}
       <div className="flex-1 flex flex-col">
         <div className="relative mb-6">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input 
+          <input
             type="text"
-            placeholder="Search medicine by name or generic name..."
-            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            placeholder="Search medicine..."
+            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -173,13 +173,13 @@ const POS = () => {
       </div>
 
       {/* Cart / Checkout */}
-      <div className="w-96 bg-white border border-gray-200 rounded-2xl shadow-lg flex flex-col">
+      <div className="w-full lg:w-96 bg-white border border-gray-200 rounded-3xl shadow-xl flex flex-col h-fit lg:h-full sticky top-0">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center">
             <ShoppingCart className="w-5 h-5 text-indigo-600 mr-2" />
             <h2 className="font-bold text-gray-800">Current Sale</h2>
           </div>
-          <button 
+          <button
             onClick={() => setCart([])}
             className="text-[10px] font-black uppercase text-red-500 hover:text-red-700 tracking-widest bg-red-50 px-2 py-1 rounded transition-colors"
           >
@@ -217,9 +217,9 @@ const POS = () => {
           <div className="mb-4">
             <div className="flex items-center mb-2 px-3 py-2 bg-white border border-gray-200 rounded-lg">
               <User className="w-4 h-4 text-gray-400 mr-2" />
-              <input 
-                type="text" 
-                placeholder="Patient ID (Optional)" 
+              <input
+                type="text"
+                placeholder="Patient ID (Optional)"
                 className="bg-transparent text-sm w-full focus:outline-none"
                 value={patientId}
                 onChange={(e) => setPatientId(e.target.value)}
@@ -238,7 +238,7 @@ const POS = () => {
             </div>
           </div>
 
-          <button 
+          <button
             disabled={cart.length === 0 || loading}
             onClick={handleCheckout}
             className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold flex items-center justify-center shadow-lg shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-50 disabled:shadow-none transition-all"

@@ -109,7 +109,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-10 pb-12">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
           <p className="text-gray-500 mt-1">Real-time system performance and inventory status</p>
@@ -120,7 +120,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -149,7 +149,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Sales */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-50">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
@@ -206,7 +206,7 @@ const Dashboard = () => {
         </div>
 
         {/* Inventory Summary */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-50 flex flex-col">
+        <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-50 flex flex-col">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">

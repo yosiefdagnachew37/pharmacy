@@ -112,7 +112,7 @@ const Batches = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Stock Batches</h1>
           <p className="text-sm text-gray-500 mt-1 font-medium">Track and manage medicine batches, expiry, and inventory levels.</p>
@@ -120,7 +120,7 @@ const Batches = () => {
         {canCreate('batches') && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300"
+            className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300 active:scale-95"
           >
             <Plus className="w-4 h-4 mr-2" />
             Issue New Batch
@@ -154,16 +154,16 @@ const Batches = () => {
           filteredBatches.map((batch) => (
             <div
               key={batch.id}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
+              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200"
             >
-              <div className="grid grid-cols-1 md:grid-cols-[1.5fr_100px_140px_120px_140px_40px] items-center gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.5fr_100px_140px_120px_140px_40px] items-center gap-6">
                 {/* 1. Medicine & Batch Info */}
-                <div className="flex items-center min-w-0">
+                <div className="flex items-center min-w-0 col-span-2 md:col-span-1 xl:col-span-1">
                   <div className={`p-3 rounded-xl mr-4 flex-shrink-0 ${isExpired(batch.expiry_date)
-                      ? 'bg-red-50 text-red-500'
-                      : isExpiringSoon(batch.expiry_date)
-                        ? 'bg-amber-50 text-amber-500'
-                        : 'bg-indigo-50 text-indigo-500'
+                    ? 'bg-red-50 text-red-500'
+                    : isExpiringSoon(batch.expiry_date)
+                      ? 'bg-amber-50 text-amber-500'
+                      : 'bg-indigo-50 text-indigo-500'
                     }`}>
                     <Package className="w-6 h-6" />
                   </div>
@@ -176,7 +176,7 @@ const Batches = () => {
                 </div>
 
                 {/* 2. Quantity */}
-                <div className="text-center md:text-left">
+                <div className="text-left">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Quantity</p>
                   <p className="text-lg font-bold text-gray-800 leading-none">
                     {batch.quantity_remaining}
@@ -184,9 +184,9 @@ const Batches = () => {
                 </div>
 
                 {/* 3. Pricing */}
-                <div className="text-center md:text-left">
+                <div className="text-left">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Buy / Sell</p>
-                  <div className="flex items-baseline space-x-1 justify-center md:justify-start">
+                  <div className="flex items-baseline space-x-1 justify-start">
                     <span className="text-sm font-bold text-gray-700">${Number(batch.purchase_price || 0).toFixed(2)}</span>
                     <span className="text-xs text-gray-300">/</span>
                     <span className="text-sm font-bold text-indigo-600">${Number(batch.selling_price || 0).toFixed(2)}</span>
@@ -194,9 +194,9 @@ const Batches = () => {
                 </div>
 
                 {/* 4. Expiry */}
-                <div className="text-center md:text-left">
+                <div className="text-left">
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Expiry</p>
-                  <div className="flex items-center justify-center md:justify-start text-gray-700">
+                  <div className="flex items-center justify-start text-gray-700">
                     <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-300" />
                     <span className="font-bold text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
                   </div>
@@ -222,11 +222,11 @@ const Batches = () => {
                 </div>
 
                 {/* 6. Actions */}
-                <div className="flex justify-end">
+                <div className="flex justify-end col-span-2 md:col-span-1 xl:col-span-1">
                   {canDelete('batches') && (
                     <button
                       onClick={() => handleDelete(batch.id)}
-                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                      className="p-2.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100 shadow-sm hover:shadow-md"
                       title="Delete Batch"
                     >
                       <Trash2 className="w-4 h-4" />

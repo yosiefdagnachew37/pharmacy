@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  FileText, 
-  Plus, 
-  Calendar, 
-  User, 
+import {
+  FileText,
+  Plus,
+  Calendar,
+  User,
   ExternalLink,
   ClipboardCheck,
   Clock,
@@ -44,11 +44,11 @@ const Prescriptions = () => {
   const { canCreate } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
-  
+
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_name: '',
@@ -118,12 +118,12 @@ const Prescriptions = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Prescriptions</h1>
         {canCreate('prescriptions') && (
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+            className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Prescription
@@ -225,20 +225,20 @@ const Prescriptions = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-bold text-gray-800">Prescribed Medications</h4>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={addItem}
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center"
               >
                 <Plus className="w-3 h-3 mr-1" /> Add Medicine
               </button>
             </div>
-            
+
             {formData.items.map((item, idx) => (
               <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200 relative">
                 {formData.items.length > 1 && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => removeItem(idx)}
                     className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
                   >

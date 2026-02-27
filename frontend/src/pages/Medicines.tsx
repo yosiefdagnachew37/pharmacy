@@ -20,7 +20,7 @@ const Medicines = () => {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMed, setEditingMed] = useState<Medicine | null>(null);
   const [formData, setFormData] = useState<Partial<Medicine>>({
@@ -78,7 +78,7 @@ const Medicines = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Explicitly pick only the whitelisted fields to avoid 400 Bad Request from backend's forbidNonWhitelisted: true
     const payload = {
       name: formData.name,
@@ -88,7 +88,7 @@ const Medicines = () => {
       minimum_stock_level: Number(formData.minimum_stock_level),
       is_controlled: formData.is_controlled
     };
-    
+
     try {
       if (editingMed) {
         await client.patch(`/medicines/${editingMed.id}`, payload);
@@ -103,19 +103,19 @@ const Medicines = () => {
     }
   };
 
-  const filteredMedicines = medicines.filter(m => 
+  const filteredMedicines = medicines.filter(m =>
     (m.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (m.generic_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">Medicines Inventory</h1>
         {canCreate('medicines') && (
-          <button 
+          <button
             onClick={() => handleOpenModal()}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+            className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2.5 rounded-lg flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm active:scale-95"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Medicine
@@ -124,13 +124,13 @@ const Medicines = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-200 flex items-center">
-          <div className="relative flex-1 max-w-md">
+        <div className="p-4 border-b border-gray-200">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder="Search medicines..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -167,7 +167,7 @@ const Medicines = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{med.category}</td>
                     <td className="px-6 py-4">
-                       <span className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
+                      <span className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
                         {med.total_stock} {med.unit}
                       </span>
                     </td>
@@ -180,22 +180,22 @@ const Medicines = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                       {canUpdate('medicines') && (
-                         <button 
+                      {canUpdate('medicines') && (
+                        <button
                           onClick={() => handleOpenModal(med)}
                           className="text-gray-400 hover:text-indigo-600"
-                         >
+                        >
                           <Edit2 className="w-4 h-4" />
-                         </button>
-                       )}
-                       {canDelete('medicines') && (
-                         <button 
+                        </button>
+                      )}
+                      {canDelete('medicines') && (
+                        <button
                           onClick={() => handleDelete(med.id)}
                           className="text-gray-400 hover:text-red-600"
-                         >
+                        >
                           <Trash2 className="w-4 h-4" />
-                         </button>
-                       )}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -205,9 +205,9 @@ const Medicines = () => {
         </div>
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={editingMed ? 'Edit Medicine' : 'Add New Medicine'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">

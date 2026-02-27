@@ -77,16 +77,16 @@ const SalesLog = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Sales Log</h1>
                     <p className="text-gray-500 text-sm">View and manage all transaction history</p>
                 </div>
-                <div className="flex space-x-3">
+                <div className="flex w-full sm:w-auto">
                     <button
                         onClick={handleExportExcel}
                         disabled={exporting}
-                        className="flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
                     >
                         {exporting ? (
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
