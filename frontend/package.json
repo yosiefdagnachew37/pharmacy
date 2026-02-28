@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "Pharmacy Management System with RBAC and Inventory Tracking",
   "author": "Yosief",
+  "engines": {
+    "node": "20.x"
+  },
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
