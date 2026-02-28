@@ -75,6 +75,7 @@ async function seed() {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto";`);
 
     try {
         // ── 1. SEED USERS ─────────────────────────────────────────────
