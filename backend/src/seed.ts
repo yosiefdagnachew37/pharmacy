@@ -10,6 +10,9 @@ const AppDataSource = new DataSource({
     url: process.env.DATABASE_URL,
     synchronize: false,
     logging: false,
+    ssl: {
+        rejectUnauthorized: false,   // ⭐ REQUIRED for Railway
+    },
 });
 
 // ── Helpers ─────────────────────────────────────────────────────────
