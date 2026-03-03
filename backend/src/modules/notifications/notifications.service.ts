@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Notification, NotificationType } from './entities/notification.entity';
 
 @Injectable()
 export class NotificationsService {
+    private readonly logger = new Logger(NotificationsService.name);
+
     constructor(
         @InjectRepository(Notification)
         private readonly notificationRepository: Repository<Notification>,
@@ -16,6 +18,7 @@ export class NotificationsService {
         message: string;
         type: NotificationType;
     }): Promise<Notification> {
+        this.logger.log(`Creating notification: ${data.title} for user: ${data.user_id || 'Broadcast'}`);
         const notification = this.notificationRepository.create(data);
         return this.notificationRepository.save(notification);
     }
@@ -32,12 +35,14 @@ export class NotificationsService {
     }
 
     async getUnreadCount(userId: string): Promise<number> {
-        return this.notificationRepository.count({
+        const count = await this.notificationRepository.count({
             where: [
                 { user_id: userId, is_read: false },
                 { user_id: IsNull(), is_read: false },
             ],
         });
+        this.logger.debug(`Unread count for user ${userId}: ${count}`);
+        return count;
     }
 
     async markAsRead(id: string): Promise<void> {

@@ -1,20 +1,31 @@
-import { Controller, Get, Patch, Delete, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Req, UseGuards } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { NotificationType } from './entities/notification.entity';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
 
+    @Post('test')
+    async createTest(@Req() req: any) {
+        return this.notificationsService.create({
+            title: 'Test Notification',
+            message: 'This is a test notification to verify the system is working!',
+            type: NotificationType.INFO,
+            user_id: req.user.userId
+        });
+    }
+
     @Get()
     async findAll(@Req() req: any) {
-        return this.notificationsService.findAllForUser(req.user.id);
+        return this.notificationsService.findAllForUser(req.user.userId);
     }
 
     @Get('unread-count')
     async getUnreadCount(@Req() req: any) {
-        const count = await this.notificationsService.getUnreadCount(req.user.id);
+        const count = await this.notificationsService.getUnreadCount(req.user.userId);
         return { count };
     }
 
@@ -26,7 +37,7 @@ export class NotificationsController {
 
     @Patch('read-all')
     async markAllAsRead(@Req() req: any) {
-        await this.notificationsService.markAllAsRead(req.user.id);
+        await this.notificationsService.markAllAsRead(req.user.userId);
         return { success: true };
     }
 

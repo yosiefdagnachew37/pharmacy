@@ -60,7 +60,7 @@ const NotificationBell = () => {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000);
+        const interval = setInterval(fetchUnreadCount, 10000); // More frequent updates for testing
         return () => clearInterval(interval);
     }, []);
 
@@ -153,6 +153,16 @@ const NotificationBell = () => {
                                     Mark all read
                                 </button>
                             )}
+                            <button
+                                onClick={async () => {
+                                    await client.post('/notifications/test');
+                                    fetchUnreadCount();
+                                    if (notifications.length > 0) fetchNotifications();
+                                }}
+                                className="text-[10px] font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg transition-colors"
+                            >
+                                Test
+                            </button>
                             <button
                                 onClick={() => setIsOpen(false)}
                                 className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"

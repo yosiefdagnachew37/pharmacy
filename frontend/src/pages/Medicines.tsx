@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, Save, Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Save, Upload, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
 
