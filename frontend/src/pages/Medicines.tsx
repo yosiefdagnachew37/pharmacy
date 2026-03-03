@@ -240,9 +240,9 @@ const Medicines = () => {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[400px]">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold">
+            <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
               <tr>
                 <ColumnFilter
                   label="Medicine Name"

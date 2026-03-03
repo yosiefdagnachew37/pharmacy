@@ -7,6 +7,8 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { StockService } from '../stock/stock.service';
 import { ReferenceType } from '../stock/entities/stock-transaction.entity';
 import { AlertsService } from '../alerts/alerts.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class SalesService {
@@ -17,6 +19,7 @@ export class SalesService {
         private readonly itemsRepository: Repository<SaleItem>,
         private readonly stockService: StockService,
         private readonly alertsService: AlertsService,
+        private readonly notificationsService: NotificationsService,
         private dataSource: DataSource,
     ) { }
 
@@ -71,6 +74,13 @@ export class SalesService {
         this.alertsService.checkLowStock().catch(err =>
             console.error('Error in reactive stock check:', err)
         );
+
+        // Notify admins of the new sale
+        this.notificationsService.create({
+            title: 'New Sale Completed',
+            message: `A sale of $${sale.total_amount.toLocaleString()} has been processed (Receipt: ${sale.receipt_number || 'N/A'})`,
+            type: NotificationType.SALE
+        }).catch(err => console.error('Error creating sale notification:', err));
 
         return sale;
     }

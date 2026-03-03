@@ -5,7 +5,10 @@ import { AlertsService } from './alerts.service';
 import { AlertsController } from './alerts.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Alert])],
+  imports: [
+    TypeOrmModule.forFeature([Alert]),
+    NotificationsModule,
+  ],
   controllers: [AlertsController],
   providers: [AlertsService],
   exports: [AlertsService],

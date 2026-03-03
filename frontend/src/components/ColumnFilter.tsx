@@ -11,7 +11,7 @@ interface ColumnFilterProps {
 const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: ColumnFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLTableHeaderCellElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -44,7 +44,7 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: Column
     const isActive = selectedValues.length > 0;
 
     return (
-        <th className="px-6 py-3 relative" ref={ref}>
+        <th className={`px-6 py-3 relative ${isOpen ? 'z-[100]' : 'z-10'}`} ref={ref}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full text-left ${isActive ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
@@ -114,8 +114,8 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: Column
                                             }`}
                                     >
                                         <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all ${isSelected
-                                                ? 'bg-indigo-600 border-indigo-600'
-                                                : 'border-gray-300 bg-white'
+                                            ? 'bg-indigo-600 border-indigo-600'
+                                            : 'border-gray-300 bg-white'
                                             }`}>
                                             {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                                         </div>

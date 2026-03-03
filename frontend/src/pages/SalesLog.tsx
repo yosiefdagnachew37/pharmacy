@@ -161,10 +161,10 @@ const SalesLog = () => {
                         <p>No transactions found.</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100">
+                                <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-30 shadow-sm">
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date & Time</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt #</th>
                                     <ColumnFilter

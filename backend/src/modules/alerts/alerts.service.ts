@@ -5,6 +5,8 @@ import { Alert, AlertType, AlertStatus } from './entities/alert.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { Batch } from '../batches/entities/batch.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class AlertsService {
@@ -13,6 +15,7 @@ export class AlertsService {
     constructor(
         @InjectRepository(Alert)
         private readonly alertsRepository: Repository<Alert>,
+        private readonly notificationsService: NotificationsService,
         private dataSource: DataSource,
     ) { }
 
@@ -117,6 +120,14 @@ export class AlertsService {
                 status: AlertStatus.ACTIVE,
             });
             await this.alertsRepository.save(alert);
+
+            // Trigger in-app notification
+            await this.notificationsService.create({
+                title: type === AlertType.LOW_STOCK ? 'Low Stock Alert' : 'Expiring Batch Alert',
+                message,
+                type: type === AlertType.LOW_STOCK ? NotificationType.LOW_STOCK : NotificationType.EXPIRING
+            });
+
             this.logger.log(`New Alert Created: ${message}`);
         }
     }

@@ -14,6 +14,7 @@ import { AuditModule } from '../audit/audit.module';
         StockModule,
         AlertsModule,
         AuditModule,
+        NotificationsModule,
     ],
     controllers: [SalesController],
     providers: [SalesService],
