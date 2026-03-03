@@ -6,7 +6,6 @@ import Medicines from './pages/Medicines';
 import Batches from './pages/Batches';
 import POS from './pages/POS';
 import Patients from './pages/Patients';
-
 import Alerts from './pages/Alerts';
 import AuditLogs from './pages/AuditLogs';
 import Login from './pages/Login';
@@ -72,7 +71,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="alerts"
               element={

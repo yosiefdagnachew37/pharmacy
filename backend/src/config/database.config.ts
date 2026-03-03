@@ -8,6 +8,6 @@ export default registerAs('database', () => ({
     password: process.env.DB_PASSWORD || 'yosief',
     database: process.env.DB_NAME || 'pharmacy_db',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    synchronize: process.env.NODE_ENV !== 'production', // true for dev, false for prod
-    logging: process.env.NODE_ENV !== 'production',
+    synchronize: true,
+    logging: true,
 }));
