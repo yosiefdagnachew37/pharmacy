@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { BatchesService } from './batches.service';
 import { CreateBatchDto } from './dto/create-batch.dto';
 import { UpdateBatchDto } from './dto/update-batch.dto';
@@ -87,5 +88,15 @@ export class BatchesController {
             entity_id: id,
             old_values: { batch_number: batch.batch_number },
         });
+    }
+
+    @Post('import')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    @UseInterceptors(FileInterceptor('file'))
+    async importExcel(@UploadedFile() file: Express.Multer.File) {
+        if (!file) {
+            return { created: 0, errors: [{ row: 0, message: 'No file uploaded' }] };
+        }
+        return this.batchesService.importFromExcel(file.buffer);
     }
 }

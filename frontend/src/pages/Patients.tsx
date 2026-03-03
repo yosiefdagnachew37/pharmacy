@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, User, Phone, MapPin, Save, Trash2, FileText, ShoppingCart, Loader2, Calendar, ChevronRight, Clock } from 'lucide-react';
+import {
+  Plus, Search, User, Phone, MapPin, Save, Trash2, FileText,
+  ShoppingCart, Loader2, Calendar, ChevronRight, Clock,
+  ClipboardCheck, ExternalLink
+} from 'lucide-react';
 import Modal from '../components/Modal';
 
 interface Patient {
@@ -16,8 +20,32 @@ interface Patient {
   sales?: any[];
 }
 
+interface Medicine {
+  id: string;
+  name: string;
+}
+
+interface PrescriptionItem {
+  medicine_id: string;
+  medicine: { name: string };
+  dosage: string;
+  duration: string;
+}
+
+interface Prescription {
+  id: string;
+  patient_name: string;
+  patient: { name: string };
+  doctor_name: string;
+  items: PrescriptionItem[];
+  created_at: string;
+}
+
 const Patients = () => {
   const { canCreate, canDelete } = useAuth();
+  const [activeTab, setActiveTab] = useState<'directory' | 'prescriptions'>('directory');
+
+  // ─── Patient State ──────────────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -36,6 +64,20 @@ const Patients = () => {
     allergies: []
   });
 
+  // ─── Prescription State ─────────────────────────────────────────
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [prescriptionLoading, setPrescriptionLoading] = useState(true);
+  const [prescriptionSearch, setPrescriptionSearch] = useState('');
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+
+  const [rxFormData, setRxFormData] = useState({
+    patient_id: '',
+    doctor_name: '',
+    items: [{ medicine_id: '', dosage: '', duration: '' }]
+  });
+
+  // ─── Data Fetching ──────────────────────────────────────────────
   const fetchPatients = async () => {
     setLoading(true);
     try {
@@ -45,6 +87,27 @@ const Patients = () => {
       console.error('Error fetching patients:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPrescriptions = async () => {
+    setPrescriptionLoading(true);
+    try {
+      const response = await client.get('/prescriptions');
+      setPrescriptions(response.data);
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
+    } finally {
+      setPrescriptionLoading(false);
+    }
+  };
+
+  const fetchMedicines = async () => {
+    try {
+      const response = await client.get('/medicines');
+      setMedicines(response.data);
+    } catch (err) {
+      console.error('Error fetching medicines:', err);
     }
   };
 
@@ -63,8 +126,11 @@ const Patients = () => {
 
   useEffect(() => {
     fetchPatients();
+    fetchPrescriptions();
+    fetchMedicines();
   }, []);
 
+  // ─── Patient Handlers ──────────────────────────────────────────
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this patient record?')) return;
     try {
@@ -87,116 +153,287 @@ const Patients = () => {
     }
   };
 
+  // ─── Prescription Handlers ─────────────────────────────────────
+  const addRxItem = () => {
+    setRxFormData({
+      ...rxFormData,
+      items: [...rxFormData.items, { medicine_id: '', dosage: '', duration: '' }]
+    });
+  };
+
+  const removeRxItem = (index: number) => {
+    setRxFormData({
+      ...rxFormData,
+      items: rxFormData.items.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleRxSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await client.post('/prescriptions', rxFormData);
+      setIsPrescriptionModalOpen(false);
+      fetchPrescriptions();
+      setRxFormData({
+        patient_id: '',
+        doctor_name: '',
+        items: [{ medicine_id: '', dosage: '', duration: '' }]
+      });
+    } catch (err: any) {
+      console.error('Error creating prescription:', err.response?.data || err.message);
+      alert(err.response?.data?.message || 'Error creating prescription. Ensure all fields are filled.');
+    }
+  };
+
+  // ─── Filtered Data ─────────────────────────────────────────────
   const filteredPatients = patients.filter(p =>
     (p.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (p.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
+  const filteredPrescriptions = prescriptions.filter(rx =>
+    (rx.patient?.name?.toLowerCase() || '').includes(prescriptionSearch.toLowerCase()) ||
+    (rx.doctor_name?.toLowerCase() || '').includes(prescriptionSearch.toLowerCase())
+  );
+
+  // ─── Tab Buttons ────────────────────────────────────────────────
+  const tabs = [
+    { key: 'directory' as const, label: 'Patient Directory', icon: User },
+    { key: 'prescriptions' as const, label: 'Prescriptions', icon: FileText },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Patient Directory</h1>
-        {canCreate('patients') && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Register Patient
-          </button>
-        )}
-      </div>
+      {/* Header + Tabs */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-800">Patient Management</h1>
+          <div className="flex gap-3 w-full sm:w-auto">
+            {activeTab === 'directory' && canCreate('patients') && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Register Patient
+              </button>
+            )}
+            {activeTab === 'prescriptions' && canCreate('prescriptions') && (
+              <button
+                onClick={() => setIsPrescriptionModalOpen(true)}
+                className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Prescription
+              </button>
+            )}
+          </div>
+        </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search by name or phone number..."
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        {/* Tab Bar */}
+        <div className="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab.key
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          <div className="col-span-full py-12 text-center text-gray-500 italic">Finding patient records...</div>
-        ) : filteredPatients.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-gray-500 italic">No patients found match your search.</div>
-        ) : (
-          filteredPatients.map((patient) => (
-            <div
-              key={patient.id}
-              onClick={() => fetchHistory(patient.id)}
-              className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden"
-            >
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <ChevronRight className="w-4 h-4 text-indigo-300" />
-              </div>
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* PATIENT DIRECTORY TAB                                         */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'directory' && (
+        <>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by name or phone number..."
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
 
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start space-x-3">
-                  <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-                    <User className="w-6 h-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loading ? (
+              <div className="col-span-full py-12 text-center text-gray-500 italic">Finding patient records...</div>
+            ) : filteredPatients.length === 0 ? (
+              <div className="col-span-full py-12 text-center text-gray-500 italic">No patients found match your search.</div>
+            ) : (
+              filteredPatients.map((patient) => (
+                <div
+                  key={patient.id}
+                  onClick={() => fetchHistory(patient.id)}
+                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden"
+                >
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronRight className="w-4 h-4 text-indigo-300" />
                   </div>
-                </div>
-                {canDelete('patients') && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(patient.id);
-                    }}
-                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    title="Delete Patient"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
 
-              <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {patient.gender}, {patient.age} years old
-                <span className="ml-2 px-1.5 py-0.5 bg-gray-50 text-[10px] font-bold text-gray-400 border border-gray-100 rounded">
-                  #{patient.id.slice(0, 8)}
-                </span>
-              </p>
-
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Phone className="w-4 h-4 mr-3 text-gray-400" />
-                  {patient.phone || 'No phone recorded'}
-                </div>
-                <div className="flex items-center text-sm text-gray-600 truncate">
-                  <MapPin className="w-4 h-4 mr-3 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">{patient.address || 'Address not provided'}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Allergies</p>
-                  <div className="flex flex-wrap gap-1">
-                    {patient.allergies?.length > 0 ? (
-                      patient.allergies.map(a => (
-                        <span key={a} className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[10px] font-medium border border-red-100">{a}</span>
-                      ))
-                    ) : (
-                      <span className="text-[10px] text-green-600 font-medium italic">None recorded</span>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+                        <User className="w-6 h-6" />
+                      </div>
+                    </div>
+                    {canDelete('patients') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(patient.id);
+                        }}
+                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                        title="Delete Patient"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
-                </div>
-                <div className="text-xs font-bold text-indigo-600 flex items-center">
-                  View History <ChevronRight className="w-3 h-3 ml-1" />
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
 
+                  <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {patient.gender}, {patient.age} years old
+                    <span className="ml-2 px-1.5 py-0.5 bg-gray-50 text-[10px] font-bold text-gray-400 border border-gray-100 rounded">
+                      #{patient.id.slice(0, 8)}
+                    </span>
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Phone className="w-4 h-4 mr-3 text-gray-400" />
+                      {patient.phone || 'No phone recorded'}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 truncate">
+                      <MapPin className="w-4 h-4 mr-3 text-gray-400 flex-shrink-0" />
+                      <span className="truncate">{patient.address || 'Address not provided'}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Allergies</p>
+                      <div className="flex flex-wrap gap-1">
+                        {patient.allergies?.length > 0 ? (
+                          patient.allergies.map(a => (
+                            <span key={a} className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[10px] font-medium border border-red-100">{a}</span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-green-600 font-medium italic">None recorded</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-indigo-600 flex items-center">
+                      View History <ChevronRight className="w-3 h-3 ml-1" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* PRESCRIPTIONS TAB                                             */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'prescriptions' && (
+        <>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by patient name or doctor..."
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                value={prescriptionSearch}
+                onChange={(e) => setPrescriptionSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {prescriptionLoading ? (
+              <div className="bg-white p-12 text-center text-gray-400 italic rounded-xl border border-gray-100 shadow-sm">
+                Retrieving medical files...
+              </div>
+            ) : filteredPrescriptions.length === 0 ? (
+              <div className="bg-white p-12 text-center text-gray-400 italic rounded-xl border border-gray-100 shadow-sm">
+                No active prescriptions on file.
+              </div>
+            ) : (
+              filteredPrescriptions.map((prescription) => (
+                <div key={prescription.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:border-indigo-200 transition-all">
+                  <div className="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{prescription.patient?.name || prescription.patient_name}</h3>
+                        <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                          <User className="w-3 h-3 mr-1" />
+                          Dr. {prescription.doctor_name}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-6">
+                      <div className="text-right">
+                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">Prescribed On</p>
+                        <div className="flex items-center text-sm font-medium text-gray-700">
+                          <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                          {new Date(prescription.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <button className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">
+                        <ExternalLink className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-5 bg-gray-50/50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {prescription.items.map((item, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                          <h4 className="font-bold text-gray-800 text-sm mb-2">{item.medicine?.name || 'Unknown Medicine'}</h4>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center text-xs text-gray-600">
+                              <ClipboardCheck className="w-3.5 h-3.5 mr-2 text-indigo-400" />
+                              {item.dosage}
+                            </div>
+                            <div className="flex items-center text-xs text-gray-600">
+                              <Clock className="w-3.5 h-3.5 mr-2 text-orange-400" />
+                              {item.duration}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* MODALS                                                        */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+
+      {/* Register Patient Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register New Patient">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -297,7 +534,6 @@ const Patients = () => {
             </div>
           ) : (
             <div className="space-y-8 py-4">
-              {/* Combine and sort history by date */}
               {[
                 ...(selectedHistory.prescriptions || []).map(p => ({ ...p, type: 'PRESCRIPTION' })),
                 ...(selectedHistory.sales || []).map(s => ({ ...s, type: 'SALE' }))
@@ -305,10 +541,7 @@ const Patients = () => {
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .map((item) => (
                   <div key={`${item.type}-${item.id}`} className="relative pl-8 pb-2">
-                    {/* Timeline Line */}
                     <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-gray-100 last:hidden" />
-
-                    {/* Timeline Indicator */}
                     <div className={`absolute left-0 top-1 p-1.5 rounded-full z-10 ${item.type === 'PRESCRIPTION' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'
                       }`}>
                       {item.type === 'PRESCRIPTION' ? <FileText className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
@@ -373,7 +606,120 @@ const Patients = () => {
           )}
         </div>
       </Modal>
-    </div >
+
+      {/* New Prescription Modal */}
+      <Modal isOpen={isPrescriptionModalOpen} onClose={() => setIsPrescriptionModalOpen(false)} title="Issue New Prescription">
+        <form onSubmit={handleRxSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Patient</label>
+              <select
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={rxFormData.patient_id}
+                onChange={(e) => setRxFormData({ ...rxFormData, patient_id: e.target.value })}
+              >
+                <option value="">Choose a patient...</option>
+                {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
+              <input
+                required
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                value={rxFormData.doctor_name}
+                onChange={(e) => setRxFormData({ ...rxFormData, doctor_name: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-gray-800">Prescribed Medications</h4>
+              <button
+                type="button"
+                onClick={addRxItem}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center"
+              >
+                <Plus className="w-3 h-3 mr-1" /> Add Medicine
+              </button>
+            </div>
+
+            {rxFormData.items.map((item, idx) => (
+              <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200 relative">
+                {rxFormData.items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeRxItem(idx)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+                <div className="grid grid-cols-1 gap-3">
+                  <select
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={item.medicine_id}
+                    onChange={(e) => {
+                      const newItems = [...rxFormData.items];
+                      newItems[idx].medicine_id = e.target.value;
+                      setRxFormData({ ...rxFormData, items: newItems });
+                    }}
+                  >
+                    <option value="">Select Medicine...</option>
+                    {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      required
+                      placeholder="Dosage (e.g. 1x3)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      value={item.dosage}
+                      onChange={(e) => {
+                        const newItems = [...rxFormData.items];
+                        newItems[idx].dosage = e.target.value;
+                        setRxFormData({ ...rxFormData, items: newItems });
+                      }}
+                    />
+                    <input
+                      required
+                      placeholder="Duration (e.g. 5 days)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      value={item.duration}
+                      onChange={(e) => {
+                        const newItems = [...rxFormData.items];
+                        newItems[idx].duration = e.target.value;
+                        setRxFormData({ ...rxFormData, items: newItems });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setIsPrescriptionModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 flex items-center shadow-lg shadow-indigo-100"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Issue Prescription
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
   );
 };
 

@@ -76,4 +76,49 @@ export class MedicinesService {
         const medicine = await this.findOne(id);
         await this.medicinesRepository.remove(medicine);
     }
+
+    async importFromExcel(buffer: Buffer): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+        const ExcelJS = await import('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer as any);
+
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+            return { created: 0, errors: [{ row: 0, message: 'No worksheet found in file' }] };
+        }
+
+        const created: any[] = [];
+        const errors: { row: number; message: string }[] = [];
+
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return; // skip header
+
+            const name = row.getCell(1).value?.toString()?.trim();
+            const generic_name = row.getCell(2).value?.toString()?.trim() || '';
+            const category = row.getCell(3).value?.toString()?.trim() || '';
+            const unit = row.getCell(4).value?.toString()?.trim() || 'TAB';
+            const minimum_stock_level = parseInt(row.getCell(5).value?.toString() || '10') || 10;
+            const is_controlled = ['true', 'yes', '1'].includes((row.getCell(6).value?.toString()?.trim() || '').toLowerCase());
+
+            if (!name) {
+                errors.push({ row: rowNumber, message: 'Medicine name is required' });
+                return;
+            }
+
+            created.push({ name, generic_name, category, unit, minimum_stock_level, is_controlled });
+        });
+
+        let savedCount = 0;
+        for (let i = 0; i < created.length; i++) {
+            try {
+                const medicine = this.medicinesRepository.create(created[i]);
+                await this.medicinesRepository.save(medicine);
+                savedCount++;
+            } catch (err: any) {
+                errors.push({ row: i + 2, message: err.message || 'Failed to save' });
+            }
+        }
+
+        return { created: savedCount, errors };
+    }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import client from '../api/client';
 import {
     Calendar,
@@ -11,6 +11,7 @@ import {
     Loader2
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import ColumnFilter from '../components/ColumnFilter';
 
 interface Sale {
     id: string;
@@ -33,6 +34,13 @@ const SalesLog = () => {
     const [loading, setLoading] = useState(true);
     const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
     const [exporting, setExporting] = useState(false);
+
+    // ─── Column Filters ──────────────────────────────────────────
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        patient: [],
+        method: [],
+        user: [],
+    });
 
     useEffect(() => {
         const fetchSales = async () => {
@@ -70,10 +78,32 @@ const SalesLog = () => {
         }
     };
 
-    const filteredSales = sales.filter(sale =>
-        (sale.receipt_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (sale.patient?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
+    // ─── Unique Options ──────────────────────────────────────────
+    const uniquePatients = useMemo(() => [...new Set(sales.map(s => s.patient?.name || 'Walk-in'))].sort(), [sales]);
+    const uniqueMethods = useMemo(() => [...new Set(sales.map(s => s.payment_method).filter(Boolean))].sort(), [sales]);
+    const uniqueUsers = useMemo(() => [...new Set(sales.map(s => s.user?.username || 'System'))].sort(), [sales]);
+
+    const filteredSales = useMemo(() => {
+        return sales.filter(sale => {
+            const matchesSearch =
+                (sale.receipt_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                (sale.patient?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+            const patientName = sale.patient?.name || 'Walk-in';
+            const userName = sale.user?.username || 'System';
+            const matchesPatient = columnFilters.patient.length === 0 || columnFilters.patient.includes(patientName);
+            const matchesMethod = columnFilters.method.length === 0 || columnFilters.method.includes(sale.payment_method);
+            const matchesUser = columnFilters.user.length === 0 || columnFilters.user.includes(userName);
+
+            return matchesSearch && matchesPatient && matchesMethod && matchesUser;
+        });
+    }, [sales, searchTerm, columnFilters]);
+
+    const updateFilter = (column: string, values: string[]) => {
+        setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     return (
         <div className="space-y-6">
@@ -98,8 +128,8 @@ const SalesLog = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                <div className="relative">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                         type="text"
@@ -109,6 +139,14 @@ const SalesLog = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                {activeFilterCount > 0 && (
+                    <button
+                        onClick={() => setColumnFilters({ patient: [], method: [], user: [] })}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                        Clear All Filters ({activeFilterCount})
+                    </button>
+                )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -129,9 +167,24 @@ const SalesLog = () => {
                                 <tr className="bg-gray-50 border-b border-gray-100">
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date & Time</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Receipt #</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Patient</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Method</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                                    <ColumnFilter
+                                        label="Patient"
+                                        options={uniquePatients}
+                                        selectedValues={columnFilters.patient}
+                                        onFilterChange={(v) => updateFilter('patient', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Method"
+                                        options={uniqueMethods}
+                                        selectedValues={columnFilters.method}
+                                        onFilterChange={(v) => updateFilter('method', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="User"
+                                        options={uniqueUsers}
+                                        selectedValues={columnFilters.user}
+                                        onFilterChange={(v) => updateFilter('user', v)}
+                                    />
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                                 </tr>

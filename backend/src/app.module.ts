@@ -17,6 +17,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { SystemModule } from './modules/system/system.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SystemModule } from './modules/system/system.module';
     SalesModule,
     ReportingModule,
     SystemModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

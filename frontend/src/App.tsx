@@ -6,12 +6,13 @@ import Medicines from './pages/Medicines';
 import Batches from './pages/Batches';
 import POS from './pages/POS';
 import Patients from './pages/Patients';
-import Prescriptions from './pages/Prescriptions';
+
 import Alerts from './pages/Alerts';
 import AuditLogs from './pages/AuditLogs';
 import Login from './pages/Login';
 import System from './pages/System';
 import SalesLog from './pages/SalesLog';
+import Reports from './pages/Reports';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -56,6 +57,14 @@ function App() {
               }
             />
             <Route
+              path="reports"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="patients"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
@@ -63,14 +72,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="prescriptions"
-              element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
-                  <Prescriptions />
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="alerts"
               element={

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MedicinesService } from './medicines.service';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
@@ -71,5 +72,15 @@ export class MedicinesController {
             entity_id: id,
             old_values: { name: medicine.name },
         });
+    }
+
+    @Post('import')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    @UseInterceptors(FileInterceptor('file'))
+    async importExcel(@UploadedFile() file: Express.Multer.File) {
+        if (!file) {
+            return { created: 0, errors: [{ row: 0, message: 'No file uploaded' }] };
+        }
+        return this.medicinesService.importFromExcel(file.buffer);
     }
 }

@@ -11,8 +11,22 @@ import {
   ExternalLink,
   ChevronRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
+} from 'recharts';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,22 +41,30 @@ const Dashboard = () => {
     inventorySummary: [] as any[],
     totalMedicines: 0
   });
+  const [trending, setTrending] = useState<any[]>([]);
+  const [revenue, setRevenue] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSales, setExpandedSales] = useState(false);
   const [expandedStock, setExpandedStock] = useState(false);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await client.get('/reporting/dashboard');
-        setStats(response.data);
+        const [statsRes, trendRes, revRes] = await Promise.all([
+          client.get('/reporting/dashboard'),
+          client.get('/reporting/trending-medicines?limit=10'),
+          client.get('/reporting/revenue-comparison')
+        ]);
+        setStats(statsRes.data);
+        setTrending(trendRes.data);
+        setRevenue(revRes.data);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats', error);
+        console.error('Failed to fetch dashboard data', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchStats();
+    fetchData();
   }, []);
 
   const statCards = [
@@ -145,6 +167,76 @@ const Dashboard = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-50">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Top Selling Medicines</h3>
+            </div>
+            <button onClick={() => navigate('/reports')} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-200">Full Analysis</button>
+          </div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trending}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                <Tooltip
+                  cursor={{ fill: '#F9FAFB' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="total_quantity" fill="#4F46E5" radius={[6, 6, 0, 0]} barSize={32}>
+                  {trending.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#4F46E5' : '#818CF8'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-indigo-900 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:scale-150 transition-transform duration-1000" />
+
+          <h3 className="text-xl font-extrabold flex items-center gap-2 mb-8 relative z-10">
+            <Calendar className="w-5 h-5 text-indigo-300" />
+            Revenue Overview
+          </h3>
+
+          <div className="space-y-6 relative z-10">
+            <div>
+              <p className="text-xs font-bold text-indigo-300 uppercase tracking-[0.2em] mb-1">Today</p>
+              <h4 className="text-3xl font-black">${revenue?.today?.toFixed(2) || '0.00'}</h4>
+              <div className="flex items-center gap-1.5 text-emerald-400 mt-2 font-bold text-xs uppercase">
+                <ArrowUpRight className="w-4 h-4" /> Live Tracking
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-indigo-800">
+              <div>
+                <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Yesterday</p>
+                <p className="text-lg font-black">${revenue?.yesterday?.toFixed(2) || '0.00'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">This Week</p>
+                <p className="text-lg font-black">${revenue?.thisWeek?.toFixed(2) || '0.00'}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/reports')}
+              className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-sm font-bold transition-all border border-white/10 mt-6"
+            >
+              Detailed Financial Report
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

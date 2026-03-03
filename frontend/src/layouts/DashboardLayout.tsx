@@ -14,8 +14,10 @@ import {
   Shield,
   LogOut,
   Menu,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 interface MenuItem {
   icon: any;
@@ -30,8 +32,8 @@ const allMenuItems: MenuItem[] = [
   { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
   { icon: FileText, label: 'Sales Log', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
-  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: FileText, label: 'Prescriptions', path: '/prescriptions', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
+  { icon: Users, label: 'Patient', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR'] },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN'] },
@@ -160,7 +162,8 @@ const DashboardLayout = () => {
               <span className="hidden md:block text-xs text-gray-400 font-bold uppercase tracking-tight mr-4">
                 Session: <span className="text-indigo-600">{role}</span>
               </span>
-              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 ring-1 ring-indigo-100">
+              <NotificationBell />
+              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 ring-1 ring-indigo-100 ml-2">
                 <Users className="w-4 h-4" />
               </div>
             </div>
