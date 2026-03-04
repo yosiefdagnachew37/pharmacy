@@ -1,487 +1,605 @@
-# Implementation Plan — Advanced Pharmacy System Enhancements
+# Enterprise Pharmacy Intelligence Platform — Advanced Implementation Plan
 
-> **Document**: `imp-adv.md` (root of `Pharmacy_system`)
-> **Date**: 2026-03-03
+## Vision Statement
 
----
-
-## Overview
-
-This document outlines the implementation plan for **7 major feature enhancements** to the Pharmacy Management System. Each section describes the feature, the files impacted (both frontend and backend), and the technical approach.
+Transform the current Pharmacy Management System from an operational CRUD + Reporting platform into a **Fully Integrated Intelligent Pharmacy ERP** with Predictive Inventory, Procurement Optimization, Financial Intelligence, Compliance Monitoring, and Enterprise FEFO (First Expiry, First Out) enforcement.
 
 ---
 
-## Table of Contents
+## Current System Baseline
 
-1. [Column Filtering on Data Tables](#1-column-filtering-on-data-tables)
-2. [Excel Import for Medicines & Batches](#2-excel-import-for-medicines--batches)
-3. [Reports Page with Multi-Format Export](#3-reports-page-with-multi-format-export)
-4. [Profit & Loss Calculation](#4-profit--loss-calculation)
-5. [In-App Notification System](#5-in-app-notification-system)
-6. [Dashboard Trending / Analytics Visuals](#6-dashboard-trending--analytics-visuals)
-7. [Merge Patient & Prescription Pages](#7-merge-patient--prescription-pages)
+The existing system already provides:
+- Medicine & Batch CRUD with Excel import
+- FIFO stock issuance via `StockService.issueStock()`
+- POS with cart, checkout, and receipt numbers
+- Patient & Prescription management
+- Multi-format reporting (Excel, PDF, Word)
+- In-app notifications, audit logging, and system backups
+- RBAC with 4 roles (Admin, Pharmacist, Cashier, Auditor)
 
----
-
-## 1. Column Filtering on Data Tables
-
-### Description
-Add dropdown-based column filtering to table views. When a user clicks a column header (e.g. "Medicine Name", "Category", "Status"), a dropdown appears with all unique values for that column. The user can select one or more values to filter by. Multiple column filters should combine (AND logic) to narrow results. The reference UI is a dropdown appearing below the column header with checkboxes or a list of values.
-
-### Current State
-- `Medicines.tsx` has a table with 6 columns: Medicine Name, Category, Stock Level, Min. Level, Status, Actions.
-- Only a single text search bar exists (`searchTerm`) that does a fuzzy match on name/generic_name.
-- Other table pages (`SalesLog.tsx`, `Batches.tsx`) also only use text search.
-
-### Technical Approach
-
-#### Frontend
-
-##### [NEW] `frontend/src/components/ColumnFilter.tsx`
-- A reusable dropdown filter component.
-- **Props**: `columnKey`, `label`, `options` (unique values for the column), `selectedValues`, `onFilterChange`.
-- **Behavior**: Clicking the column header toggles the dropdown. A list of checkboxes is shown. On selecting/deselecting, the `onFilterChange` callback fires with updated selections.
-- Includes an "All" option to clear the filter for that column, and an "Advanced Search" link for multiple selection.
-- Dropdown closes when clicking outside (use a `useRef` + `useEffect` click-outside listener).
-
-##### [MODIFY] `frontend/src/pages/Medicines.tsx`
-- Add state: `columnFilters` object with keys for each filterable column: `name`, `category`, `status`.
-- Compute unique values for each column from the `medicines` array (e.g. unique categories, unique statuses like "Low Stock" / "In Stock").
-- Replace `<th>` elements with `<ColumnFilter>` components.
-- Update `filteredMedicines` logic to apply all active column filters (AND logic) in addition to the existing search.
-
-##### [MODIFY] `frontend/src/pages/SalesLog.tsx`
-- Add column filters for: Payment Method, Patient, User columns.
-- Same approach as Medicines.
-
-##### [MODIFY] `frontend/src/pages/Batches.tsx`
-- Add column filters for: Medicine Name, Status (Expired / Expiring Soon / Good).
-
-#### Backend
-- No backend changes required. Filtering is done client-side on already-fetched data.
+All new features build **on top of** this foundation without breaking existing functionality.
 
 ---
 
-## 2. Excel Import for Medicines & Batches
+## Phase 1 — Enterprise FEFO Framework & Batch Intelligence
 
-### Description
-Allow users to import medicine and batch data from Excel (.xlsx) files. The user clicks an "Import Excel" button, selects a file, the system parses it, validates the data, and creates records in bulk.
+> **Priority: CRITICAL** — Eliminates expiry losses, the #1 financial risk in pharmacy operations.
 
-### Current State
-- No import functionality exists anywhere.
-- Backend uses NestJS with `class-validator` DTOs for validation.
-- `exceljs` is already installed in the backend (`package.json`).
+### 1.1 Database Schema Changes
 
-### Technical Approach
+#### [MODIFY] `batch.entity.ts`
+Add fields to enforce FEFO and expiry locking:
+```
++ is_locked: boolean (default: false)     — Prevents sale of expired batches
++ is_quarantined: boolean (default: false) — Manual hold flag
++ supplier_id: string (nullable, FK)       — Links to future Supplier entity
++ notes: string (nullable)                 — Batch-level notes
+```
 
-#### Backend
+#### [MODIFY] `medicine.entity.ts`
+Add barcode infrastructure and procurement fields:
+```
++ barcode: string (unique, nullable)       — EAN/UPC barcode
++ sku: string (unique, nullable)           — Internal stock-keeping unit
++ supplier_barcode: string (nullable)      — Supplier's own barcode
++ preferred_supplier_id: string (nullable) — Default supplier FK
+```
 
-##### [MODIFY] `backend/src/modules/medicines/medicines.controller.ts`
-- Add a `POST /medicines/import` endpoint.
-- Accept a file upload using `@UseInterceptors(FileInterceptor('file'))` from `@nestjs/platform-express`.
-- Pass the file buffer to the service for parsing.
+#### [MODIFY] `stock-transaction.entity.ts`
+Add FEFO override tracking:
+```
++ is_fefo_override: boolean (default: false)
++ override_reason: string (nullable)
+```
 
-##### [MODIFY] `backend/src/modules/medicines/medicines.service.ts`
-- Add `importFromExcel(buffer: Buffer)` method.
-- Use `exceljs` to parse the buffer.
-- Validate rows against expected columns: `name`, `generic_name`, `category`, `unit`, `minimum_stock_level`, `is_controlled`.
-- Return a summary: `{ created: number, errors: { row: number, message: string }[] }`.
+### 1.2 FEFO Batch Selection (Replaces current FIFO)
 
-##### [MODIFY] `backend/src/modules/batches/batches.controller.ts`
-- Add a `POST /batches/import` endpoint with file upload.
+**Current**: `StockService.issueStock()` sorts by `expiry_date ASC` and skips expired batches.
 
-##### [MODIFY] `backend/src/modules/batches/batches.service.ts`
-- Add `importFromExcel(buffer: Buffer)` method.
-- Expected columns: `medicine_name` (used to look up `medicine_id`), `batch_number`, `expiry_date`, `purchase_price`, `selling_price`, `initial_quantity`.
+**Upgrade**: Replace with deterministic FEFO allocation engine:
 
-##### [NEW] Install `multer` types
-- Run `npm install --save @types/multer` in backend (needed for file upload typing).
+```sql
+-- Atomic FEFO batch selection query
+SELECT * FROM batches
+WHERE medicine_id = :medicineId
+  AND quantity_remaining > 0
+  AND is_locked = FALSE
+  AND is_quarantined = FALSE
+  AND expiry_date > CURRENT_DATE
+ORDER BY expiry_date ASC, created_at ASC
+FOR UPDATE;  -- Row-level lock for concurrency
+```
 
-#### Frontend
+Key changes:
+- Add `is_locked` and `is_quarantined` checks
+- Add `FOR UPDATE` for transactional safety under concurrent POS usage
+- Reject if batch expires within 24 hours (configurable threshold)
 
-##### [MODIFY] `frontend/src/pages/Medicines.tsx`
-- Add an "Import Excel" button next to "Add Medicine".
-- On click, open a hidden `<input type="file" accept=".xlsx,.xls">`.
-- On file select, upload via `client.post('/medicines/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } })`.
-- Show a results modal with import summary (created count + error list).
+### 1.3 Automated Expired Batch Locking
 
-##### [MODIFY] `frontend/src/pages/Batches.tsx`
-- Same pattern: "Import Excel" button + file upload to `/batches/import`.
+**New Cron Job** (runs every hour via `@nestjs/schedule`):
+```sql
+UPDATE batches
+SET is_locked = TRUE
+WHERE expiry_date <= CURRENT_DATE
+  AND is_locked = FALSE;
+```
+- Creates an alert for each newly locked batch
+- Logs the action in the audit trail
 
----
+### 1.4 FEFO Manual Override (Admin Only)
 
-## 3. Reports Page with Multi-Format Export
+Allow pharmacist to manually override FEFO batch selection:
+- Must provide a reason (mandatory text field)
+- Logged as `FEFO_OVERRIDE` in `StockTransaction`
+- **Blocked entirely for controlled substances** (`medicine.is_controlled = true`)
 
-### Description
-Create a dedicated Reports page where users can generate and export reports. Report types include:
-- **Profit & Loss** (with date range filters: daily, weekly, monthly, quarterly, yearly, custom)
-- **Medicine Inventory** report
-- **Batch Status** report
-- **Sales Summary** report
-- Additional report types as needed (e.g., expiring stock, patient activity)
+### 1.5 Expiry Risk Scoring Engine
 
-Reports can be exported in **PDF**, **Excel**, and **Word** formats.
+#### [NEW] `expiry-intelligence.service.ts`
 
-### Current State
-- `SalesLog.tsx` has basic Excel export via `/reporting/sales/export/excel`.
-- Backend `reporting.service.ts` has `generateSalesExcel()` and `generateSalesPdf()`.
-- No dedicated report page exists. No Word export exists.
-- `pdfkit` and `exceljs` already installed.
+```
+Expiry Risk Score = (Current Stock / Avg Daily Sales) ÷ Days Until Expiry
+```
 
-### Technical Approach
+| Score | Status | Automated Action |
+| :--- | :--- | :--- |
+| < 0.5 | Safe | None |
+| 0.5 – 1.0 | Monitor | Dashboard highlight |
+| 1.0 – 2.0 | High Risk | Alert + Discount suggestion |
+| > 2.0 | Critical | Alert + Block new purchase + Suggest supplier return |
 
-#### Backend
+### 1.6 Dashboard Widgets (Expiry Intelligence)
 
-##### [NEW] Install `docx` package
-- Run `npm install docx` in backend for Word document generation.
+Add to `Dashboard.tsx`:
+- **Total Inventory at Expiry Risk** (currency value)
+- **% of Inventory Near Expiry** (gauge chart)
+- **Top 10 Expiry Risk Medicines** (ranked list)
+- **Predicted Expiry Loss (Next 30 Days)** (projected financial impact)
 
-##### [MODIFY] `backend/src/modules/reporting/reporting.service.ts`
-- Add `getProfitLossReport(startDate, endDate)` — queries sales with items + batch (for `purchase_price`), calculates profit per item.
-- Add `getMedicineReport()` — returns all medicines with stock levels, categories, etc.
-- Add `getBatchReport()` — returns all batches with status tags (Good / Expiring / Expired).
-- Add `generateMedicineExcel()`, `generateBatchExcel()`, `generateProfitLossExcel()`.
-- Add `generateMedicinePdf()`, `generateBatchPdf()`, `generateProfitLossPdf()`.
-- Add Word export methods: `generateSalesWord()`, `generateProfitLossWord()`, etc. using the `docx` library.
+### 1.7 FEFO Reporting
 
-##### [MODIFY] `backend/src/modules/reporting/reporting.controller.ts`
-- Add endpoints:
-  - `GET /reporting/profit-loss?start=&end=` — JSON profit/loss data
-  - `GET /reporting/profit-loss/export/excel`
-  - `GET /reporting/profit-loss/export/pdf`
-  - `GET /reporting/profit-loss/export/word`
-  - `GET /reporting/medicines` — JSON medicine report
-  - `GET /reporting/medicines/export/excel`
-  - `GET /reporting/batches` — JSON batch report
-  - `GET /reporting/batches/export/excel`
-  - `GET /reporting/sales/export/word`
-
-#### Frontend
-
-##### [NEW] `frontend/src/pages/Reports.tsx`
-- A full report page with:
-  1. **Report Type Selector**: Tabs or dropdown to choose report type (Profit & Loss, Sales, Medicines, Batches).
-  2. **Date Range Filter**: Preset buttons (Today, This Week, This Month, This Quarter, This Year) + custom date picker (start/end inputs).
-  3. **Report Preview Area**: Displays the generated report data in a table/summary format.
-  4. **Export Buttons**: PDF, Excel, Word buttons on the top right.
-- Uses Recharts or custom SVG for profit/loss visualization (bar chart or line chart).
-- The profit/loss report shows: Total Revenue, Total Cost, Gross Profit, Profit Margin %, and a breakdown table.
-
-##### [MODIFY] `frontend/src/App.tsx`
-- Add route: `<Route path="reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}><Reports /></ProtectedRoute>} />`.
-
-##### [MODIFY] `frontend/src/layouts/DashboardLayout.tsx`
-- Add "Reports" to the sidebar menu (with `BarChart3` icon from lucide-react).
-
-##### [NEW] Install `recharts` for charts
-- Run `npm install recharts` in frontend folder.
+#### [NEW] Report types in `ReportingService`:
+- **FEFO Compliance Report**: % of sales that followed FEFO vs. overrides
+- **Expiry Loss Report**: Actual and projected losses from expired stock
+- **Batch Turnover Report**: Days-to-sell per batch, identifying slow movers
 
 ---
 
-## 4. Profit & Loss Calculation
+## Phase 2 — Supplier Management Module
 
-### Description
-Calculate profit and loss from completed sales. Profit = Selling Price − Purchase Price (per unit), multiplied by quantity sold. This is integrated into the Reports page (Feature #3).
+> **Priority: HIGH** — Enables strategic, data-driven procurement.
 
-### Current State
-- `SaleItem` entity has `unit_price` (selling price) and links to `Batch` via `batch_id`.
-- `Batch` entity has `purchase_price`.
-- **No profit calculation exists anywhere**.
-- The data model already supports this: `profit_per_item = (sale_item.unit_price - batch.purchase_price) * sale_item.quantity`.
+### 2.1 New Database Entities
 
-### Technical Approach
+#### [NEW] `supplier.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| name | string | Company name |
+| contact_person | string | Primary contact |
+| phone | string | Phone number |
+| email | string | Email address |
+| address | text | Full address |
+| credit_limit | decimal | Maximum credit (ETB) |
+| payment_terms | enum | NET_15, NET_30, NET_60, COD |
+| average_lead_time | int | Average delivery days |
+| is_active | boolean | Active/inactive toggle |
+| created_at | timestamp | Record creation date |
 
-#### Backend
+#### [NEW] `supplier-contract.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| supplier_id | UUID (FK) | Linked supplier |
+| effective_date | date | Contract start |
+| expiry_date | date | Contract end |
+| discount_percentage | decimal | Agreed discount |
+| return_policy | text | Return terms |
+| notes | text | Additional terms |
 
-##### [MODIFY] `backend/src/modules/reporting/reporting.service.ts`
-- The `getProfitLossReport(startDate, endDate)` method (from Feature #3) will:
-  1. Query all sales within the date range with relations: `items → batch`.
-  2. For each `SaleItem`, compute: `revenue = unit_price × quantity`, `cost = batch.purchase_price × quantity`, `profit = revenue - cost`.
-  3. Aggregate into totals: `totalRevenue`, `totalCost`, `grossProfit`, `profitMargin`.
-  4. Group by day/week/month depending on the date range span for chart data.
-  5. Return both the summary and the grouped data.
+#### [NEW] `supplier-performance.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| supplier_id | UUID (FK) | Linked supplier |
+| period | string | e.g., "2026-03" |
+| on_time_deliveries | int | Count |
+| total_deliveries | int | Count |
+| price_variance | decimal | Price stability metric |
+| returned_items | int | Items returned |
+| total_items | int | Items received |
+| quality_rating | decimal | 1.0 – 5.0 |
+| computed_score | decimal | Auto-calculated |
 
-#### Frontend
-- Covered by the Reports page in Feature #3.
-- The Profit & Loss tab shows:
-  - **Summary Cards**: Total Revenue, Total Cost, Gross Profit, Profit Margin %.
-  - **Chart**: Bar chart showing profit over time (days/weeks/months depending on filter).
-  - **Breakdown Table**: Per-medicine breakdown with revenue, cost, and profit columns.
+#### [NEW] `price-history.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| medicine_id | UUID (FK) | Linked medicine |
+| supplier_id | UUID (FK) | Linked supplier |
+| unit_price | decimal | Purchase price |
+| recorded_at | timestamp | When price was recorded |
 
----
+### 2.2 Supplier Performance Scoring Algorithm
 
-## 5. In-App Notification System
+```
+Supplier Score =
+  (Delivery Reliability × 0.35)
+  + (Price Stability × 0.25)
+  + (Credit Flexibility × 0.15)
+  + (Return Cooperation × 0.15)
+  + (Quality Rating × 0.10)
 
-### Description
-A modern in-app notification system with:
-- Notification bell icon in the header bar with unread count badge.
-- Dropdown panel showing recent notifications.
-- Mark as read, mark all as read, and delete functionality.
-- Responsive design (works on mobile).
-- Notifications triggered by system events (low stock alerts, expiring batches, new sales, etc.).
+Where:
+  Delivery Reliability = on_time_deliveries / total_deliveries
+  Price Stability = 1 - normalized_price_variance
+  Return Cooperation = 1 - (returned_items / total_items)
+  Credit Flexibility = normalized(credit_limit / avg_order_value)
+  Quality Rating = quality_rating / 5.0
+```
 
-### Current State
-- `Alerts` entity and service exist but are page-level alerts (separate Alerts page) — they are not in-app notifications.
-- `DashboardLayout.tsx` header has space for additional elements.
-- No notification entity or API exists.
+### 2.3 Frontend Pages
 
-### Technical Approach
+#### [NEW] `Suppliers.tsx`
+- Supplier directory with CRUD
+- Performance score badges (color-coded: green ≥ 0.8, amber ≥ 0.6, red < 0.6)
+- Price history charts per medicine
+- Contract status indicators
 
-#### Backend
+#### [NEW] `SupplierDetail.tsx`
+- Full profile with contracts, performance history, and price trends
+- Multi-supplier price comparison table per medicine
 
-##### [NEW] `backend/src/modules/notifications/entities/notification.entity.ts`
-- Fields: `id`, `user_id` (nullable — null means broadcast to all), `title`, `message`, `type` (enum: LOW_STOCK, EXPIRING, SALE, SYSTEM, INFO), `is_read` (boolean, default false), `created_at`.
+### 2.4 Supplier Ranking Dashboard Widget
 
-##### [NEW] `backend/src/modules/notifications/notifications.service.ts`
-- `create(dto)` — creates a notification.
-- `findAllForUser(userId)` — returns notifications for the user (user-specific + broadcasts), ordered by `created_at DESC`.
-- `getUnreadCount(userId)` — count of unread notifications.
-- `markAsRead(id)` — sets `is_read = true`.
-- `markAllAsRead(userId)` — marks all user's notifications as read.
-- `delete(id)` — deletes a notification.
-
-##### [NEW] `backend/src/modules/notifications/notifications.controller.ts`
-- `GET /notifications` — returns all notifications for the logged-in user.
-- `GET /notifications/unread-count` — returns the unread count.
-- `PATCH /notifications/:id/read` — mark as read.
-- `PATCH /notifications/read-all` — mark all as read.
-- `DELETE /notifications/:id` — delete a notification.
-
-##### [NEW] `backend/src/modules/notifications/notifications.module.ts`
-- Standard NestJS module setup.
-
-##### [MODIFY] `backend/src/app.module.ts`
-- Register `NotificationsModule`.
-
-##### [MODIFY] `backend/src/modules/alerts/alerts.service.ts`
-- When `checkLowStock()` generates a new alert, also create a notification via `NotificationsService`.
-
-##### [MODIFY] `backend/src/modules/sales/sales.service.ts`
-- After a sale completes, create a notification for admin users (e.g., "New sale completed: $XX.XX").
-
-#### Frontend
-
-##### [NEW] `frontend/src/components/NotificationBell.tsx`
-- A bell icon (from lucide-react `Bell` icon) placed in the header.
-- Shows an animated badge with unread count.
-- On click, toggles a dropdown panel with recent notifications.
-- Each notification card shows: icon (by type), title, message, time ago, action buttons (mark read / delete).
-- "Mark All as Read" button at the top of the panel.
-- Polls `/notifications/unread-count` every 30 seconds to update the badge.
-- On open, fetches full notification list from `/notifications`.
-
-##### [MODIFY] `frontend/src/layouts/DashboardLayout.tsx`
-- Add `<NotificationBell />` component in the header, between the session info and the user avatar.
+Show Top 5 suppliers by composite score on the main Dashboard.
 
 ---
 
-## 6. Dashboard Trending / Analytics Visuals
+## Phase 3 — Intelligent Purchase Order Module
 
-### Description
-Add trending medicine analytics to the Dashboard. The system analyzes sales data and displays:
-- **Top Selling Medicines** — bar or horizontal bar chart showing the most sold medicines.
-- **Least Selling Medicines** — to identify slow-moving stock.
-- **Sales Trend** — line chart showing daily/weekly sales over time.
-- **Revenue Summary** — a compact widget showing today's, this week's, and this month's revenue comparison.
+> **Priority: HIGH** — Automates procurement and prevents over-purchasing.
 
-### Current State
-- Dashboard (`Dashboard.tsx`) shows: 5 stat cards, recent transactions list, and critical stock status.
-- No charts or graphs exist on the dashboard.
-- No trending data API exists.
+### 3.1 New Database Entities
 
-### Technical Approach
+#### [NEW] `purchase-order.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| po_number | string (unique) | Auto-generated PO number |
+| supplier_id | UUID (FK) | Target supplier |
+| status | enum | DRAFT, APPROVED, SENT, CONFIRMED, PARTIALLY_RECEIVED, COMPLETED, CANCELLED |
+| total_amount | decimal | Computed total |
+| notes | text | PO notes |
+| created_by | UUID (FK) | User who created |
+| approved_by | UUID (FK, nullable) | User who approved |
+| created_at | timestamp | Creation date |
+| expected_delivery | date | Based on supplier lead time |
 
-#### Backend
+#### [NEW] `purchase-order-item.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| purchase_order_id | UUID (FK) | Parent PO |
+| medicine_id | UUID (FK) | Medicine to order |
+| quantity_ordered | int | Amount requested |
+| quantity_received | int (default: 0) | Amount received so far |
+| unit_price | decimal | Agreed unit cost |
+| subtotal | decimal | Computed |
 
-##### [MODIFY] `backend/src/modules/reporting/reporting.service.ts`
-- Add `getTrendingMedicines(limit: number)`:
-  - Query `sale_items` grouped by `medicine_id`, summing `quantity`.
-  - Join with `medicine` table to get names.
-  - Order by total quantity DESC. Return top N.
-- Add `getLeastSellingMedicines(limit: number)`:
-  - Same query but order ASC, filtering out medicines with 0 sales from the medicines table.
-- Add `getSalesTrend(days: number)`:
-  - Query sales grouped by date (for the last N days).
-  - Return array of `{ date, totalSales, totalRevenue }`.
-- Add `getRevenueComparison()`:
-  - Compute: today's revenue, this week's, this month's, previous month's. Return all for comparison.
+#### [NEW] `goods-receipt.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| purchase_order_id | UUID (FK) | Linked PO |
+| received_by | UUID (FK) | User who confirmed |
+| received_at | timestamp | Date/time of receipt |
+| notes | text | Discrepancy notes |
 
-##### [MODIFY] `backend/src/modules/reporting/reporting.controller.ts`
-- Add endpoints:
-  - `GET /reporting/trending-medicines?limit=10`
-  - `GET /reporting/least-selling?limit=10`
-  - `GET /reporting/sales-trend?days=30`
-  - `GET /reporting/revenue-comparison`
+Auto-creates Batch records upon goods receipt confirmation.
 
-#### Frontend
+#### [NEW] `purchase-recommendation.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| medicine_id | UUID (FK) | Medicine to reorder |
+| recommended_quantity | int | Calculated amount |
+| reorder_point | int | Trigger threshold |
+| safety_stock | int | Buffer quantity |
+| avg_daily_sales | decimal | 30-day average |
+| suggested_supplier_id | UUID (FK, nullable) | Best-scoring supplier |
+| status | enum | PENDING, CONVERTED, DISMISSED |
+| created_at | timestamp | Generated date |
 
-##### [MODIFY] `frontend/src/pages/Dashboard.tsx`
-- Add a new row below the stat cards with 2-3 chart widgets:
-  1. **Trending Medicines** — horizontal bar chart (using recharts `BarChart` or `ResponsiveContainer`).
-  2. **Sales Trend** — line chart (using recharts `LineChart`).
-  3. **Revenue Overview** — compact cards comparing today vs. week vs. month with percentage change indicators.
-- Optionally add **Least Selling Medicines** as a small list widget.
-- Fetch data from the new endpoints on mount.
+### 3.2 Dynamic Reorder Algorithm
 
-##### [DEPENDENCY] `recharts` (installed in Feature #3)
+```
+Reorder Point = (Avg Daily Sales × Lead Time) + Safety Stock
 
----
+Safety Stock = Z × StdDev(Daily Sales) × √(Lead Time)
+  Where Z = 1.65 (95% service level)
+```
 
-## 7. Merge Patient & Prescription Pages
+### 3.3 Over-Purchase Prevention Rule
 
-### Description
-Combine the Patient page (`Patients.tsx`) and Prescription page (`Prescriptions.tsx`) into a single unified "Patient" page. All features from both pages must be preserved:
-- Patient registration, search, directory (card grid).
-- Patient history modal (prescriptions + sales timeline).
-- Prescription creation, listing, viewing.
+Block PO creation if:
+```
+(Current Stock + Incoming PO Quantity) > (Forecasted 60-Day Demand × 1.2)
+```
+Display warning with projected expiry risk.
 
-### Current State
-- `Patients.tsx` (381 lines): Patient cards with search, register modal, history modal.
-- `Prescriptions.tsx` (314 lines): Prescription list with create modal.
-- Two separate routes: `/patients` and `/prescriptions`.
-- Sidebar has separate entries for both.
+### 3.4 Frontend Pages
 
-### Technical Approach
+#### [NEW] `PurchaseOrders.tsx`
+- PO list with status pipeline visualization (Draft → Completed)
+- Create PO from recommendation or manually
+- Multi-supplier price comparison during item selection
+- Budget cap alert indicator
 
-#### Frontend
+#### [NEW] `PurchaseRecommendations.tsx`
+- Auto-generated suggestions from forecasting engine
+- One-click "Convert to PO" action
+- Dismiss with reason
 
-##### [MODIFY] `frontend/src/pages/Patients.tsx`
-- Add a **tabbed interface** at the top: "Patient Directory" | "Prescriptions".
-- **Patient Directory tab**: Keep existing functionality (cards, search, register, history modal).
-- **Prescriptions tab**: Move the prescription listing and creation logic from `Prescriptions.tsx` into this tab.
-  - Prescription list with create modal.
-  - All prescription state management (formData, medicines/patients fetching, addItem/removeItem, handleSubmit).
-- Both tabs share the same patient data fetch, so prescriptions tab can pre-populate patient options.
-
-##### [DELETE] `frontend/src/pages/Prescriptions.tsx`
-- Remove this file after merging all functionality into `Patients.tsx`.
-
-##### [MODIFY] `frontend/src/App.tsx`
-- Remove the `/prescriptions` route.
-- Keep `/patients` route as-is.
-
-##### [MODIFY] `frontend/src/layouts/DashboardLayout.tsx`
-- Remove "Prescriptions" from `allMenuItems`.
-- Rename "Patients" label to "Patient" (singular, to match user's request).
-
-#### Backend
-- **No changes needed**. The `/patients` and `/prescriptions` APIs remain separate. The frontend just calls both from one page.
+#### [NEW] `GoodsReceipt.tsx`
+- Receive against open POs
+- Partial delivery support
+- Auto-creates batches in the system
 
 ---
 
-## Dependencies Summary
+## Phase 4 — Intelligent Forecasting Engine
 
-| Package | Location | Purpose |
-|---------|---------|---------|
-| `recharts` | Frontend | Charts for dashboard and reports |
-| `docx` | Backend | Word document export |
-| `@types/multer` | Backend | File upload typing |
+> **Priority: HIGH** — Powers purchase recommendations and expiry prevention.
+
+### 4.1 Implementation Strategy
+
+**No Python required.** All statistical modeling runs in TypeScript + PostgreSQL.
+
+#### [NEW] `forecasting.service.ts`
+Uses `simple-statistics` npm library for:
+- **Simple Moving Average** (30/60/90-day windows)
+- **Weighted Moving Average** (recent sales weighted higher)
+- **Linear Regression** (trend detection)
+- **Seasonal Index** (monthly multipliers from historical data)
+
+#### [NEW] `forecast-result.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| medicine_id | UUID (FK) | Target medicine |
+| forecast_date | date | Prediction target date |
+| predicted_demand | decimal | Forecasted quantity |
+| confidence_interval | decimal | ± range |
+| method | enum | SMA, WMA, LINEAR_REG, SEASONAL |
+| created_at | timestamp | When forecast was generated |
+
+### 4.2 Nightly Cron Job
+
+Using `@nestjs/schedule`:
+- Runs at 2:00 AM daily
+- Calculates forecasts for all active medicines
+- Generates purchase recommendations where `current_stock < reorder_point`
+- Updates expiry risk scores
+
+### 4.3 Dead Stock Detection
+
+**Criteria**: No sales in 60 days AND stock > minimum level.
+
+**Actions**:
+- Flag medicine as "Dead Stock" in dashboard
+- Suggest discount or supplier return
+- Include in dead stock report
 
 ---
 
-## New File Summary
+## Phase 5 — Advanced POS & Receipt Printing
 
-| File | Type | Purpose |
-|------|------|---------|
-| `frontend/src/components/ColumnFilter.tsx` | Component | Reusable dropdown column filter |
-| `frontend/src/components/NotificationBell.tsx` | Component | Header notification bell + dropdown |
-| `frontend/src/pages/Reports.tsx` | Page | Dedicated reports page |
-| `backend/src/modules/notifications/` | Module | Full notification module (entity, service, controller, module) |
+> **Priority: MEDIUM** — Speeds up checkout and provides professional receipts.
+
+### 5.1 POS Enhancements (`POS.tsx` Upgrade)
+
+- **Barcode Scan Input**: Auto-focused text field, barcode scanner acts as keyboard
+- **Quick Add**: Scan → auto-add to cart (duplicate scan increments quantity)
+- **Sound Feedback**: Audio confirmation on successful scan
+- **Split Payments**: Support partial Cash + Card combinations
+- **Refund Processing**: Process returns with stock re-entry
+- **Controlled Drug Prompt**: Modal confirmation for `is_controlled = true` medicines requiring prescription reference
+- **Discount Application**: Per-item and per-cart discount support
+
+### 5.2 Receipt Printing
+
+#### [NEW] `receipt.service.ts`
+Structure:
+```
+┌──────────────────────────────┐
+│     PHARMACY NAME            │
+│     Address Line 1           │
+│     Phone | License No.      │
+├──────────────────────────────┤
+│ Receipt: RX-20260304-0042    │
+│ Date: 2026-03-04 11:30 AM   │
+│ Cashier: pharmacist1         │
+├──────────────────────────────┤
+│ Item         Qty  Price  Sub │
+│ Paracetamol   2   1.20  2.40│
+│ Amoxicillin   1   3.50  3.50│
+├──────────────────────────────┤
+│ Subtotal:              5.90  │
+│ Tax (15%):             0.89  │
+│ TOTAL:                 6.79  │
+│ Payment: Cash                │
+├──────────────────────────────┤
+│        [QR CODE]             │
+│   Scan for verification      │
+└──────────────────────────────┘
+```
+
+### 5.3 QR Code Generation
+
+Using `qrcode` npm package:
+- QR encodes: `{ saleId, receiptNo, timestamp, hash }`
+- Used for customer verification and regulatory audit
 
 ---
 
-## File Modification Summary
+## Phase 6 — Barcode & QR Scanning Infrastructure
 
-| File | Features |
-|------|----------|
-| `frontend/src/pages/Medicines.tsx` | #1 (column filter), #2 (Excel import) |
-| `frontend/src/pages/Batches.tsx` | #1 (column filter), #2 (Excel import) |
-| `frontend/src/pages/SalesLog.tsx` | #1 (column filter) |
-| `frontend/src/pages/Dashboard.tsx` | #6 (trending analytics) |
-| `frontend/src/pages/Patients.tsx` | #7 (merge prescriptions) |
-| `frontend/src/App.tsx` | #3 (reports route), #7 (remove prescriptions route) |
-| `frontend/src/layouts/DashboardLayout.tsx` | #3 (reports menu), #5 (notification bell), #7 (remove prescriptions menu) |
-| `backend/src/modules/reporting/reporting.service.ts` | #3 (reports), #4 (profit/loss), #6 (trending) |
-| `backend/src/modules/reporting/reporting.controller.ts` | #3 (report endpoints), #6 (trending endpoints) |
-| `backend/src/modules/medicines/medicines.controller.ts` | #2 (import endpoint) |
-| `backend/src/modules/medicines/medicines.service.ts` | #2 (import logic) |
-| `backend/src/modules/batches/batches.controller.ts` | #2 (import endpoint) |
-| `backend/src/modules/batches/batches.service.ts` | #2 (import logic) |
-| `backend/src/modules/alerts/alerts.service.ts` | #5 (trigger notifications) |
-| `backend/src/modules/sales/sales.service.ts` | #5 (trigger notifications) |
-| `backend/src/app.module.ts` | #5 (register notifications module) |
+> **Priority: MEDIUM** — Eliminates manual product search in POS and stock audits.
+
+### 6.1 POS Barcode Integration
+
+- **Option A (Primary)**: USB barcode scanner → keyboard input → auto-detect via `onKeyDown` listener
+- **Option B (Optional)**: Camera-based scanning via `html5-qrcode` library
+
+### 6.2 Stock Audit Mode
+
+#### [NEW] `StockAudit.tsx`
+
+Workflow:
+1. Start audit session (records timestamp and auditor)
+2. Scan all physical stock items
+3. System compares scanned quantities vs. database quantities
+4. Generate **Variance Report** (shortages, surpluses)
+5. Auto-create adjustment transactions for discrepancies
+6. Lock audit session (immutable after finalization)
 
 ---
 
-## Execution Order (Recommended)
+## Phase 7 — Financial Intelligence Layer
 
-1. **Feature #7** — Merge Patient & Prescription (independent, reduces page count early)
-2. **Feature #1** — Column Filtering (reusable component, purely frontend)
-3. **Feature #5** — In-App Notifications (backend entity + frontend component)
-4. **Feature #2** — Excel Import (backend + frontend)
-5. **Features #3 + #4** — Reports Page + Profit/Loss (tightly coupled, backend heavy)
-6. **Feature #6** — Dashboard Trending Analytics (depends on recharts from #3)
+> **Priority: MEDIUM** — True profit visibility and working capital monitoring.
+
+### 7.1 Expense Tracking Module
+
+#### [NEW] `expense.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| category | enum | RENT, UTILITIES, SALARY, MAINTENANCE, MISC |
+| amount | decimal | Expense amount |
+| description | text | Details |
+| expense_date | date | Date incurred |
+| receipt_reference | string (nullable) | External reference |
+| created_by | UUID (FK) | User who recorded |
+| created_at | timestamp | Record creation |
+
+### 7.2 True Profit Calculation
+
+```
+Net Profit = Gross Profit
+             − Operating Expenses
+             − Expiry Loss (value of expired stock)
+             − Shrinkage Loss (audit variances)
+```
+
+### 7.3 New Financial Reports
+
+- **Monthly P&L with expense breakdown** (graph + table)
+- **Profit Margin per Medicine** (identify top/bottom performers)
+- **Top 20% Revenue Contributors** (Pareto analysis)
+- **Inventory Turnover Ratio**: `COGS ÷ Average Inventory`
+
+### 7.4 Working Capital Dashboard Widget
+
+Display:
+- Total Inventory Value (at cost)
+- Outstanding Payables (to suppliers)
+- Cash Position estimate
+- Inventory Turnover Ratio
+
+### 7.5 Supplier Payment Tracking
+
+#### [NEW] `supplier-payment.entity.ts`
+Track payments against supplier invoices, outstanding balances, and payment aging.
+
+---
+
+## Phase 8 — Compliance & Controlled Substance Monitoring
+
+> **Priority: MEDIUM** — Regulatory readiness.
+
+### 8.1 Enhanced Controlled Substance Rules
+
+- **Mandatory prescription attachment** for `is_controlled = true` medicines
+- **No FEFO override** for controlled substances
+- **Special audit log flag** (`is_controlled_transaction: true`)
+
+### 8.2 New Reports
+
+- **Daily Narcotics Report**: All controlled substance sales with prescription references
+- **Regulatory Export**: CSV/Excel format compliant with standard pharmacy regulatory requirements
+
+---
+
+## Phase 9 — Anomaly & Fraud Detection
+
+> **Priority: LOW** — Advanced security layer.
+
+### 9.1 Detection Rules
+
+| Anomaly | Detection Method | Action |
+| :--- | :--- | :--- |
+| Sales spike | Z-score > 3.0 on daily sales | Alert + Audit flag |
+| Stock without sale | Negative adjustments > threshold | Alert + Investigation flag |
+| High refund rate | Refunds > 5% of sales per user | Alert + Manager notification |
+| Unusual discounts | Discount % > 2× average per user | Alert + Audit flag |
+
+### 9.2 Implementation
+
+#### [NEW] `anomaly-detection.service.ts`
+- Runs nightly as cron job
+- Uses Z-score calculation from `simple-statistics`
+- Generates `FRAUD_ALERT` type notifications
+
+---
+
+## Phase 10 — Multi-Branch Future-Proofing
+
+> **Priority: LOW** — Schema preparation only, no UI changes yet.
+
+### 10.1 Schema Addition
+
+Add `branch_id` (UUID, nullable, default: null) to all major entities:
+- `medicines`, `batches`, `sales`, `patients`, `purchase_orders`, `expenses`
+
+#### [NEW] `branch.entity.ts`
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| id | UUID (PK) | Primary key |
+| name | string | Branch name |
+| address | text | Location |
+| phone | string | Contact |
+| is_headquarters | boolean | Main branch flag |
+
+This enables future inter-branch transfers and centralized reporting without migration risk.
+
+---
+
+## Dependency & Installation Plan
+
+### New NPM Packages (Backend)
+
+| Package | Purpose | Phase |
+| :--- | :--- | :--- |
+| `@nestjs/schedule` | Cron jobs for forecasting and batch locking | 1 |
+| `simple-statistics` | Statistical forecasting (SMA, regression) | 4 |
+| `qrcode` | QR code generation for receipts | 5 |
+
+### New NPM Packages (Frontend)
+
+| Package | Purpose | Phase |
+| :--- | :--- | :--- |
+| `html5-qrcode` | Camera-based barcode/QR scanning (optional) | 6 |
+| `react-qr-code` | QR display in receipt previews | 5 |
+
+---
+
+## Safe Migration Strategy
+
+Since the system is already live:
+
+| Step | Action | Risk |
+| :--- | :--- | :--- |
+| 1 | Add new tables and nullable columns only — no existing schema modification | Zero |
+| 2 | Deploy Phase 1 (FEFO + Batch locking) first | Low — enhances existing flow |
+| 3 | Deploy Phase 2-3 (Supplier + PO) as independent modules | Zero — new functionality |
+| 4 | Enable Forecasting in read-only mode (Phase 4) | Zero — background process |
+| 5 | After validation → Activate auto-recommendations | Low |
+| 6 | Enable financial intelligence (Phase 7) | Zero — additive |
+
+---
+
+## Implementation Timeline Estimate
+
+| Phase | Scope | Estimated Effort |
+| :--- | :--- | :--- |
+| **Phase 1** | FEFO Framework + Expiry Intelligence | 3–4 days |
+| **Phase 2** | Supplier Management | 2–3 days |
+| **Phase 3** | Purchase Orders + Goods Receipt | 3–4 days |
+| **Phase 4** | Forecasting Engine + Recommendations | 2–3 days |
+| **Phase 5** | POS Upgrades + Receipt Printing | 2–3 days |
+| **Phase 6** | Barcode/QR + Stock Audit | 1–2 days |
+| **Phase 7** | Financial Intelligence + Expenses | 2–3 days |
+| **Phase 8** | Compliance Monitoring | 1–2 days |
+| **Phase 9** | Anomaly Detection | 1–2 days |
+| **Phase 10** | Multi-Branch Schema Prep | 0.5 day |
+
+**Total Estimated: 18–26 working days**
 
 ---
 
 ## Verification Plan
 
-### Automated / Build Verification
-- **TypeScript Compilation**: Run `npm run build` in both `frontend/` and `backend/` to ensure no compile errors after each feature.
-- **Backend Lint**: Run `npm run lint` in `backend/` to catch style issues.
-- **Backend Unit Tests**: Run `npm test` in `backend/` — existing tests should continue to pass.
+### Per-Phase Testing
+- Unit tests for all service methods (especially FEFO allocation, scoring algorithms, forecast calculations)
+- Integration tests for PO → Goods Receipt → Batch creation flow
+- Browser-based UI verification for all new pages
+- Report accuracy validation against manual calculations
 
-### Manual Verification (per feature)
-
-**Feature #1 — Column Filtering**:
-1. Navigate to `/medicines` page.
-2. Click the "Medicine Name" column header → verify a dropdown appears with all unique medicine names.
-3. Select one medicine name → verify the table filters to only show that medicine.
-4. Click the "Status" column header → verify dropdown with "Low Stock" and "In Stock".
-5. Select "Low Stock" while a medicine name filter is active → verify combined AND filter works.
-6. Click "All" in any dropdown → verify the filter is cleared for that column.
-
-**Feature #2 — Excel Import**:
-1. Prepare a test `.xlsx` file with columns: `name`, `generic_name`, `category`, `unit`, `minimum_stock_level`, `is_controlled`.
-2. Navigate to `/medicines` → click "Import Excel" → select the file.
-3. Verify the import summary modal shows created count.
-4. Verify the new medicines appear in the table.
-5. Repeat for Batches with: `medicine_name`, `batch_number`, `expiry_date`, `purchase_price`, `selling_price`, `initial_quantity`.
-
-**Feature #3 — Reports Page**:
-1. Navigate to `/reports` (or click "Reports" in sidebar).
-2. Select "Sales" report type → verify sales data table loads.
-3. Change date filter to "This Month" → verify data updates.
-4. Click "Export Excel" → verify `.xlsx` file downloads.
-5. Click "Export PDF" → verify `.pdf` file downloads.
-6. Click "Export Word" → verify `.docx` file downloads.
-7. Repeat for other report types (Medicines, Batches, Profit & Loss).
-
-**Feature #4 — Profit & Loss**:
-1. On the Reports page, select "Profit & Loss" tab.
-2. Verify summary cards show: Total Revenue, Total Cost, Gross Profit, Margin %.
-3. Verify the chart displays profit over time.
-4. Change date range → verify numbers update accordingly.
-
-**Feature #5 — In-App Notifications**:
-1. Check the header bar for a bell icon with a badge.
-2. Trigger a low stock alert (sell enough to hit minimum stock level).
-3. Verify the badge count increases.
-4. Click the bell → verify the notification dropdown opens with the new notification.
-5. Click "Mark as Read" on a notification → verify it visually changes.
-6. Click "Delete" on a notification → verify it disappears.
-7. Click "Mark All as Read" → verify all notifications are marked read and badge resets.
-
-**Feature #6 — Dashboard Analytics**:
-1. Navigate to the Dashboard.
-2. Verify the "Trending Medicines" bar chart appears with data (requires existing sales data).
-3. Verify the "Sales Trend" line chart shows the last 30 days.
-4. Verify revenue comparison cards show today vs week vs month.
-
-**Feature #7 — Patient/Prescription Merge**:
-1. Verify `/patients` page now has two tabs: "Patient Directory" and "Prescriptions".
-2. On the "Patient Directory" tab, verify all patient features work (search, register, view history, delete).
-3. Switch to "Prescriptions" tab → verify prescription list loads.
-4. Click "New Prescription" → verify the create modal opens with patient/medicine dropdowns.
-5. Create a prescription → verify it appears in the list.
-6. Navigate to `/prescriptions` → verify it redirects or shows 404 (route removed).
-7. Verify the sidebar no longer shows "Prescriptions" as a separate item.
+### End-to-End Scenarios
+1. Full procurement cycle: Forecast → Recommendation → PO → Receipt → Batch → Sale (FEFO) → Report
+2. Expiry prevention: Near-expiry batch → Alert → Discount suggestion → Prioritized sale
+3. Fraud detection: Simulated anomaly → Alert generation → Audit log verification
+4. Controlled substance: Attempt FEFO override → Blocked → Audit logged
