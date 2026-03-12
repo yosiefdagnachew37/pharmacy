@@ -14,7 +14,10 @@ import {
   Printer,
   Download,
   AlertTriangle,
-  Lock
+  Lock,
+  Percent,
+  Banknote,
+  FileText
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import PrescriptionAttachment from '../components/PrescriptionAttachment';
@@ -54,22 +57,30 @@ const POS = () => {
   const [authError, setAuthError] = useState('');
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
 
+  // New Phase 5 features
+  const [cartDiscount, setCartDiscount] = useState<number>(0);
+  const [splitAmounts, setSplitAmounts] = useState({ cash: 0, card: 0 });
+  const [chequeDetails, setChequeDetails] = useState({ bank_name: '', cheque_number: '', due_date: '' });
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [medRes, custRes] = await Promise.all([
           client.get('/medicines'),
-          client.get('/credit/customers') // Using the new credit module endpoint for all registered customers
+          client.get('/credit/customers').catch(() => ({ data: [] }))
         ]);
 
-        // Use current_selling_price if it exists, otherwise fallback to selling_price
-        const formattedMeds = medRes.data.map((m: any) => ({
-          ...m,
-          selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
-        }));
-
-        setMedicines(formattedMeds);
-        setCustomers(custRes.data);
+        if (medRes?.data) {
+          const formattedMeds = medRes.data.map((m: any) => ({
+            ...m,
+            selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
+          }));
+          setMedicines(formattedMeds);
+        }
+        
+        if (custRes?.data) {
+          setCustomers(custRes.data);
+        }
       } catch (err) {
         console.error('Error fetching POS data:', err);
       }
@@ -194,8 +205,18 @@ const POS = () => {
     ));
   };
 
-  const total = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const discountAmount = (subtotal * (cartDiscount / 100));
+  const total = subtotal - discountAmount;
   const hasControlledItems = cart.some(item => medicines.find(m => m.id === item.medicine_id)?.is_controlled);
+
+  useEffect(() => {
+    // Auto-update split amounts if we switch away or total changes
+    if (paymentMethod === 'SPLIT') {
+      const remaining = total - splitAmounts.cash;
+      setSplitAmounts(prev => ({ ...prev, card: remaining >= 0 ? remaining : 0 }));
+    }
+  }, [total, paymentMethod, splitAmounts.cash]);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -218,18 +239,34 @@ const POS = () => {
         unit_price: item.unit_price
       }));
 
-      const res = await client.post('/sales', {
+      const payload: any = {
         patient_id: patientId || undefined,
         items: saleItems,
         total_price: total,
         payment_method: paymentMethod,
+        discount: discountAmount,
         prescription_image_url: prescriptionUrl || undefined
-      });
+      };
+
+      if (paymentMethod === 'SPLIT') {
+        payload.split_payments = [
+          { method: 'CASH', amount: splitAmounts.cash },
+          { method: 'CARD', amount: splitAmounts.card }
+        ];
+      } else if (paymentMethod === 'CHEQUE') {
+        payload.cheque_details = chequeDetails; // Assuming backend handles this or just stores in notes/credit service
+        payload.notes = `Cheque Payment - Bank: ${chequeDetails.bank_name}, CC: ${chequeDetails.cheque_number}, Due: ${chequeDetails.due_date}`;
+      }
+
+      const res = await client.post('/sales', payload);
       setReceipt(res.data);
       setSuccess(true);
       setCart([]);
       setPatientId('');
       setPaymentMethod('CASH');
+      setCartDiscount(0);
+      setSplitAmounts({ cash: 0, card: 0 });
+      setChequeDetails({ bank_name: '', cheque_number: '', due_date: '' });
 
       // Refresh medicines stock
       const stockRes = await client.get('/medicines');
@@ -258,37 +295,75 @@ const POS = () => {
           receiptWindow.document.write(`
               <html><head><title>Receipt ${fullReceipt.receipt_number}</title>
               <style>
-                body { font-family: monospace; padding: 20px; max-width: 300px; margin: 0 auto; color: black; }
+                body { font-family: monospace; padding: 20px; max-width: 320px; margin: 0 auto; color: black; }
                 .text-center { text-align: center; }
+                .text-right { text-align: right; }
                 .bold { font-weight: bold; }
                 .flex { display: flex; justify-content: space-between; }
-                .border-bottom { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+                .border-bottom { border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
                 .qr-code { text-align: center; margin-top: 20px; }
-                .qr-code img { max-width: 150px; }
+                .qr-code img { max-width: 150px; display: block; margin: 0 auto; }
+                .header h2 { margin: 0; padding: 0; font-size: 1.5em; }
+                .header p { margin: 2px 0; font-size: 0.9em; }
               </style>
               </head><body>
-                <h2 class="text-center bold">PHARMACY RECEIPT</h2>
-                <div class="text-center border-bottom">${fullReceipt.receipt_number}</div>
-                <div>Date: ${new Date(fullReceipt.date).toLocaleString()}</div>
-                <div>Cashier: ${fullReceipt.cashier}</div>
-                <div class="border-bottom">Customer: ${fullReceipt.customer}</div>
-                ${fullReceipt.items.map((item: any) => `
-                  <div class="flex">
-                    <span>${item.name} x${item.quantity}</span>
-                    <span>$${Number(item.subtotal).toFixed(2)}</span>
-                  </div>
-                `).join('')}
-                <div class="border-bottom" style="margin-top: 10px;"></div>
+                <div class="header text-center border-bottom">
+                  <h2>PHARMACY RECEIPT</h2>
+                  <p>123 Health Ave, Pharma City</p>
+                  <p>Tel: +1 234 567 8900</p>
+                  <p>License No. PHAR-2026</p>
+                </div>
+                <div><b>Receipt No:</b> ${fullReceipt.receipt_number}</div>
+                <div><b>Date:</b> ${new Date(fullReceipt.date).toLocaleString()}</div>
+                <div><b>Cashier:</b> ${fullReceipt.cashier}</div>
+                <div class="border-bottom"><b>Customer:</b> ${fullReceipt.customer}</div>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                  <thead>
+                    <tr style="border-bottom: 1px dashed #000;">
+                      <th style="text-align: left;">Item</th>
+                      <th style="text-align: right;">Qty</th>
+                      <th style="text-align: right;">Price</th>
+                      <th style="text-align: right;">Sub</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${fullReceipt.items.map((item: any) => `
+                      <tr>
+                        <td style="text-align: left; padding: 4px 0;">${item.name}</td>
+                        <td style="text-align: right;">${item.quantity}</td>
+                        <td style="text-align: right;">${Number(item.unit_price).toFixed(2)}</td>
+                        <td style="text-align: right;">${Number(item.subtotal).toFixed(2)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                
+                <div class="flex">
+                   <span>Subtotal:</span>
+                   <span>$${(Number(fullReceipt.total) + Number(fullReceipt.discount)).toFixed(2)}</span>
+                </div>
+                ${fullReceipt.discount > 0 ? `
+                <div class="flex" style="color: #666;">
+                   <span>Discount:</span>
+                   <span>-$${Number(fullReceipt.discount).toFixed(2)}</span>
+                </div>
+                ` : ''}
+                <div class="border-bottom" style="margin-top: 5px;"></div>
                 <div class="flex bold" style="font-size: 1.2em;">
                    <span>TOTAL</span>
                    <span>$${Number(fullReceipt.total).toFixed(2)}</span>
                 </div>
-                <div class="text-center" style="margin-top: 10px;">Paid via: ${fullReceipt.payment_method}</div>
+                <div class="text-center bold" style="margin-top: 10px; text-transform: uppercase;">
+                  Paid via: ${fullReceipt.payment_method}
+                </div>
+                
                 <div class="qr-code">
                   <img src="${fullReceipt.qr_code}" alt="QR Verification" />
-                  <p style="font-size: 10px;">Scan to Verify</p>
+                  <p style="font-size: 10px; margin-top: 4px;">Scan for verification</p>
                 </div>
-                <div class="text-center" style="margin-top: 20px; font-size: 10px;">Thank you for your business!</div>
+                <div class="text-center border-bottom" style="margin-top: 10px;"></div>
+                <div class="text-center" style="margin-top: 10px; font-size: 12px; font-weight: bold;">Thank you for your business!</div>
               </body></html>
             `);
           receiptWindow.document.close();
@@ -489,9 +564,75 @@ const POS = () => {
                 onClick={() => setPaymentMethod('CHEQUE')}
                 className={`py-2 px-1 text-xs font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CHEQUE' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
-                <CreditCard className="w-4 h-4" /> Cheque
+                <FileText className="w-4 h-4" /> Cheque
+              </button>
+              <button
+                onClick={() => setPaymentMethod('SPLIT')}
+                className={`py-2 px-1 text-xs font-bold rounded-xl border flex-col items-center justify-center gap-1 transition-all col-span-3 mt-1 flex ${paymentMethod === 'SPLIT' ? 'bg-purple-50 border-purple-200 text-purple-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Banknote className="w-4 h-4" /> <span className="font-bold">Split Payment (Cash + Card)</span>
+                </div>
               </button>
             </div>
+
+            {/* Split Payment Inputs */}
+            {paymentMethod === 'SPLIT' && (
+              <div className="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100 flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cash Amt</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-purple-300 focus:ring-1 focus:ring-purple-100 font-black text-purple-700"
+                    value={splitAmounts.cash}
+                    onChange={(e) => setSplitAmounts(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card Amt</label>
+                  <div className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-black text-gray-600 flex items-center h-[38px]">
+                    ${splitAmounts.card.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cheque Inputs */}
+            {paymentMethod === 'CHEQUE' && (
+              <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bank Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
+                    value={chequeDetails.bank_name}
+                    onChange={(e) => setChequeDetails(prev => ({ ...prev, bank_name: e.target.value }))}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cheque No.</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
+                      value={chequeDetails.cheque_number}
+                      onChange={(e) => setChequeDetails(prev => ({ ...prev, cheque_number: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Date</label>
+                    <input
+                      type="date"
+                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
+                      value={chequeDetails.due_date}
+                      onChange={(e) => setChequeDetails(prev => ({ ...prev, due_date: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Controlled Substance Compliance */}
@@ -510,18 +651,38 @@ const POS = () => {
           )}
 
           <div className="pt-4 border-t border-dashed border-gray-200">
+            <div className="flex justify-between items-center text-gray-500 mb-2">
+              <span className="text-xs font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Cart Discount</span>
+              <div className="relative w-20">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="w-full text-right bg-white border border-gray-200 rounded-md px-2 py-1 text-xs font-bold focus:outline-none focus:border-indigo-400"
+                  value={cartDiscount}
+                  onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
+              </div>
+            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between items-center text-rose-500 mb-2">
+                <span className="text-xs font-bold uppercase">Discount Amt</span>
+                <span className="text-sm font-bold">-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center text-gray-500 mb-1">
               <span className="text-xs font-bold uppercase">Subtotal</span>
-              <span className="text-sm font-bold">${total.toFixed(2)}</span>
+              <span className="text-sm font-bold">${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-end text-gray-900">
+            <div className="flex justify-between items-end text-gray-900 mt-2">
               <span className="text-sm font-black uppercase">Total Due</span>
               <span className="text-3xl font-black">${total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
-            disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (hasControlledItems && !prescriptionUrl)}
+            disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (paymentMethod === 'SPLIT' && (splitAmounts.cash + splitAmounts.card !== total)) || (hasControlledItems && !prescriptionUrl)}
             onClick={handleCheckout}
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none transition-all mt-4"
           >

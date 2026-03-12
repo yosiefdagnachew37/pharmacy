@@ -17,7 +17,8 @@ import { NotificationsModule } from '../notifications/notifications.module'; // 
       ForecastResult,
       PurchaseRecommendation,
       Medicine,
-      Sale
+      Sale,
+      SaleItem
     ]),
     NotificationsModule,
   ],

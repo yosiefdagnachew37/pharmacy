@@ -55,7 +55,7 @@ export class AlertCronService {
                 title,
                 message,
                 type: NotificationType.INFO,
-                user_id: null, // Admin alert
+                user_id: undefined, // Admin alert
             });
         }
     }
@@ -84,7 +84,7 @@ export class AlertCronService {
                 title,
                 message,
                 type: NotificationType.INFO,
-                user_id: null,
+                user_id: undefined,
             });
         }
     }

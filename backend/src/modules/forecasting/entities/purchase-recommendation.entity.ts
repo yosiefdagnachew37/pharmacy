@@ -3,8 +3,7 @@ import { Medicine } from '../../medicines/entities/medicine.entity';
 
 export enum RecommendationStatus {
     PENDING = 'PENDING',
-    REVIEWED = 'REVIEWED',
-    PO_CREATED = 'PO_CREATED',
+    CONVERTED = 'CONVERTED',
     DISMISSED = 'DISMISSED'
 }
 
@@ -24,11 +23,23 @@ export class PurchaseRecommendation {
     @Column('int')
     recommended_quantity: number;
 
+    @Column('int', { default: 0 })
+    reorder_point: number;
+
+    @Column('int', { default: 0 })
+    safety_stock: number;
+
+    @Column('decimal', { precision: 10, scale: 2, default: 0 })
+    avg_daily_sales: number;
+
+    @Column({ nullable: true })
+    suggested_supplier_id: string;
+
     @Column('decimal', { precision: 10, scale: 2, nullable: true })
     estimated_cost: number;
 
     @Column({ type: 'text', nullable: true })
-    reasoning: string; // e.g., "Predicted demand: 150, Current Stock: 20"
+    reasoning: string;
 
     @Column({ type: 'text', nullable: true })
     urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThan, Raw, LessThan } from 'typeorm';
+import { Repository, Between, MoreThan, Raw, LessThan, Not } from 'typeorm';
 import { Sale } from '../sales/entities/sale.entity';
 import { SaleItem } from '../sales/entities/sale-item.entity';
 import { Batch } from '../batches/entities/batch.entity';
@@ -11,7 +11,7 @@ import { Expense, ExpenseFrequency } from '../expenses/entities/expense.entity';
 import * as ExcelJS from 'exceljs';
 import * as PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, AlignmentType, WidthType } from 'docx';
-import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
+import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { CreditRecord } from '../credit/entities/credit-record.entity';
 
 @Injectable()
@@ -991,17 +991,86 @@ export class ReportingService {
     async getDailyExpenseSummary() {
         const recurring = await this.expensesRepository.find({ where: { is_recurring: true } });
         let dailyCost = 0;
+        const details: { id: string; name: string; category: string; frequency: string; original_amount: number; daily_amortized: number }[] = [];
 
         recurring.forEach(e => {
             let divisor = 1;
             if (e.frequency === ExpenseFrequency.MONTHLY) divisor = 30;
             else if (e.frequency === ExpenseFrequency.WEEKLY) divisor = 7;
-            dailyCost += Number(e.amount) / divisor;
+
+            const daily = Number(e.amount) / divisor;
+            dailyCost += daily;
+
+            details.push({
+                id: e.id,
+                name: e.name,
+                category: e.category,
+                frequency: e.frequency,
+                original_amount: Number(e.amount),
+                daily_amortized: parseFloat(daily.toFixed(2))
+            });
         });
+
+        // Sort by daily amortized cost descending
+        details.sort((a, b) => b.daily_amortized - a.daily_amortized);
 
         return {
             total_expected_daily: parseFloat(dailyCost.toFixed(2)),
-            recurring_count: recurring.length
+            recurring_count: recurring.length,
+            details: details
         };
+    }
+
+    async getSupplierPaymentAging() {
+        const pos = await this.poRepository.find({
+            where: { payment_status: Not(POPaymentStatus.PAID) },
+            relations: ['supplier']
+        });
+
+        const agingMap = new Map<string, any>();
+        const now = new Date();
+
+        pos.forEach(po => {
+            if (!po.supplier) return;
+            const supplierId = po.supplier.id;
+            const outstanding = Number(po.total_amount) - Number(po.total_paid);
+            if (outstanding <= 0) return;
+
+            if (!agingMap.has(supplierId)) {
+                agingMap.set(supplierId, {
+                    supplier_id: supplierId,
+                    supplier_name: po.supplier.name,
+                    total_outstanding: 0,
+                    current: 0, // 0-30 days
+                    days_31_60: 0,
+                    days_61_90: 0,
+                    over_90: 0
+                });
+            }
+
+            const stats = agingMap.get(supplierId);
+            stats.total_outstanding += outstanding;
+
+            const ageInDays = Math.floor((now.getTime() - new Date(po.created_at).getTime()) / (1000 * 3600 * 24));
+
+            if (ageInDays <= 30) {
+                stats.current += outstanding;
+            } else if (ageInDays <= 60) {
+                stats.days_31_60 += outstanding;
+            } else if (ageInDays <= 90) {
+                stats.days_61_90 += outstanding;
+            } else {
+                stats.over_90 += outstanding;
+            }
+        });
+
+        return Array.from(agingMap.values()).map(s => ({
+            ...s,
+            total_outstanding: parseFloat(s.total_outstanding.toFixed(2)),
+            current: parseFloat(s.current.toFixed(2)),
+            days_31_60: parseFloat(s.days_31_60.toFixed(2)),
+            days_61_90: parseFloat(s.days_61_90.toFixed(2)),
+            over_90: parseFloat(s.over_90.toFixed(2))
+        })).sort((a, b) => b.total_outstanding - a.total_outstanding);
     }
 }

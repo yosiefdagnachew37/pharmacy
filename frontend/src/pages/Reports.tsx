@@ -16,7 +16,8 @@ import {
     FileSpreadsheet,
     File as FileIcon,
     Loader2,
-    RefreshCcw
+    RefreshCcw,
+    AlertCircle
 } from 'lucide-react';
 import {
     BarChart,
@@ -41,7 +42,12 @@ const Reports = () => {
     });
 
     // Data States
-    const [profitLoss, setProfitLoss] = useState<any>(null);
+    const defaultProfitLoss = {
+        summary: { totalRevenue: 0, totalCost: 0, grossProfit: 0, profitMargin: 0 },
+        dailyBreakdown: [],
+        medicineBreakdown: []
+    };
+    const [profitLoss, setProfitLoss] = useState<any>(defaultProfitLoss);
     const [sales, setSales] = useState<any[]>([]);
     const [medicines, setMedicines] = useState<any[]>([]);
     const [batches, setBatches] = useState<any[]>([]);
@@ -50,6 +56,7 @@ const Reports = () => {
     const [paretoData, setParetoData] = useState<any[]>([]);
     const [profitMargins, setProfitMargins] = useState<any[]>([]);
     const [batchTurnover, setBatchTurnover] = useState<any[]>([]);
+    const [supplierAging, setSupplierAging] = useState<any[]>([]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -59,7 +66,11 @@ const Reports = () => {
                     client.get(`/reporting/profit-loss?start=${dateRange.start}&end=${dateRange.end}`),
                     client.get(`/reporting/daily-profit-analytics?start=${dateRange.start}&end=${dateRange.end}`)
                 ]);
-                setProfitLoss(plRes.data);
+                setProfitLoss({
+                    summary: plRes.data?.summary || defaultProfitLoss.summary,
+                    dailyBreakdown: plRes.data?.dailyBreakdown || [],
+                    medicineBreakdown: plRes.data?.medicineBreakdown || []
+                });
                 setNetProfitAnalytics(dailyNetRes.data);
             } else if (activeTab === 'sales') {
                 const res = await client.get(`/reporting/sales?start=${dateRange.start}&end=${dateRange.end}`);
@@ -71,16 +82,18 @@ const Reports = () => {
                 const res = await client.get('/reporting/batches-status');
                 setBatches(res.data);
             } else if (activeTab === 'analytics') {
-                const [wcRes, paretoRes, marginRes, turnoverRes] = await Promise.all([
+                const [wcRes, paretoRes, marginRes, turnoverRes, agingRes] = await Promise.all([
                     client.get('/reporting/working-capital'),
                     client.get(`/reporting/pareto-analysis?start=${dateRange.start}&end=${dateRange.end}`),
                     client.get('/reporting/profit-margin'),
-                    client.get('/reporting/batch-turnover')
+                    client.get('/reporting/batch-turnover'),
+                    client.get('/reporting/supplier-payment-aging')
                 ]);
                 setWorkingCapital(wcRes.data);
                 setParetoData(paretoRes.data);
                 setProfitMargins(marginRes.data);
                 setBatchTurnover(turnoverRes.data);
+                setSupplierAging(agingRes.data);
             }
         } catch (error) {
             console.error('Error fetching report data:', error);
@@ -201,8 +214,25 @@ const Reports = () => {
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                     {/* PROFIT & LOSS View */}
-                    {activeTab === 'profit-loss' && profitLoss && (
+                    {activeTab === 'profit-loss' && (
                         <div className="space-y-6">
+                            {(!profitLoss?.summary || profitLoss.summary.totalRevenue === 0) && (
+                                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
+                                    <div className="flex">
+                                        <div className="flex-shrink-0">
+                                            <AlertCircle className="h-5 w-5 text-amber-400" />
+                                        </div>
+                                        <div className="ml-3">
+                                            <p className="text-sm text-amber-700 font-bold">
+                                                No financial data found for the selected period.
+                                            </p>
+                                            <p className="text-sm text-amber-600 mt-1">
+                                                The charts below will appear empty until sales are recorded in this date range.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <StatCard title="Total Revenue" value={`$${profitLoss.summary.totalRevenue.toLocaleString()}`} color="bg-indigo-500" icon={DollarSign} />
                                 <StatCard title="Total Cost" value={`$${profitLoss.summary.totalCost.toLocaleString()}`} color="bg-orange-500" icon={ShoppingCart} />
@@ -652,6 +682,60 @@ const Reports = () => {
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Supplier Payment Aging */}
+                            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <DollarSign className="w-5 h-5 text-rose-500" />
+                                    Supplier Payment Aging (Payables)
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-50">
+                                                <th className="py-3 px-2">Supplier</th>
+                                                <th className="py-3 px-2 text-right">0-30 Days</th>
+                                                <th className="py-3 px-2 text-right">31-60 Days</th>
+                                                <th className="py-3 px-2 text-right">61-90 Days</th>
+                                                <th className="py-3 px-2 text-right">&gt; 90 Days</th>
+                                                <th className="py-3 px-2 text-right text-gray-800">Total Outstanding</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50 text-sm">
+                                            {supplierAging.length === 0 ? (
+                                                <tr className="bg-emerald-50/30">
+                                                    <td className="py-3 px-2 italic text-gray-400 text-xs" colSpan={6}>
+                                                        No outstanding payables currently recorded.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                supplierAging.map((sa: any, i: number) => (
+                                                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="py-3 px-2 font-bold text-gray-700">{sa.supplier_name}</td>
+                                                        <td className="py-3 px-2 text-right text-gray-500">{sa.current > 0 ? '$' + sa.current.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-amber-500">{sa.days_31_60 > 0 ? '$' + sa.days_31_60.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-orange-500 font-medium">{sa.days_61_90 > 0 ? '$' + sa.days_61_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-rose-600 font-bold">{sa.over_90 > 0 ? '$' + sa.over_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right font-black text-gray-900">{'$' + sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                        {supplierAging.length > 0 && (
+                                            <tfoot className="border-t-2 border-gray-100">
+                                                <tr className="text-sm font-black text-gray-900">
+                                                    <td className="py-3 px-2 text-right uppercase tracking-wider text-xs text-gray-500">Total</td>
+                                                    <td className="py-3 px-2 text-right">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.current, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-amber-600">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_31_60, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-orange-600">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_61_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-rose-700">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.over_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-indigo-700">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.total_outstanding, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
                                 </div>
                             </div>
                         </div>

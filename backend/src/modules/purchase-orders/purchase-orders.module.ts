@@ -9,6 +9,7 @@ import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseOrdersController } from './purchase-orders.controller';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { ForecastingModule } from '../forecasting/forecasting.module';
+import { StockModule } from '../stock/stock.module';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { ForecastingModule } from '../forecasting/forecasting.module';
             Medicine,
         ]),
         ForecastingModule,
+        StockModule,
     ],
     controllers: [PurchaseOrdersController],
     providers: [PurchaseOrdersService],
