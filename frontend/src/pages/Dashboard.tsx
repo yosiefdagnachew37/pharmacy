@@ -55,11 +55,12 @@ const Dashboard = () => {
   const [expandedSales, setExpandedSales] = useState(false);
   const [expandedStock, setExpandedStock] = useState(false);
   const [supplierRanking, setSupplierRanking] = useState<any[]>([]);
+  const [turnover, setTurnover] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes, rankRes] = await Promise.all([
+        const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes, rankRes, turnRes] = await Promise.all([
           client.get('/reporting/dashboard'),
           client.get('/reporting/trending-medicines?limit=10'),
           client.get('/reporting/revenue-comparison'),
@@ -67,6 +68,7 @@ const Dashboard = () => {
           client.get('/reporting/working-capital').catch(() => ({ data: null })),
           client.get('/reporting/expected-daily-expense').catch(() => ({ data: null })),
           client.get('/suppliers/ranking?limit=5').catch(() => ({ data: [] })),
+          client.get('/reporting/inventory-turnover').catch(() => ({ data: null })),
         ]);
         setStats(statsRes.data);
         setTrending(trendRes.data);
@@ -75,6 +77,7 @@ const Dashboard = () => {
         setWorkingCapital(wcRes.data);
         setDailyExpense(expRes.data);
         setSupplierRanking((rankRes as any).data || []);
+        setTurnover(turnRes.data);
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
       } finally {
@@ -134,26 +137,6 @@ const Dashboard = () => {
       secondaryColor: "bg-indigo-50",
       textColor: "text-indigo-600",
       path: "/alerts"
-    },
-    {
-      label: "Working Capital",
-      value: workingCapital ? `$${workingCapital.net_working_capital.toLocaleString()}` : "---",
-      desc: "Liquidity status",
-      icon: DollarSign,
-      color: "bg-cyan-500",
-      secondaryColor: "bg-cyan-50",
-      textColor: "text-cyan-600",
-      path: "/reports"
-    },
-    {
-      label: "Daily Overhead",
-      value: dailyExpense ? `$${dailyExpense.total_expected_daily}` : "---",
-      desc: "Expected recurring",
-      icon: BarChart3,
-      color: "bg-violet-500",
-      secondaryColor: "bg-violet-50",
-      textColor: "text-violet-600",
-      path: "/expenses"
     }
   ];
 
@@ -274,6 +257,120 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Financial Intelligence: Working Capital & Expected Expenses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Working Capital Detailed Widget */}
+        {workingCapital && (
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-50 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800">Working Capital</h3>
+                </div>
+                <button onClick={() => navigate('/reports')} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center uppercase tracking-wider">
+                  Full Report <ExternalLink className="w-3 h-3 ml-1.5" />
+                </button>
+              </div>
+
+              <div className="mb-8">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Net Position Estimate</p>
+                <h4 className={`text-4xl font-black ${workingCapital.net_working_capital >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  ${workingCapital.net_working_capital?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h4>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                  <span className="text-sm font-bold text-gray-600">Total Inventory Value</span>
+                  <span className="text-lg font-black text-gray-900">${workingCapital.inventory_valuation?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-2xl">
+                  <span className="text-sm font-bold text-emerald-700">Outstanding Receivables</span>
+                  <span className="text-lg font-black text-emerald-700">+${workingCapital.outstanding_receivables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-rose-50 rounded-2xl">
+                  <span className="text-sm font-bold text-rose-700">Outstanding Payables</span>
+                  <span className="text-lg font-black text-rose-700">-${workingCapital.outstanding_payables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {turnover && (
+              <div className="mt-6 pt-6 border-t border-gray-100 flex justify-between items-center">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Inventory Turnover (30d)</p>
+                  <p className="text-xl font-black text-indigo-600">{turnover.turnover_ratio}x</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">COGS (30d)</p>
+                  <p className="text-xl font-black text-gray-800">${turnover.cogs?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Expected Daily Expenses Widget */}
+        {dailyExpense && (
+          <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-50 flex flex-col max-h-[600px]">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-violet-50 text-violet-600 rounded-lg">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">Operational Expenses</h3>
+              </div>
+              <button onClick={() => navigate('/expenses')} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center uppercase tracking-wider">
+                Manage <ExternalLink className="w-3 h-3 ml-1.5" />
+              </button>
+            </div>
+
+            <div className="mb-6 grid grid-cols-2 gap-4">
+              <div className="p-5 bg-gradient-to-br from-violet-50 to-violet-100 rounded-2xl border border-violet-200">
+                <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-1">Amortized Daily Cost</p>
+                <h4 className="text-2xl font-black text-violet-700">
+                  ${dailyExpense.total_expected_daily?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </h4>
+              </div>
+              <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">True Profit Today</p>
+                <h4 className="text-2xl font-black text-emerald-700">
+                  ${((revenue?.today || 0) - dailyExpense.total_expected_daily).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </h4>
+                <p className="text-[9px] text-emerald-600/80 mt-1 uppercase font-bold text-right">(Rev - Exp)</p>
+              </div>
+            </div>
+
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cost Breakdown</h4>
+            <div className="overflow-y-auto pr-2 custom-scrollbar flex-1 space-y-3">
+              {dailyExpense.details && dailyExpense.details.length > 0 ? (
+                dailyExpense.details.map((exp: any) => (
+                  <div key={exp.id} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-white hover:border-violet-200 transition-colors">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{exp.name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">
+                        {exp.category} • {exp.frequency} (${exp.original_amount})
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-rose-600">${exp.daily_amortized?.toFixed(2)}</p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">/ day</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-gray-400 italic bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-sm">
+                  No recurring expenses configured.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

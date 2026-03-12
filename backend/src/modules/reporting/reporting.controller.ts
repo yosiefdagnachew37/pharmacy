@@ -275,6 +275,12 @@ export class ReportingController {
         return this.reportingService.getDailyExpenseSummary();
     }
 
+    @Get('supplier-payment-aging')
+    @Roles(UserRole.ADMIN, UserRole.AUDITOR)
+    async getSupplierPaymentAging() {
+        return this.reportingService.getSupplierPaymentAging();
+    }
+
     // ─── HELPERS ────────────────────────────────────────────────
 
     private parseDates(start: string, end: string) {
