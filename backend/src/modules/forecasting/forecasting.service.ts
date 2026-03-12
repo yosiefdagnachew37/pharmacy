@@ -91,29 +91,77 @@ export class ForecastingService {
         const model = ss.linearRegression(timeSeriesData);
         const lineFn = ss.linearRegressionLine(model);
 
-        // Predict next week's average daily demand
-        let predictedTotalNext7Days = 0;
+        // --- 1. Linear Regression ---
+        let lrPredictedTotal = 0;
         for (let i = 1; i <= 7; i++) {
-            const prediction = lineFn(currentDayIndex + i);
-            predictedTotalNext7Days += Math.max(0, prediction);
+            lrPredictedTotal += Math.max(0, lineFn(currentDayIndex + i));
         }
+        const lrRSquared = ss.rSquared(timeSeriesData, lineFn);
+        const lrConfidence = isNaN(lrRSquared) ? 0 : Math.min(100, Math.max(0, lrRSquared * 100));
 
-        const rSquared = ss.rSquared(timeSeriesData, lineFn);
-        const confidenceScore = isNaN(rSquared) ? 0 : Math.min(100, Math.max(0, rSquared * 100));
+        // --- 2. Simple Moving Average (SMA - 7 days) ---
+        const last7DaysSales = timeSeriesData.slice(-7).map(t => t[1]);
+        const sma7 = ss.mean(last7DaysSales);
+        const smaPredictedTotal = sma7 * 7;
+        const smaConfidence = 70; // Baseline confidence for SMA
+
+        // --- 3. Weighted Moving Average (WMA - last 7 days, heavier on recent) ---
+        let wmaSum = 0;
+        let wmaWeight = 0;
+        last7DaysSales.forEach((val, idx) => {
+            const weight = idx + 1; // 1 to 7
+            wmaSum += val * weight;
+            wmaWeight += weight;
+        });
+        const wmaDaily = wmaSum / wmaWeight;
+        const wmaPredictedTotal = wmaDaily * 7;
+        const wmaConfidence = 75; // Slightly better than SMA
+
+        // --- 4. Seasonal Index (Monthly multiplier based on 90 days) ---
+        const first30Days = timeSeriesData.slice(0, 30).map(t => t[1]);
+        const last30Days = timeSeriesData.slice(-30).map(t => t[1]);
+        const first30Avg = ss.mean(first30Days) || 1;
+        const last30Avg = ss.mean(last30Days);
+        const seasonalMultiplier = last30Avg / first30Avg;
+        const seasonalPredictedTotal = smaPredictedTotal * seasonalMultiplier;
+        const seasonalConfidence = 80;
 
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + 7);
 
-        const forecast = this.forecastRepository.create({
-            medicine_id: medicine.id,
-            target_date: targetDate,
-            method: ForecastMethod.LINEAR_REGRESSION,
-            predicted_demand: predictedTotalNext7Days,
-            confidence_score: parseFloat(confidenceScore.toFixed(2)),
-            historical_data_points: timeSeriesData
-        });
+        // Save all forecast results
+        const forecasts = [
+            this.forecastRepository.create({
+                medicine_id: medicine.id,
+                target_date: targetDate,
+                method: ForecastMethod.LINEAR_REGRESSION,
+                predicted_demand: lrPredictedTotal,
+                confidence_score: parseFloat(lrConfidence.toFixed(2)),
+                historical_data_points: timeSeriesData
+            }),
+            this.forecastRepository.create({
+                medicine_id: medicine.id,
+                target_date: targetDate,
+                method: ForecastMethod.SMA,
+                predicted_demand: smaPredictedTotal,
+                confidence_score: parseFloat(smaConfidence.toFixed(2)),
+                historical_data_points: last7DaysSales
+            }),
+            this.forecastRepository.create({
+                medicine_id: medicine.id,
+                target_date: targetDate,
+                method: ForecastMethod.WMA,
+                predicted_demand: wmaPredictedTotal,
+                confidence_score: parseFloat(wmaConfidence.toFixed(2)),
+                historical_data_points: last7DaysSales
+            })
+        ];
 
-        await this.forecastRepository.save(forecast);
+        await this.forecastRepository.save(forecasts);
+
+        // Use the prediction with the highest confidence for recommendations
+        const bestForecast = forecasts.reduce((prev, current) => (prev.confidence_score > current.confidence_score) ? prev : current);
+        const predictedTotalNext7Days = bestForecast.predicted_demand;
 
         const dailySalesValues = timeSeriesData.map(t => t[1]);
         const avgDailySales = ss.mean(dailySalesValues);
@@ -137,9 +185,16 @@ export class ForecastingService {
             });
 
             if (!existingRec) {
+                // If using WMA/SMA, recalculate for 30 days
                 let predicted30Days = 0;
-                for (let i = 1; i <= 30; i++) {
-                    predicted30Days += Math.max(0, lineFn(currentDayIndex + i));
+                if (bestForecast.method === ForecastMethod.LINEAR_REGRESSION) {
+                    for (let i = 1; i <= 30; i++) {
+                        predicted30Days += Math.max(0, lineFn(currentDayIndex + i));
+                    }
+                } else if (bestForecast.method === ForecastMethod.WMA) {
+                    predicted30Days = wmaDaily * 30;
+                } else {
+                    predicted30Days = sma7 * 30;
                 }
 
                 let orderQty = Math.ceil(predicted30Days - medicine.total_stock);
@@ -158,7 +213,7 @@ export class ForecastingService {
                     suggested_supplier_id: (medicine as any).preferred_supplier_id || null, // Best-scoring supplier or default
                     estimated_cost: estimatedCost,
                     urgency: urgency,
-                    reasoning: `Avg Daily Sales: ${avgDailySales.toFixed(1)}. Safety Stock: ${safetyStock}. Reorder Point: ${reorderPoint}. Predicted 7-day demand is ${Math.ceil(predictedTotalNext7Days)} units based on historical sales trends. Current stock is ${medicine.total_stock}. 30-day forecast recommends ordering ${orderQty} units.`,
+                    reasoning: `Avg Daily Sales: ${avgDailySales.toFixed(1)}. Safety Stock: ${safetyStock}. Reorder Point: ${reorderPoint}. Predicted 7-day demand is ${Math.ceil(predictedTotalNext7Days)} units (Model: ${bestForecast.method}). Current stock is ${medicine.total_stock}. 30-day forecast recommends ordering ${orderQty} units.`,
                 });
 
                 await this.recommendationRepository.save(recommendation);
@@ -203,12 +258,41 @@ export class ForecastingService {
         const model = ss.linearRegression(timeSeriesData);
         const lineFn = ss.linearRegressionLine(model);
 
-        let predictedTotal = 0;
+        // --- 1. Linear Regression ---
+        let lrPredictedTotal = 0;
         for (let i = 1; i <= days; i++) {
-            predictedTotal += Math.max(0, lineFn(currentDayIndex + i));
+            lrPredictedTotal += Math.max(0, lineFn(currentDayIndex + i));
         }
+        const lrRSquared = ss.rSquared(timeSeriesData, lineFn);
+        const lrConfidence = isNaN(lrRSquared) ? 0 : Math.min(100, Math.max(0, lrRSquared * 100));
 
-        return Math.ceil(predictedTotal);
+        // --- 2. Simple Moving Average ---
+        const last7DaysSales = timeSeriesData.slice(-7).map(t => t[1]);
+        const sma7 = ss.mean(last7DaysSales);
+        const smaPredictedTotal = sma7 * days;
+        const smaConfidence = 70;
+
+        // --- 3. Weighted Moving Average ---
+        let wmaSum = 0;
+        let wmaWeight = 0;
+        last7DaysSales.forEach((val, idx) => {
+            const weight = idx + 1;
+            wmaSum += val * weight;
+            wmaWeight += weight;
+        });
+        const wmaDaily = wmaSum / wmaWeight;
+        const wmaPredictedTotal = wmaDaily * days;
+        const wmaConfidence = 75;
+
+        // Find Best
+        const predictions = [
+            { total: lrPredictedTotal, confidence: lrConfidence },
+            { total: smaPredictedTotal, confidence: smaConfidence },
+            { total: wmaPredictedTotal, confidence: wmaConfidence },
+        ];
+        const best = predictions.reduce((prev, current) => (prev.confidence > current.confidence) ? prev : current);
+
+        return Math.ceil(best.total);
     }
 
     async getRecommendations() {
