@@ -29,6 +29,12 @@ interface AuditItem {
     variance: number;
 }
 
+interface Medicine {
+    id: string;
+    barcode: string;
+    sku: string;
+}
+
 interface AuditSession {
     id: string;
     status: 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
@@ -45,6 +51,7 @@ const StockAudit = () => {
     const [showNewModal, setShowNewModal] = useState(false);
     const [newNotes, setNewNotes] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [medicines, setMedicines] = useState<Medicine[]>([]);
 
     const fetchSessions = async () => {
         setLoading(true);
@@ -60,7 +67,63 @@ const StockAudit = () => {
 
     useEffect(() => {
         fetchSessions();
+        // Pre-fetch medicines so we can resolve barcodes to medicine IDs during audit
+        client.get('/medicines').then(res => setMedicines(res.data)).catch(console.error);
     }, []);
+
+    // --- Global Barcode Scanner Listener ---
+    useEffect(() => {
+        if (!activeSession || activeSession.status !== 'IN_PROGRESS') return;
+
+        let barcodeBuffer = '';
+        let barcodeTimeout: any;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if user is typing in the search box, notes, or manual inputs
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+                return;
+            }
+
+            if (e.key === 'Enter' && barcodeBuffer.length > 3) {
+                // Scanned barcode complete
+                const scannedMed = medicines.find(
+                    (m) => m.barcode === barcodeBuffer || m.sku === barcodeBuffer
+                );
+
+                if (scannedMed) {
+                    // Find the audit item matching this medicine
+                    // If multiple batches exist, we pick the first one with variance mismatch or the first overall
+                    // In a perfect world, batches would have unique GS1 barcodes, but here we add to the first available batch for that medicine.
+                    const auditItemsForMed = activeSession.items.filter(item => item.medicine_id === scannedMed.id);
+
+                    if (auditItemsForMed.length > 0) {
+                        const targetItem = auditItemsForMed.find(i => i.scanned_quantity < i.system_quantity) || auditItemsForMed[0];
+                        const newQty = targetItem.scanned_quantity + 1;
+                        handleUpdateQuantity(targetItem.batch_id, newQty);
+                    } else {
+                        console.warn(`Medicine found but no active batch in this audit session: ${barcodeBuffer}`);
+                    }
+                } else {
+                    console.warn(`Barcode not found in inventory: ${barcodeBuffer}`);
+                }
+
+                barcodeBuffer = '';
+            } else if (e.key.length === 1) {
+                barcodeBuffer += e.key;
+
+                clearTimeout(barcodeTimeout);
+                barcodeTimeout = setTimeout(() => {
+                    barcodeBuffer = '';
+                }, 50); // Scanner inputs keys very fast
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            clearTimeout(barcodeTimeout);
+        };
+    }, [activeSession, medicines]);
 
     const handleStartAudit = async () => {
         try {
