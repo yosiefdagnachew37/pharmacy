@@ -424,10 +424,10 @@ const POS = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full max-h-screen overflow-hidden gap-8">
+    <div className="flex flex-col lg:flex-row h-full max-h-screen overflow-hidden gap-6">
       {/* Product Selection */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="relative mb-6">
+        <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -467,7 +467,7 @@ const POS = () => {
 
       {/* Cart / Checkout */}
       <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full overflow-hidden flex-shrink-0">
-        <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <ShoppingCart className="w-5 h-5" />
@@ -482,7 +482,7 @@ const POS = () => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
           {cart.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <ShoppingCart className="w-16 h-16 mx-auto mb-4 opacity-10" />
@@ -490,46 +490,55 @@ const POS = () => {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.medicine_id} className="group flex justify-between items-start bg-gray-50 p-3 rounded-2xl border border-gray-100/50">
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-gray-800 pr-2">{item.name}</h4>
-                  <div className="flex items-center mt-2 bg-white w-fit rounded-lg border border-gray-200">
+              <div key={item.medicine_id} className="group relative bg-gray-50 p-3 rounded-2xl border border-gray-100/50">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-sm font-bold text-gray-800 pr-8 leading-tight">{item.name}</h4>
+                  <button 
+                    onClick={() => removeFromCart(item.medicine_id)} 
+                    className="absolute top-3 right-3 text-gray-300 hover:text-rose-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center bg-white rounded-lg border border-gray-200">
                     <button onClick={() => updateQuantity(item.medicine_id, -1)} className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"><Minus className="w-3.5 h-3.5" /></button>
                     <span className="text-xs font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
                     <button onClick={() => updateQuantity(item.medicine_id, 1)} className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"><Plus className="w-3.5 h-3.5" /></button>
                   </div>
-                </div>
-                <div className="text-right flex flex-col justify-between h-full items-end">
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-[10px] text-gray-400 font-bold">ETB</span>
-                    <input
-                      type="number"
-                      className="w-16 text-right text-[15px] font-black text-indigo-600 bg-transparent border-b border-dashed border-gray-300 focus:border-indigo-500 outline-none p-0 hide-arrows"
-                      value={item.unit_price}
-                      onChange={(e) => updatePrice(item.medicine_id, parseFloat(e.target.value) || 0)}
-                      step="0.01"
-                    />
+
+                  <div className="flex items-center gap-1.5 flex-1 justify-end">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Price</span>
+                      <input
+                        type="number"
+                        className="w-14 text-right text-xs font-bold text-indigo-600 bg-white border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-indigo-500 hide-arrows"
+                        value={item.unit_price}
+                        onChange={(e) => updatePrice(item.medicine_id, parseFloat(e.target.value) || 0)}
+                        step="0.01"
+                      />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] font-black text-gray-900">ETB {(item.quantity * item.unit_price).toFixed(2)}</p>
+                    </div>
                   </div>
-                  <p className="text-[13px] font-bold text-gray-500">Total: ETB {(item.quantity * item.unit_price).toFixed(2)}</p>
-                  <button onClick={() => removeFromCart(item.medicine_id)} className="text-rose-400 hover:text-rose-600 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        <div className="p-6 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 space-y-4">
+        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 space-y-2">
           {/* Customer Selection */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 ml-1">Customer / Patient</label>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Customer / Patient</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select
                 value={patientId}
                 onChange={(e) => setPatientId(e.target.value)}
-                className={`w-full pl-9 pr-4 py-3 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 text-sm font-medium appearance-none ${paymentMethod === 'CREDIT' && !patientId ? 'border-amber-300 ring-2 ring-amber-50 shadow-sm shadow-amber-100' : 'border-gray-200'}`}
+                className={`w-full pl-9 pr-4 py-2.5 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 text-xs font-medium appearance-none ${paymentMethod === 'CREDIT' && !patientId ? 'border-amber-300 ring-2 ring-amber-50' : 'border-gray-200'}`}
               >
                 <option value="">Walk-in Customer (Unregistered)</option>
                 {customers.map(c => (
@@ -537,154 +546,141 @@ const POS = () => {
                 ))}
               </select>
             </div>
-            {paymentMethod === 'CREDIT' && !patientId && (
-              <p className="text-[10px] font-bold text-amber-600 mt-1 ml-1 flex items-center gap-1">
-                Required for Credit Sales.
-              </p>
-            )}
           </div>
 
           {/* Payment Method */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 ml-1">Payment Method</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setPaymentMethod('CASH')}
-                className={`py-2 px-1 text-xs font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CASH' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                className={`py-1.5 px-1 text-[10px] font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CASH' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
-                <Wallet className="w-4 h-4" /> Cash
+                <Wallet className="w-3.5 h-3.5" /> Cash
               </button>
               <button
                 onClick={() => setPaymentMethod('CREDIT')}
-                className={`py-2 px-1 text-xs font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CREDIT' ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                className={`py-1.5 px-1 text-[10px] font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CREDIT' ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
-                <Building2 className="w-4 h-4" /> Credit
+                <Building2 className="w-3.5 h-3.5" /> Credit
               </button>
               <button
                 onClick={() => setPaymentMethod('CHEQUE')}
-                className={`py-2 px-1 text-xs font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CHEQUE' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                className={`py-1.5 px-1 text-[10px] font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CHEQUE' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
-                <FileText className="w-4 h-4" /> Cheque
+                <FileText className="w-3.5 h-3.5" /> Cheque
               </button>
               <button
                 onClick={() => setPaymentMethod('SPLIT')}
-                className={`py-2 px-1 text-xs font-bold rounded-xl border flex-col items-center justify-center gap-1 transition-all col-span-3 mt-1 flex ${paymentMethod === 'SPLIT' ? 'bg-purple-50 border-purple-200 text-purple-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-xl border flex items-center justify-center gap-2 transition-all col-span-3 ${paymentMethod === 'SPLIT' ? 'bg-purple-50 border-purple-200 text-purple-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4" /> <span className="font-bold">Split Payment (Cash + Card)</span>
-                </div>
+                <Banknote className="w-3.5 h-3.5" /> <span>Split Payment (Cash + Card)</span>
               </button>
             </div>
 
-            {/* Split Payment Inputs */}
-            {paymentMethod === 'SPLIT' && (
-              <div className="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100 flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cash Amt</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-purple-300 focus:ring-1 focus:ring-purple-100 font-black text-purple-700"
-                    value={splitAmounts.cash}
-                    onChange={(e) => setSplitAmounts(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card Amt</label>
-                  <div className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-black text-gray-600 flex items-center h-[38px]">
-                    ETB {splitAmounts.card.toFixed(2)}
+            {/* Split/Cheque Inputs - constrained height */}
+            <div className="max-h-[120px] overflow-y-auto custom-scrollbar mt-2">
+              {paymentMethod === 'SPLIT' && (
+                <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cash</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-purple-300 focus:ring-1 focus:ring-purple-100 font-black text-purple-700"
+                      value={splitAmounts.cash}
+                      onChange={(e) => setSplitAmounts(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card</label>
+                    <div className="w-full px-2 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-[11px] font-black text-gray-600 flex items-center h-[30px]">
+                      ETB {splitAmounts.card.toFixed(2)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Cheque Inputs */}
-            {paymentMethod === 'CHEQUE' && (
-              <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bank Name</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                    value={chequeDetails.bank_name}
-                    onChange={(e) => setChequeDetails(prev => ({ ...prev, bank_name: e.target.value }))}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cheque No.</label>
+              {paymentMethod === 'CHEQUE' && (
+                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bank Name</label>
                     <input
                       type="text"
                       className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                      value={chequeDetails.cheque_number}
-                      onChange={(e) => setChequeDetails(prev => ({ ...prev, cheque_number: e.target.value }))}
+                      value={chequeDetails.bank_name}
+                      onChange={(e) => setChequeDetails(prev => ({ ...prev, bank_name: e.target.value }))}
                     />
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Date</label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                      value={chequeDetails.due_date}
-                      onChange={(e) => setChequeDetails(prev => ({ ...prev, due_date: e.target.value }))}
-                    />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cheque No.</label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
+                        value={chequeDetails.cheque_number}
+                        onChange={(e) => setChequeDetails(prev => ({ ...prev, cheque_number: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Date</label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
+                        value={chequeDetails.due_date}
+                        onChange={(e) => setChequeDetails(prev => ({ ...prev, due_date: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Controlled Substance Compliance */}
           {hasControlledItems && (
-            <div className="pt-4 border-t border-dashed border-gray-200">
+            <div className="pt-2 border-t border-dashed border-gray-200">
               <PrescriptionAttachment
                 onAttachment={setPrescriptionUrl}
                 attachedUrl={prescriptionUrl}
               />
-              {!prescriptionUrl && (
-                <p className="text-[10px] font-bold text-rose-500 mt-2 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Prescription attachment required for controlled drugs.
-                </p>
-              )}
             </div>
           )}
 
-          <div className="pt-4 border-t border-dashed border-gray-200">
-            <div className="flex justify-between items-center text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Cart Discount</span>
-              <div className="relative w-20">
+          <div className="pt-2 border-t border-dashed border-gray-200">
+            <div className="flex justify-between items-center text-gray-500 mb-1">
+              <span className="text-[10px] font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Discount</span>
+              <div className="relative w-16">
                 <input
                   type="number"
                   min="0"
                   max="100"
-                  className="w-full text-right bg-white border border-gray-200 rounded-md px-2 py-1 text-xs font-bold focus:outline-none focus:border-indigo-400"
+                  className="w-full text-right bg-white border border-gray-200 rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none focus:border-indigo-400"
                   value={cartDiscount}
                   onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
                 />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-bold">%</span>
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
               </div>
             </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between items-center text-rose-500 mb-2">
-                <span className="text-xs font-bold uppercase">Discount Amt</span>
-                <span className="text-sm font-bold">-ETB {discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-center text-gray-500 mb-1">
-              <span className="text-xs font-bold uppercase">Subtotal</span>
-              <span className="text-sm font-bold">ETB {subtotal.toFixed(2)}</span>
+            
+            <div className="flex justify-between items-center text-gray-400 mb-1">
+              <span className="text-[10px] font-bold uppercase">Subtotal</span>
+              <span className="text-xs font-bold">ETB {subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-end text-gray-900 mt-2">
-              <span className="text-sm font-black uppercase">Total Due</span>
-              <span className="text-3xl font-black">ETB {total.toFixed(2)}</span>
+
+            <div className="flex justify-between items-end text-gray-900 mt-1">
+              <div className="flex flex-col">
+                {discountAmount > 0 && <span className="text-[10px] font-bold text-rose-500 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
+                <span className="text-xs font-black uppercase leading-none">Total Due</span>
+              </div>
+              <span className="text-2xl font-black leading-none">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
             disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (paymentMethod === 'SPLIT' && (splitAmounts.cash + splitAmounts.card !== total)) || (hasControlledItems && !prescriptionUrl)}
             onClick={handleCheckout}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none transition-all mt-4"
+            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-2"
           >
             {loading ? 'Processing...' : `Charge ETB ${total.toFixed(2)}`}
           </button>
