@@ -432,14 +432,14 @@ const Purchases = () => {
                                     <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-gray-600">Total Order Val:</span>
                                         <span className={`text-xl ${orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0) > 10000 ? 'text-rose-600' : 'text-indigo-700'}`}>
-                                            ${orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0).toFixed(2)}
+                                            ETB {orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0).toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
                                 {orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0) > 10000 && (
                                     <div className="flex items-start gap-2 text-rose-600 bg-rose-50 p-3 rounded-lg text-xs font-bold border border-rose-100">
                                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                        <p>Budget Cap Warning: This purchase order exceeds the $10,000 standard order limit. Ensure you have management approval before confirming.</p>
+                                        <p>Budget Cap Warning: This purchase order exceeds the ETB 10,000 standard order limit. Ensure you have management approval before confirming.</p>
                                     </div>
                                 )}
                             </div>
@@ -493,7 +493,7 @@ const Purchases = () => {
                                         <th className="px-4 py-3 w-32">Receive Qty</th>
                                         <th className="px-4 py-3 min-w-[150px]">Batch Number *</th>
                                         <th className="px-4 py-3 min-w-[150px]">Expiry Date *</th>
-                                        <th className="px-4 py-3 w-32">Sale Price ($)</th>
+                                        <th className="px-4 py-3 w-32">Sale Price (ETB)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -585,12 +585,12 @@ const Purchases = () => {
                         <div className="space-y-4">
                             <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
                                 <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">PO Balance Due</p>
-                                <p className="text-2xl font-black text-indigo-900">${(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toFixed(2)}</p>
+                                <p className="text-2xl font-black text-indigo-900">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toFixed(2)}</p>
                                 <p className="text-[10px] text-indigo-400 mt-1">PO: {selectedPO.po_number} • Supplier: {selectedPO.supplier?.name}</p>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Payment Amount ($) *</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Payment Amount (ETB) *</label>
                                 <input
                                     type="number"
                                     value={paymentAmount}

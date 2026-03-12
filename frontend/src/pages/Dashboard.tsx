@@ -232,7 +232,7 @@ const Dashboard = () => {
           <div className="space-y-6 relative z-10">
             <div>
               <p className="text-xs font-bold text-indigo-300 uppercase tracking-[0.2em] mb-1">Today</p>
-              <h4 className="text-3xl font-black">${revenue?.today?.toFixed(2) || '0.00'}</h4>
+              <h4 className="text-3xl font-black">ETB {revenue?.today?.toFixed(2) || '0.00'}</h4>
               <div className="flex items-center gap-1.5 text-emerald-400 mt-2 font-bold text-xs uppercase">
                 <ArrowUpRight className="w-4 h-4" /> Live Tracking
               </div>
@@ -241,11 +241,11 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-indigo-800">
               <div>
                 <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Yesterday</p>
-                <p className="text-lg font-black">${revenue?.yesterday?.toFixed(2) || '0.00'}</p>
+                <p className="text-lg font-black">ETB {revenue?.yesterday?.toFixed(2) || '0.00'}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">This Week</p>
-                <p className="text-lg font-black">${revenue?.thisWeek?.toFixed(2) || '0.00'}</p>
+                <p className="text-lg font-black">ETB {revenue?.thisWeek?.toFixed(2) || '0.00'}</p>
               </div>
             </div>
 
@@ -280,22 +280,22 @@ const Dashboard = () => {
               <div className="mb-8">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Net Position Estimate</p>
                 <h4 className={`text-4xl font-black ${workingCapital.net_working_capital >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  ${workingCapital.net_working_capital?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ETB {workingCapital.net_working_capital?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h4>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
                   <span className="text-sm font-bold text-gray-600">Total Inventory Value</span>
-                  <span className="text-lg font-black text-gray-900">${workingCapital.inventory_valuation?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-black text-gray-900">ETB {workingCapital.inventory_valuation?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-2xl">
                   <span className="text-sm font-bold text-emerald-700">Outstanding Receivables</span>
-                  <span className="text-lg font-black text-emerald-700">+${workingCapital.outstanding_receivables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-black text-emerald-700">+ETB {workingCapital.outstanding_receivables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-rose-50 rounded-2xl">
                   <span className="text-sm font-bold text-rose-700">Outstanding Payables</span>
-                  <span className="text-lg font-black text-rose-700">-${workingCapital.outstanding_payables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-black text-rose-700">-ETB {workingCapital.outstanding_payables?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             </div>
@@ -308,7 +308,7 @@ const Dashboard = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">COGS (30d)</p>
-                  <p className="text-xl font-black text-gray-800">${turnover.cogs?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-xl font-black text-gray-800">ETB {turnover.cogs?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
               </div>
             )}
@@ -334,13 +334,13 @@ const Dashboard = () => {
               <div className="p-5 bg-gradient-to-br from-violet-50 to-violet-100 rounded-2xl border border-violet-200">
                 <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mb-1">Amortized Daily Cost</p>
                 <h4 className="text-2xl font-black text-violet-700">
-                  ${dailyExpense.total_expected_daily?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ETB {dailyExpense.total_expected_daily?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h4>
               </div>
               <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200">
                 <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">True Profit Today</p>
                 <h4 className="text-2xl font-black text-emerald-700">
-                  ${((revenue?.today || 0) - dailyExpense.total_expected_daily).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ETB {((revenue?.today || 0) - dailyExpense.total_expected_daily).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h4>
                 <p className="text-[9px] text-emerald-600/80 mt-1 uppercase font-bold text-right">(Rev - Exp)</p>
               </div>
@@ -354,11 +354,11 @@ const Dashboard = () => {
                     <div>
                       <p className="text-sm font-bold text-gray-800">{exp.name}</p>
                       <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">
-                        {exp.category} • {exp.frequency} (${exp.original_amount})
+                        {exp.category} • {exp.frequency} (ETB {exp.original_amount})
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-rose-600">${exp.daily_amortized?.toFixed(2)}</p>
+                      <p className="text-sm font-black text-rose-600">ETB {exp.daily_amortized?.toFixed(2)}</p>
                       <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">/ day</p>
                     </div>
                   </div>
@@ -407,7 +407,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-md font-bold text-gray-900">${Number(sale.total_amount).toFixed(2)}</p>
+                    <p className="text-md font-bold text-gray-900">ETB {Number(sale.total_amount).toFixed(2)}</p>
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Receipt: {sale.receipt_number || 'N/A'}</p>
                   </div>
                 </div>

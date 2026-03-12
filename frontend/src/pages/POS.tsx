@@ -341,18 +341,18 @@ const POS = () => {
                 
                 <div class="flex">
                    <span>Subtotal:</span>
-                   <span>$${(Number(fullReceipt.total) + Number(fullReceipt.discount)).toFixed(2)}</span>
+                   <span>ETB ${(Number(fullReceipt.total) + Number(fullReceipt.discount)).toFixed(2)}</span>
                 </div>
                 ${fullReceipt.discount > 0 ? `
                 <div class="flex" style="color: #666;">
                    <span>Discount:</span>
-                   <span>-$${Number(fullReceipt.discount).toFixed(2)}</span>
+                   <span>-ETB ${Number(fullReceipt.discount).toFixed(2)}</span>
                 </div>
                 ` : ''}
                 <div class="border-bottom" style="margin-top: 5px;"></div>
                 <div class="flex bold" style="font-size: 1.2em;">
                    <span>TOTAL</span>
-                   <span>$${Number(fullReceipt.total).toFixed(2)}</span>
+                   <span>ETB ${Number(fullReceipt.total).toFixed(2)}</span>
                 </div>
                 <div class="text-center bold" style="margin-top: 10px; text-transform: uppercase;">
                   Paid via: ${fullReceipt.payment_method}
@@ -392,13 +392,13 @@ const POS = () => {
             {receipt.items?.map((item: any) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span className="font-medium text-gray-700">{item.medicine?.name} x{item.quantity}</span>
-                <span className="text-gray-900">${Number(item.subtotal).toFixed(2)}</span>
+                <span className="text-gray-900">ETB {Number(item.subtotal).toFixed(2)}</span>
               </div>
             ))}
           </div>
           <div className="pt-4 border-t border-dashed border-gray-300 flex justify-between font-bold text-lg">
             <span>Total</span>
-            <span>${Number(receipt.total_amount).toFixed(2)}</span>
+            <span>ETB {Number(receipt.total_amount).toFixed(2)}</span>
           </div>
           <div className="mt-2 text-center text-xs font-bold text-indigo-600 bg-indigo-50 py-1 rounded-md uppercase">
             {receipt.payment_method}
@@ -424,9 +424,9 @@ const POS = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-8">
+    <div className="flex flex-col lg:flex-row h-full max-h-screen overflow-hidden gap-8">
       {/* Product Selection */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="relative mb-6">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -451,7 +451,7 @@ const POS = () => {
               <div className="flex justify-between items-end border-t border-gray-50 pt-3 mt-auto">
                 <div>
                   <span className="text-xs text-gray-400 font-bold block mb-0.5">Price</span>
-                  <span className="text-base font-black text-indigo-700">${Number(med.selling_price || 0).toFixed(2)}</span>
+                  <span className="text-base font-black text-indigo-700">ETB {Number(med.selling_price || 0).toFixed(2)}</span>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase">In Stock</span>
@@ -466,7 +466,7 @@ const POS = () => {
       </div>
 
       {/* Cart / Checkout */}
-      <div className="w-full lg:w-[400px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-fit lg:h-full sticky top-0 flex-shrink-0">
+      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full overflow-hidden flex-shrink-0">
         <div className="p-6 border-b border-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -668,16 +668,16 @@ const POS = () => {
             {discountAmount > 0 && (
               <div className="flex justify-between items-center text-rose-500 mb-2">
                 <span className="text-xs font-bold uppercase">Discount Amt</span>
-                <span className="text-sm font-bold">-${discountAmount.toFixed(2)}</span>
+                <span className="text-sm font-bold">-ETB {discountAmount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-gray-500 mb-1">
               <span className="text-xs font-bold uppercase">Subtotal</span>
-              <span className="text-sm font-bold">${subtotal.toFixed(2)}</span>
+              <span className="text-sm font-bold">ETB {subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-end text-gray-900 mt-2">
               <span className="text-sm font-black uppercase">Total Due</span>
-              <span className="text-3xl font-black">${total.toFixed(2)}</span>
+              <span className="text-3xl font-black">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -686,7 +686,7 @@ const POS = () => {
             onClick={handleCheckout}
             className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none transition-all mt-4"
           >
-            {loading ? 'Processing...' : `Charge $${total.toFixed(2)}`}
+            {loading ? 'Processing...' : `Charge ETB ${total.toFixed(2)}`}
           </button>
         </div>
       </div>

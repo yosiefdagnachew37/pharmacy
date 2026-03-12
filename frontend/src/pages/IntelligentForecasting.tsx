@@ -184,7 +184,7 @@ const IntelligentForecasting = () => {
                                         <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                                             <BarChart2 className="w-3.5 h-3.5 text-gray-400" />
                                             <span className="text-xs font-bold text-gray-500 uppercase">Est. Cost:</span>
-                                            <span className="text-sm font-black text-gray-800">${Number(rec.estimated_cost).toFixed(2)}</span>
+                                            <span className="text-sm font-black text-gray-800">ETB {Number(rec.estimated_cost).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -230,8 +230,8 @@ const IntelligentForecasting = () => {
                                                 <div className="text-xs text-gray-400 font-normal">{d.medicine.generic_name}</div>
                                             </td>
                                             <td className="px-6 py-4 font-bold text-gray-600">{d.medicine.total_stock}</td>
-                                            <td className="px-6 py-4 text-gray-500">${Number(d.medicine.unit_price || 0).toFixed(2)}</td>
-                                            <td className="px-6 py-4 font-bold text-rose-600">${tiedCapital.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-gray-500">ETB {Number(d.medicine.unit_price || 0).toFixed(2)}</td>
+                                            <td className="px-6 py-4 font-bold text-rose-600">ETB {tiedCapital.toFixed(2)}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
                                                     <Calendar className="w-4 h-4 text-amber-500" />

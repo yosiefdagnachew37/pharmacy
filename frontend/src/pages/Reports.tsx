@@ -370,9 +370,9 @@ const Reports = () => {
                                                 <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                                                     <td className="px-6 py-4 text-sm font-bold text-gray-700">{item.name}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-500 font-medium">{item.quantity}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">${Number(item.revenue).toFixed(2)}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">${Number(item.cost).toFixed(2)}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-right text-emerald-600">${Number(item.profit).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">ETB {Number(item.revenue).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">ETB {Number(item.cost).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-right text-emerald-600">ETB {Number(item.profit).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -421,7 +421,7 @@ const Reports = () => {
                                                 <td className="px-6 py-4 text-sm text-gray-500 font-medium">{new Date(sale.created_at).toLocaleString()}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-700 font-bold">{sale.patient?.name || 'Walk-in'}</td>
                                                 <td className="px-6 py-4 italic text-sm text-gray-400">{sale.payment_method}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-gray-900">${Number(sale.total_amount).toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-right font-bold text-gray-900">ETB {Number(sale.total_amount).toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -556,7 +556,7 @@ const Reports = () => {
                                                     {new Date(b.expiry_date).toLocaleDateString()}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-900 font-bold">{b.quantity_remaining}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-gray-900">${Number(b.selling_price).toFixed(2)}</td>
+                                                <td className="px-6 py-4 text-right font-bold text-gray-900">ETB {Number(b.selling_price).toFixed(2)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -597,20 +597,20 @@ const Reports = () => {
                                         <div className="space-y-6">
                                             <div>
                                                 <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Net Position</p>
-                                                <h4 className="text-3xl font-black">${workingCapital?.net_working_capital?.toLocaleString()}</h4>
+                                                <h4 className="text-3xl font-black">ETB {workingCapital?.net_working_capital?.toLocaleString()}</h4>
                                             </div>
                                             <div className="space-y-3 pt-4 border-t border-indigo-800">
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-indigo-300">Inventory Value</span>
-                                                    <span className="font-bold">${workingCapital?.inventory_valuation?.toLocaleString()}</span>
+                                                    <span className="font-bold">ETB {workingCapital?.inventory_valuation?.toLocaleString()}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-emerald-400">Total Receivables</span>
-                                                    <span className="font-bold">+${workingCapital?.outstanding_receivables?.toLocaleString()}</span>
+                                                    <span className="font-bold">+ETB {workingCapital?.outstanding_receivables?.toLocaleString()}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-rose-400">Total Payables</span>
-                                                    <span className="font-bold">-${workingCapital?.outstanding_payables?.toLocaleString()}</span>
+                                                    <span className="font-bold">-ETB {workingCapital?.outstanding_payables?.toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -714,11 +714,11 @@ const Reports = () => {
                                                 supplierAging.map((sa: any, i: number) => (
                                                     <tr key={i} className="hover:bg-gray-50 transition-colors">
                                                         <td className="py-3 px-2 font-bold text-gray-700">{sa.supplier_name}</td>
-                                                        <td className="py-3 px-2 text-right text-gray-500">{sa.current > 0 ? '$' + sa.current.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-amber-500">{sa.days_31_60 > 0 ? '$' + sa.days_31_60.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-orange-500 font-medium">{sa.days_61_90 > 0 ? '$' + sa.days_61_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-rose-600 font-bold">{sa.over_90 > 0 ? '$' + sa.over_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right font-black text-gray-900">{'$' + sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        <td className="py-3 px-2 text-right text-gray-500">{sa.current > 0 ? 'ETB ' + sa.current.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-amber-500">{sa.days_31_60 > 0 ? 'ETB ' + sa.days_31_60.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-orange-500 font-medium">{sa.days_61_90 > 0 ? 'ETB ' + sa.days_61_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right text-rose-600 font-bold">{sa.over_90 > 0 ? 'ETB ' + sa.over_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-3 px-2 text-right font-black text-gray-900">{'ETB ' + sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     </tr>
                                                 ))
                                             )}
@@ -727,11 +727,11 @@ const Reports = () => {
                                             <tfoot className="border-t-2 border-gray-100">
                                                 <tr className="text-sm font-black text-gray-900">
                                                     <td className="py-3 px-2 text-right uppercase tracking-wider text-xs text-gray-500">Total</td>
-                                                    <td className="py-3 px-2 text-right">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.current, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-amber-600">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_31_60, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-orange-600">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_61_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-rose-700">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.over_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-indigo-700">{'$' + supplierAging.reduce((acc: number, curr: any) => acc + curr.total_outstanding, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.current, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-amber-600">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_31_60, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-orange-600">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_61_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-rose-700">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.over_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-3 px-2 text-right text-indigo-700">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.total_outstanding, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 </tr>
                                             </tfoot>
                                         )}

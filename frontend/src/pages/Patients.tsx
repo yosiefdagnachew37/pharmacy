@@ -449,7 +449,7 @@ const Patients = () => {
                         </div>
                         {item.type === 'SALE' && (
                           <span className="text-sm font-black text-gray-900 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
-                            ${Number(item.total_amount).toFixed(2)}
+                            ETB {Number(item.total_amount).toFixed(2)}
                           </span>
                         )}
                       </div>
@@ -470,13 +470,13 @@ const Patients = () => {
                                   )}
                                   {item.type === 'SALE' && (
                                     <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-                                      Quantity: <span className="text-gray-600">{detail.quantity}</span> × ${Number(detail.unit_price).toFixed(2)}
+                                      Quantity: <span className="text-gray-600">{detail.quantity}</span> × ETB {Number(detail.unit_price).toFixed(2)}
                                     </p>
                                   )}
                                 </div>
                               </div>
                               {item.type === 'SALE' && (
-                                <span className="text-xs font-bold text-gray-500">${Number(detail.subtotal).toFixed(2)}</span>
+                                <span className="text-xs font-bold text-gray-500">ETB {Number(detail.subtotal).toFixed(2)}</span>
                               )}
                             </div>
                           ))}

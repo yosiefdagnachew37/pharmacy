@@ -174,7 +174,7 @@ const CreditManagement = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 {isDept ? (
-                                                    <span className="font-bold text-rose-600">${Number(c.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span className="font-bold text-rose-600">ETB {Number(c.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 ) : (
                                                     <span className="font-bold text-emerald-600 text-xs bg-emerald-50 px-2 py-1 rounded-md">CLEARED</span>
                                                 )}
@@ -229,7 +229,7 @@ const CreditManagement = () => {
                                         <td className="px-6 py-4 font-mono font-bold text-indigo-600">{c.cheque_number}</td>
                                         <td className="px-6 py-4 font-bold text-gray-800">{c.customer?.name}</td>
                                         <td className="px-6 py-4 text-gray-500">{c.bank_name}</td>
-                                        <td className="px-6 py-4 font-black text-gray-900">${Number(c.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                        <td className="px-6 py-4 font-black text-gray-900">ETB {Number(c.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="px-6 py-4 text-gray-600 font-medium">{new Date(c.due_date).toLocaleDateString()}</td>
                                         <td className="px-6 py-4 text-right">
                                             <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border ${c.status === 'CLEARED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
@@ -276,14 +276,14 @@ const CreditManagement = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-bold text-gray-500">Total Outstanding Balance</span>
                                 <span className="text-lg font-bold text-rose-600">
-                                    ${Number(selectedCustomer.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    ETB {Number(selectedCustomer.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Payment Amount ($) *</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Payment Amount (ETB) *</label>
                                 <input
                                     type="number" step="0.01" min="0.01" max={selectedCustomer.total_credit} required
                                     value={paymentAmount}
