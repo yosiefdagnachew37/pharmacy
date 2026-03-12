@@ -155,7 +155,7 @@ const Expenses = () => {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Monthly Total</p>
-                        <p className="text-2xl font-bold text-gray-800">${monthlySummary?.grand_total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
+                        <p className="text-2xl font-bold text-gray-800">ETB {monthlySummary?.grand_total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                     </div>
                 </div>
 
@@ -165,7 +165,7 @@ const Expenses = () => {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Daily Expected</p>
-                        <p className="text-2xl font-bold text-gray-800">${dailyExpected?.total_daily_expense?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
+                        <p className="text-2xl font-bold text-gray-800">ETB {dailyExpected?.total_daily_expense?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                         <p className="text-xs text-gray-500 mt-1 font-medium bg-indigo-50 px-2 py-0.5 rounded-md inline-block">Amortized from recurring</p>
                     </div>
                 </div>
@@ -176,7 +176,7 @@ const Expenses = () => {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">One-Time Spends</p>
-                        <p className="text-2xl font-bold text-gray-800">${monthlySummary?.total_one_time?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
+                        <p className="text-2xl font-bold text-gray-800">ETB {monthlySummary?.total_one_time?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                     </div>
                 </div>
             </div>
@@ -216,7 +216,7 @@ const Expenses = () => {
                                             {e.category}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 font-bold text-gray-800">${Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td className="px-6 py-4 font-bold text-gray-800">ETB {Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                     <td className="px-6 py-4 text-xs font-bold text-gray-500">{e.frequency.replace('_', ' ')}</td>
                                     <td className="px-6 py-4">
                                         {e.is_recurring ? (
@@ -299,7 +299,7 @@ const Expenses = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Amount ($) *</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Amount (ETB) *</label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input

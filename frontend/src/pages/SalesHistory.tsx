@@ -236,7 +236,7 @@ const SalesHistory = () => {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                                            ${Number(sale.total_amount).toFixed(2)}
+                                            ETB {Number(sale.total_amount).toFixed(2)}
                                         </td>
                                         <td className="px-6 py-4 text-xs font-medium text-gray-600">
                                             <span className="bg-gray-100 px-2 py-1 rounded-md border border-gray-200 uppercase">{sale.payment_method}</span>
@@ -246,7 +246,7 @@ const SalesHistory = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             {sale.is_refunded ? (
-                                                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">Refunded (${Number(sale.refund_amount).toFixed(2)})</span>
+                                                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">Refunded (ETB {Number(sale.refund_amount).toFixed(2)})</span>
                                             ) : (
                                                 <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold">Completed</span>
                                             )}
@@ -320,10 +320,10 @@ const SalesHistory = () => {
                                     <div key={idx} className="p-3 flex justify-between items-center text-sm">
                                         <div>
                                             <p className="font-bold text-gray-800">{item.medicine?.name}</p>
-                                            <p className="text-xs text-gray-500">Qty: {item.quantity} x ${item.unit_price}</p>
+                                            <p className="text-xs text-gray-500">Qty: {item.quantity} x ETB {item.unit_price}</p>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <p className="font-bold text-gray-900">${Number(item.subtotal).toFixed(2)}</p>
+                                            <p className="font-bold text-gray-900">ETB {Number(item.subtotal).toFixed(2)}</p>
                                             {!selectedSale.is_refunded && (
                                                 <button
                                                     onClick={() => handleOpenRefund(selectedSale, item)}
@@ -341,7 +341,7 @@ const SalesHistory = () => {
 
                         <div className="pt-4 border-t border-dashed flex justify-between items-center font-bold text-lg">
                             <span>Total Amount</span>
-                            <span>${Number(selectedSale.total_amount).toFixed(2)}</span>
+                            <span>ETB {Number(selectedSale.total_amount).toFixed(2)}</span>
                         </div>
                     </div>
                 )}
@@ -354,7 +354,7 @@ const SalesHistory = () => {
                         <RotateCcw className="w-5 h-5 text-amber-600 mt-1" />
                         <div>
                             <p className="text-sm font-bold text-amber-800">Refund for {refundItem?.name}</p>
-                            <p className="text-xs text-amber-700">Full return of {refundItem?.quantity} units. Amount to return: ${refundItem ? (Number(refundItem.price) * Number(refundItem.quantity)).toFixed(2) : 0}</p>
+                            <p className="text-xs text-amber-700">Full return of {refundItem?.quantity} units. Amount to return: ETB {refundItem ? (Number(refundItem.price) * Number(refundItem.quantity)).toFixed(2) : 0}</p>
                         </div>
                     </div>
 

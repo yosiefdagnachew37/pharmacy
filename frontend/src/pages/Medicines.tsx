@@ -314,7 +314,7 @@ const Medicines = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-black text-indigo-700">
-                        ${Number(med.current_selling_price || 0).toFixed(2)}
+                        ETB {Number(med.current_selling_price || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">

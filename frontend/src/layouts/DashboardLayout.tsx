@@ -222,7 +222,7 @@ const DashboardLayout = () => {
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Selling Price</span>
                 <span className="text-lg font-black text-indigo-700">
-                  ${Number(scannedMed.current_selling_price || scannedMed.selling_price || 0).toFixed(2)}
+                  ETB {Number(scannedMed.current_selling_price || scannedMed.selling_price || 0).toFixed(2)}
                 </span>
               </div>
             </div>

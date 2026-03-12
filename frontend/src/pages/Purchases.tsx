@@ -241,13 +241,13 @@ const Purchases = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="font-bold text-gray-800">${Number(po.total_amount).toFixed(2)}</span>
+                                            <span className="font-bold text-gray-800">ETB {Number(po.total_amount).toFixed(2)}</span>
                                             <span className="text-[10px] text-gray-400">Total</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="font-bold text-emerald-600">${Number(po.total_paid || 0).toFixed(2)}</span>
+                                            <span className="font-bold text-emerald-600">ETB {Number(po.total_paid || 0).toFixed(2)}</span>
                                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getPaymentStatusBadge(po.payment_status)}`}>
                                                 {po.payment_status || 'UNPAID'}
                                             </span>
@@ -357,7 +357,7 @@ const Purchases = () => {
                                                     />
                                                 </div>
                                                 <div className="w-32">
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unit Prc($) *</label>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Unit Prc(ETB) *</label>
                                                     <input
                                                         type="number" min="0" step="0.01"
                                                         value={item.unit_price}

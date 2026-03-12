@@ -90,7 +90,7 @@ const Dashboard = () => {
   const statCards = [
     {
       label: "Today's Sales",
-      value: `$${stats.todaySalesAmount.toFixed(2)}`,
+      value: `ETB ${stats.todaySalesAmount.toFixed(2)}`,
       desc: `${stats.todaySalesCount} transactions`,
       icon: TrendingUp,
       color: "bg-emerald-500",

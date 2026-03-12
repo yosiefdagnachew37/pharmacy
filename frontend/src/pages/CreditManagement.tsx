@@ -104,7 +104,7 @@ const CreditManagement = () => {
                     </div>
                     <div>
                         <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Total Outstanding Credit</p>
-                        <p className="text-3xl font-bold text-gray-800">${Number(summary?.total_outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        <p className="text-3xl font-bold text-gray-800">ETB {Number(summary?.total_outstanding || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     </div>
                 </div>
 

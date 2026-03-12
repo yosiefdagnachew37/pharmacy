@@ -234,9 +234,9 @@ const Reports = () => {
                                 </div>
                             )}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <StatCard title="Total Revenue" value={`$${profitLoss.summary.totalRevenue.toLocaleString()}`} color="bg-indigo-500" icon={DollarSign} />
-                                <StatCard title="Total Cost" value={`$${profitLoss.summary.totalCost.toLocaleString()}`} color="bg-orange-500" icon={ShoppingCart} />
-                                <StatCard title="Gross Profit" value={`$${profitLoss.summary.grossProfit.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
+                                <StatCard title="Total Revenue" value={`ETB ${profitLoss.summary.totalRevenue.toLocaleString()}`} color="bg-indigo-500" icon={DollarSign} />
+                                <StatCard title="Total Cost" value={`ETB ${profitLoss.summary.totalCost.toLocaleString()}`} color="bg-orange-500" icon={ShoppingCart} />
+                                <StatCard title="Gross Profit" value={`ETB ${profitLoss.summary.grossProfit.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
                                 <StatCard title="Profit Margin" value={`${profitLoss.summary.profitMargin.toFixed(2)}%`} color="bg-purple-500" icon={Percent} />
                             </div>
 
@@ -318,7 +318,7 @@ const Reports = () => {
                                                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                                             />
                                             <Bar dataKey="grossProfit" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={20} name="Gross Profit" />
-                                            <Bar dataKey="amortizedExpenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expenses" />
+                                            <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expenses" />
                                             <Bar dataKey="netProfit" fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} name="Net Profit" />
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -338,10 +338,10 @@ const Reports = () => {
                                             {netProfitAnalytics.map((day, idx) => (
                                                 <tr key={idx}>
                                                     <td className="py-3 px-2 text-gray-600 font-medium">{day.date}</td>
-                                                    <td className="py-3 px-2 text-gray-800 font-bold">${day.grossProfit.toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-rose-500 font-bold">-${day.amortizedExpenses.toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-emerald-600 font-black">${day.netProfit.toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-right text-gray-400 font-bold">{day.netMargin.toFixed(1)}%</td>
+                                                    <td className="py-3 px-2 text-gray-800 font-bold">ETB {(day.grossProfit || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-rose-500 font-bold">-ETB {(day.expenses || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-emerald-600 font-black">ETB {(day.netProfit || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-right text-gray-400 font-bold">{(day.margin || 0).toFixed(1)}%</td>
                                                 </tr>
                                             ))}
                                         </tbody>

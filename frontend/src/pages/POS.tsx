@@ -501,7 +501,7 @@ const POS = () => {
                 </div>
                 <div className="text-right flex flex-col justify-between h-full items-end">
                   <div className="flex items-center gap-1 mb-1">
-                    <span className="text-[10px] text-gray-400 font-bold">$</span>
+                    <span className="text-[10px] text-gray-400 font-bold">ETB</span>
                     <input
                       type="number"
                       className="w-16 text-right text-[15px] font-black text-indigo-600 bg-transparent border-b border-dashed border-gray-300 focus:border-indigo-500 outline-none p-0 hide-arrows"
@@ -510,7 +510,7 @@ const POS = () => {
                       step="0.01"
                     />
                   </div>
-                  <p className="text-[13px] font-bold text-gray-500">Total: ${(item.quantity * item.unit_price).toFixed(2)}</p>
+                  <p className="text-[13px] font-bold text-gray-500">Total: ETB {(item.quantity * item.unit_price).toFixed(2)}</p>
                   <button onClick={() => removeFromCart(item.medicine_id)} className="text-rose-400 hover:text-rose-600 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -593,7 +593,7 @@ const POS = () => {
                 <div className="flex-1">
                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card Amt</label>
                   <div className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-black text-gray-600 flex items-center h-[38px]">
-                    ${splitAmounts.card.toFixed(2)}
+                    ETB {splitAmounts.card.toFixed(2)}
                   </div>
                 </div>
               </div>
