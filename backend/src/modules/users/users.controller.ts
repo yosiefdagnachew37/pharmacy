@@ -32,4 +32,19 @@ export class UsersController {
     findOne(@Param('id') id: string) {
         return this.usersService.findById(id);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('verify-pin')
+    async verifyPin(@Body('pin') pin: string) {
+        const user = await this.usersService.verifyPin(pin);
+        if (!user) {
+            return { valid: false };
+        }
+        return {
+            valid: true,
+            userId: user.id,
+            username: user.username,
+            role: user.role
+        };
+    }
 }

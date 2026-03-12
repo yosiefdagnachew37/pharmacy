@@ -22,11 +22,32 @@ export class Medicine {
     @Column({ default: false })
     is_controlled: boolean; // For controlled substances
 
+    @Column({ unique: true, nullable: true })
+    barcode: string; // EAN/UPC barcode
+
+    @Column({ unique: true, nullable: true })
+    sku: string; // Internal stock-keeping unit
+
+    @Column({ nullable: true })
+    supplier_barcode: string; // Supplier's own barcode
+
+    @Column({ nullable: true })
+    preferred_supplier_id: string; // FK to Supplier (Phase 2)
+
+    @Column('decimal', { precision: 10, scale: 2, nullable: true })
+    current_selling_price: number; // Owner-set selling price override
+
     @OneToMany(() => Batch, (batch) => batch.medicine)
     batches: Batch[];
 
     @Column({ type: 'int', default: 10 })
     minimum_stock_level: number;
+
+    @Column({ default: true })
+    is_active: boolean;
+
+    @Column({ nullable: true })
+    branch_id: string; // Multi-branch support
 
     @CreateDateColumn()
     created_at: Date;

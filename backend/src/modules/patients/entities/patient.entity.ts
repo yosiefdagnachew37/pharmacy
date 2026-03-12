@@ -16,6 +16,12 @@ export class Patient {
     @Column()
     name: string;
 
+    @Column({ default: true })
+    is_active: boolean;
+
+    @Column({ nullable: true })
+    branch_id: string;
+
     @Column({ nullable: true })
     phone: string;
 

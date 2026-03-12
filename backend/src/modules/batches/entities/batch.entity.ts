@@ -32,6 +32,21 @@ export class Batch {
     @Column('int')
     quantity_remaining: number; // Denormalized for quick access
 
+    @Column({ default: false })
+    is_locked: boolean; // Prevents sale of expired batches (auto-set by cron)
+
+    @Column({ default: false })
+    is_quarantined: boolean; // Manual hold flag by pharmacist/admin
+
+    @Column({ nullable: true })
+    supplier_id: string; // FK to Supplier (Phase 2)
+
+    @Column({ type: 'text', nullable: true })
+    notes: string; // Batch-level notes
+
+    @Column({ nullable: true })
+    branch_id: string;
+
     @CreateDateColumn()
     created_at: Date;
 }

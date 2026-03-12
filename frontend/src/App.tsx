@@ -12,6 +12,13 @@ import Login from './pages/Login';
 import System from './pages/System';
 import SalesLog from './pages/SalesLog';
 import Reports from './pages/Reports';
+import Suppliers from './pages/Suppliers';
+import Purchases from './pages/Purchases';
+import Expenses from './pages/Expenses';
+import CreditManagement from './pages/CreditManagement';
+import IntelligentForecasting from './pages/IntelligentForecasting';
+import SalesHistory from './pages/SalesHistory';
+import StockAudit from './pages/StockAudit';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -92,6 +99,62 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <System />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="suppliers"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <Suppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="purchases"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <Purchases />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="expenses"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <Expenses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="credit"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}>
+                  <CreditManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="forecasting"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <IntelligentForecasting />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="sales-history"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                  <SalesHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="stock-audit"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                  <StockAudit />
                 </ProtectedRoute>
               }
             />

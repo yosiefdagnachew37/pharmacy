@@ -15,9 +15,21 @@ import {
   LogOut,
   Menu,
   X,
-  BarChart3
+  BarChart2,
+  BarChart3,
+  Building2,
+  ShoppingBag,
+  Wallet2,
+  CreditCard,
+  Barcode,
+  Search as SearchIcon,
+  Pill as MedicineIcon,
+  CheckCircle
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import Modal from '../components/Modal';
+import client from '../api/client';
 
 interface MenuItem {
   icon: any;
@@ -37,6 +49,13 @@ const allMenuItems: MenuItem[] = [
   { icon: FileText, label: 'Prescriptions', path: '/prescriptions', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST'] },
   { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR'] },
+  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN'] },
+  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: History, label: 'Sales History', path: '/sales-history', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
+  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST'] },
+  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN'] },
+  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN'] },
 ];
 
@@ -52,6 +71,34 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { user, role, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Barcode Lookup State
+  const [scannedMed, setScannedMed] = useState<any>(null);
+  const [isLookupOpen, setIsLookupOpen] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  const handleGlobalScan = async (barcode: string) => {
+    // Only search if we're not currently in a lookup
+    if (isLookupOpen) return;
+
+    setIsLookupOpen(true);
+    setLookupLoading(true);
+    try {
+      const res = await client.get(`/medicines/search?q=${barcode}`);
+      if (res.data && res.data.length > 0) {
+        setScannedMed(res.data[0]);
+      } else {
+        setScannedMed(null);
+      }
+    } catch (err) {
+      console.error('Lookup failed', err);
+      setScannedMed(null);
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  useBarcodeScanner(handleGlobalScan);
 
   // Close sidebar when navigating on mobile
   useEffect(() => {
@@ -143,6 +190,76 @@ const DashboardLayout = () => {
           <span className="font-medium">Logout</span>
         </button>
       </div>
+
+      {/* Quick Lookup Modal */}
+      <Modal
+        isOpen={isLookupOpen}
+        onClose={() => setIsLookupOpen(false)}
+        title="Inventory Quick Lookup"
+      >
+        {lookupLoading ? (
+          <div className="flex flex-col items-center py-10">
+            <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-500 font-medium">Identifying product...</p>
+          </div>
+        ) : scannedMed ? (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+              <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+                <MedicineIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">{scannedMed.name}</h3>
+                <p className="text-sm text-gray-500">{scannedMed.generic_name}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Total Stock</span>
+                <span className={`text-lg font-black ${scannedMed.total_stock <= 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                  {scannedMed.total_stock} {scannedMed.unit}
+                </span>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Selling Price</span>
+                <span className="text-lg font-black text-indigo-700">
+                  ${Number(scannedMed.current_selling_price || scannedMed.selling_price || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex items-center gap-3">
+              <Barcode className="w-5 h-5 text-gray-400" />
+              <div className="flex-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Barcode / SKU</span>
+                <span className="text-sm font-mono font-bold text-gray-700">{scannedMed.barcode || scannedMed.sku || 'N/A'}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsLookupOpen(false)}
+              className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all"
+            >
+              Close Lookup
+            </button>
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <SearchIcon className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800">Product Not Found</h3>
+            <p className="text-gray-500 mt-1">The scanned code does not match any items in the database.</p>
+            <button
+              onClick={() => setIsLookupOpen(false)}
+              className="mt-6 px-8 py-2 bg-gray-100 text-gray-600 font-bold rounded-lg hover:bg-gray-200 transition-all"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+      </Modal>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">

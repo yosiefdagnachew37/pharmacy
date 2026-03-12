@@ -18,6 +18,13 @@ import { ReportingModule } from './modules/reporting/reporting.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { SystemModule } from './modules/system/system.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SuppliersModule } from './modules/suppliers/suppliers.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { CreditModule } from './modules/credit/credit.module';
+import { ForecastingModule } from './modules/forecasting/forecasting.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { BranchesModule } from './modules/branches/branches.module';
 
 @Module({
   imports: [
@@ -46,6 +53,13 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ReportingModule,
     SystemModule,
     NotificationsModule,
+    SuppliersModule,
+    PurchaseOrdersModule,
+    ExpensesModule,
+    CreditModule,
+    ForecastingModule,
+    ReceiptsModule,
+    BranchesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -30,7 +30,7 @@ import {
     Area
 } from 'recharts';
 
-type ReportTab = 'profit-loss' | 'sales' | 'inventory' | 'batches';
+type ReportTab = 'profit-loss' | 'sales' | 'inventory' | 'batches' | 'analytics';
 
 const Reports = () => {
     const [activeTab, setActiveTab] = useState<ReportTab>('profit-loss');
@@ -45,13 +45,22 @@ const Reports = () => {
     const [sales, setSales] = useState<any[]>([]);
     const [medicines, setMedicines] = useState<any[]>([]);
     const [batches, setBatches] = useState<any[]>([]);
+    const [netProfitAnalytics, setNetProfitAnalytics] = useState<any[]>([]);
+    const [workingCapital, setWorkingCapital] = useState<any>(null);
+    const [paretoData, setParetoData] = useState<any[]>([]);
+    const [profitMargins, setProfitMargins] = useState<any[]>([]);
+    const [batchTurnover, setBatchTurnover] = useState<any[]>([]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             if (activeTab === 'profit-loss') {
-                const res = await client.get(`/reporting/profit-loss?start=${dateRange.start}&end=${dateRange.end}`);
-                setProfitLoss(res.data);
+                const [plRes, dailyNetRes] = await Promise.all([
+                    client.get(`/reporting/profit-loss?start=${dateRange.start}&end=${dateRange.end}`),
+                    client.get(`/reporting/daily-profit-analytics?start=${dateRange.start}&end=${dateRange.end}`)
+                ]);
+                setProfitLoss(plRes.data);
+                setNetProfitAnalytics(dailyNetRes.data);
             } else if (activeTab === 'sales') {
                 const res = await client.get(`/reporting/sales?start=${dateRange.start}&end=${dateRange.end}`);
                 setSales(res.data);
@@ -61,6 +70,17 @@ const Reports = () => {
             } else if (activeTab === 'batches') {
                 const res = await client.get('/reporting/batches-status');
                 setBatches(res.data);
+            } else if (activeTab === 'analytics') {
+                const [wcRes, paretoRes, marginRes, turnoverRes] = await Promise.all([
+                    client.get('/reporting/working-capital'),
+                    client.get(`/reporting/pareto-analysis?start=${dateRange.start}&end=${dateRange.end}`),
+                    client.get('/reporting/profit-margin'),
+                    client.get('/reporting/batch-turnover')
+                ]);
+                setWorkingCapital(wcRes.data);
+                setParetoData(paretoRes.data);
+                setProfitMargins(marginRes.data);
+                setBatchTurnover(turnoverRes.data);
             }
         } catch (error) {
             console.error('Error fetching report data:', error);
@@ -156,6 +176,7 @@ const Reports = () => {
                     { id: 'sales', label: 'Sales Report', icon: ShoppingCart },
                     { id: 'inventory', label: 'Inventory', icon: Package },
                     { id: 'batches', label: 'Batches', icon: TableIcon },
+                    { id: 'analytics', label: 'Advanced Analytics', icon: BarChart3 },
                 ].map((tab) => (
                     <button
                         key={tab.id}
@@ -248,6 +269,53 @@ const Reports = () => {
                                             <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all" />
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Net Profit (After Amortized Expenses) */}
+                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <BarChart3 className="w-5 h-5 text-emerald-500" />
+                                    Net Profit Analytics (Includes Amortized Expenses)
+                                </h3>
+                                <div className="h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={netProfitAnalytics}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                                            />
+                                            <Bar dataKey="grossProfit" fill="#4F46E5" radius={[4, 4, 0, 0]} barSize={20} name="Gross Profit" />
+                                            <Bar dataKey="amortizedExpenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={20} name="Expenses" />
+                                            <Bar dataKey="netProfit" fill="#10B981" radius={[4, 4, 0, 0]} barSize={20} name="Net Profit" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="mt-6 overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                            <tr>
+                                                <th className="pb-3 px-2">Date</th>
+                                                <th className="pb-3 px-2">Gross Profit</th>
+                                                <th className="pb-3 px-2">Expenses (Amortized)</th>
+                                                <th className="pb-3 px-2">Net Profit</th>
+                                                <th className="pb-3 px-2 text-right">Margin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50 text-sm">
+                                            {netProfitAnalytics.map((day, idx) => (
+                                                <tr key={idx}>
+                                                    <td className="py-3 px-2 text-gray-600 font-medium">{day.date}</td>
+                                                    <td className="py-3 px-2 text-gray-800 font-bold">${day.grossProfit.toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-rose-500 font-bold">-${day.amortizedExpenses.toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-emerald-600 font-black">${day.netProfit.toFixed(2)}</td>
+                                                    <td className="py-3 px-2 text-right text-gray-400 font-bold">{day.netMargin.toFixed(1)}%</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
@@ -463,6 +531,128 @@ const Reports = () => {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ADVANCED ANALYTICS View */}
+                    {activeTab === 'analytics' && (
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-8 flex items-center gap-2">
+                                        <TrendingUp className="w-6 h-6 text-indigo-500" />
+                                        Pareto Analysis (Revenue Concentration)
+                                    </h3>
+                                    <div className="h-[350px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={paretoData}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                                                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none' }} />
+                                                <Area type="monotone" dataKey="cumulative_percentage" stroke="#4F46E5" strokeWidth={3} fill="#4F46E5" fillOpacity={0.1} name="Cumulative %" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <p className="mt-4 text-sm text-gray-500 italic text-center">Identifying the top revenue contributors (80/20 rule).</p>
+                                </div>
+
+                                <div className="bg-indigo-900 text-white p-8 rounded-3xl shadow-xl flex flex-col justify-between group">
+                                    <div>
+                                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                            <DollarSign className="w-6 h-6 text-indigo-300" />
+                                            Working Capital
+                                        </h3>
+                                        <div className="space-y-6">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">Net Position</p>
+                                                <h4 className="text-3xl font-black">${workingCapital?.net_working_capital?.toLocaleString()}</h4>
+                                            </div>
+                                            <div className="space-y-3 pt-4 border-t border-indigo-800">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-indigo-300">Inventory Value</span>
+                                                    <span className="font-bold">${workingCapital?.inventory_valuation?.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-emerald-400">Total Receivables</span>
+                                                    <span className="font-bold">+${workingCapital?.outstanding_receivables?.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-rose-400">Total Payables</span>
+                                                    <span className="font-bold">-${workingCapital?.outstanding_payables?.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-8 p-4 bg-white/10 rounded-2xl border border-white/10 text-xs font-medium text-indigo-100 italic">
+                                        Liquidity formula: Inventory + Receivables - Payables.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                        <Percent className="w-5 h-5 text-purple-500" />
+                                        Profit Margin Analysis (Top 10)
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {profitMargins.slice(0, 10).map((m, i) => (
+                                            <div key={i} className="flex flex-col gap-1">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="font-bold text-gray-700">{m.medicine}</span>
+                                                    <span className="font-black text-indigo-600">{m.margin_percentage}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${m.margin_percentage}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                        <RefreshCcw className="w-5 h-5 text-emerald-500" />
+                                        Batch Depletion Metrics (Turnover)
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead>
+                                                <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-50">
+                                                    <th className="py-3 px-2">Medicine / Batch</th>
+                                                    <th className="py-3 px-2 text-right">Qty</th>
+                                                    <th className="py-3 px-2 text-right text-gray-800">Days to Deplete</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 text-sm">
+                                                {batchTurnover.length === 0 ? (
+                                                    <tr className="bg-emerald-50/30">
+                                                        <td className="py-3 px-2 italic text-gray-400 text-xs" colSpan={3}>
+                                                            No batch depletion logs found for the selected period.
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    batchTurnover.slice(0, 10).map((bt, i) => (
+                                                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="py-3 px-2">
+                                                                <p className="font-bold text-gray-700">{bt.name}</p>
+                                                                <p className="text-[10px] text-indigo-500 font-mono italic">{bt.batchNo}</p>
+                                                            </td>
+                                                            <td className="py-3 px-2 text-right font-medium text-gray-500">{bt.qty}</td>
+                                                            <td className="py-3 px-2 text-right">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${bt.days_to_deplete <= 7 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                                    {bt.days_to_deplete} Days
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

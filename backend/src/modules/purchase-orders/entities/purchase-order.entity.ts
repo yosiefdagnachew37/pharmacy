@@ -1,0 +1,85 @@
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Supplier } from '../../suppliers/entities/supplier.entity';
+import { User } from '../../users/entities/user.entity';
+
+export enum POStatus {
+    DRAFT = 'DRAFT',
+    APPROVED = 'APPROVED',
+    SENT = 'SENT',
+    CONFIRMED = 'CONFIRMED',
+    PARTIALLY_RECEIVED = 'PARTIALLY_RECEIVED',
+    COMPLETED = 'COMPLETED',
+    CANCELLED = 'CANCELLED',
+}
+
+export enum POPaymentMethod {
+    CASH = 'CASH',
+    CREDIT = 'CREDIT',
+    CHEQUE = 'CHEQUE',
+}
+
+export enum POPaymentStatus {
+    PAID = 'PAID',
+    PENDING = 'PENDING',
+    PARTIALLY_PAID = 'PARTIALLY_PAID',
+}
+
+@Entity('purchase_orders')
+export class PurchaseOrder {
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
+
+    @Column({ unique: true })
+    po_number: string; // Auto-generated
+
+    @ManyToOne(() => Supplier, { onDelete: 'SET NULL', nullable: true })
+    @JoinColumn({ name: 'supplier_id' })
+    supplier: Supplier;
+
+    @Column({ nullable: true })
+    supplier_id: string;
+
+    @Column({ type: 'enum', enum: POStatus, default: POStatus.DRAFT })
+    status: POStatus;
+
+    @Column('decimal', { precision: 12, scale: 2, default: 0 })
+    total_amount: number;
+
+    @Column({ type: 'text', nullable: true })
+    notes: string;
+
+    @Column({ type: 'enum', enum: POPaymentMethod, default: POPaymentMethod.CASH })
+    payment_method: POPaymentMethod;
+
+    @Column({ type: 'enum', enum: POPaymentStatus, default: POPaymentStatus.PENDING })
+    payment_status: POPaymentStatus;
+
+    @Column('decimal', { precision: 10, scale: 2, default: 0 })
+    total_paid: number;
+
+    @Column({ nullable: true })
+    branch_id: string;
+
+    @ManyToOne(() => User, { nullable: true })
+    @JoinColumn({ name: 'created_by' })
+    created_by_user: User;
+
+    @Column({ nullable: true })
+    created_by: string;
+
+    @ManyToOne(() => User, { nullable: true })
+    @JoinColumn({ name: 'approved_by' })
+    approved_by_user: User;
+
+    @Column({ nullable: true })
+    approved_by: string;
+
+    @Column({ type: 'date', nullable: true })
+    expected_delivery: Date;
+
+    @CreateDateColumn()
+    created_at: Date;
+
+    @UpdateDateColumn()
+    updated_at: Date;
+}

@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThan, Raw } from 'typeorm';
+import { Repository, Between, MoreThan, Raw, LessThan } from 'typeorm';
 import { Sale } from '../sales/entities/sale.entity';
 import { SaleItem } from '../sales/entities/sale-item.entity';
 import { Batch } from '../batches/entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { StockTransaction } from '../stock/entities/stock-transaction.entity';
 import { Alert, AlertStatus } from '../alerts/entities/alert.entity';
+import { Expense, ExpenseFrequency } from '../expenses/entities/expense.entity';
 import * as ExcelJS from 'exceljs';
 import * as PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, AlignmentType, WidthType } from 'docx';
+import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
+import { CreditRecord } from '../credit/entities/credit-record.entity';
 
 @Injectable()
 export class ReportingService {
@@ -26,6 +29,12 @@ export class ReportingService {
         private readonly transactionsRepository: Repository<StockTransaction>,
         @InjectRepository(Alert)
         private readonly alertsRepository: Repository<Alert>,
+        @InjectRepository(Expense)
+        private readonly expensesRepository: Repository<Expense>,
+        @InjectRepository(PurchaseOrder)
+        private readonly poRepository: Repository<PurchaseOrder>,
+        @InjectRepository(CreditRecord)
+        private readonly creditRecordRepository: Repository<CreditRecord>,
     ) { }
 
     async getDashboardStats() {
@@ -159,6 +168,59 @@ export class ReportingService {
             medicineBreakdown: Array.from(medicineStats.values()).sort((a, b) => b.profit - a.profit),
             dailyBreakdown: Array.from(dailyStats.values())
         };
+    }
+
+    async getDailyProfitAnalytics(startDate: Date, endDate: Date) {
+        // 1. Get gross profit from sales
+        const plData = await this.getProfitLossReport(startDate, endDate);
+
+        // 2. Get all expenses
+        const expenses = await this.expensesRepository.find({
+            where: { expense_date: Between(startDate, endDate) }
+        });
+
+        const recurringExpenses = await this.expensesRepository.find({
+            where: { is_recurring: true }
+        });
+
+        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        const resultDaily: any[] = [];
+
+        for (let i = 0; i < days; i++) {
+            const current = new Date(startDate);
+            current.setDate(current.getDate() + i);
+            const dateStr = current.toISOString().split('T')[0];
+
+            const daySales = plData.dailyBreakdown.find(d => d.date === dateStr) || { revenue: 0, cost: 0, profit: 0 };
+
+            // Calculate amortized recurring expenses for this day
+            let amortizedExp = 0;
+            recurringExpenses.forEach(exp => {
+                if (exp.frequency === ExpenseFrequency.MONTHLY) amortizedExp += Number(exp.amount) / 30;
+                else if (exp.frequency === ExpenseFrequency.WEEKLY) amortizedExp += Number(exp.amount) / 7;
+                else if (exp.frequency === ExpenseFrequency.DAILY) amortizedExp += Number(exp.amount);
+            });
+
+            // One-time expenses for this specific day
+            const dayOneTimeExp = expenses
+                .filter(e => !e.is_recurring && e.expense_date.toString() === dateStr)
+                .reduce((sum, e) => sum + Number(e.amount), 0);
+
+            const totalExpenses = amortizedExp + dayOneTimeExp;
+            const netProfit = daySales.profit - totalExpenses;
+
+            resultDaily.push({
+                date: dateStr,
+                revenue: daySales.revenue,
+                cogs: daySales.cost,
+                grossProfit: daySales.profit,
+                expenses: totalExpenses,
+                netProfit: netProfit,
+                margin: daySales.revenue > 0 ? (netProfit / daySales.revenue) * 100 : 0
+            });
+        }
+
+        return resultDaily;
     }
 
     // ─── MEDICINE & BATCH REPORTS ───────────────────────────────
@@ -692,5 +754,254 @@ export class ReportingService {
             relations: ['medicine'],
             order: { expiry_date: 'ASC' },
         });
+    }
+
+    async getRegulatoryNarcoticsReport(startDate: Date, endDate: Date) {
+        return await this.salesRepository.find({
+            where: {
+                created_at: Between(startDate, endDate),
+                is_controlled_transaction: true
+            },
+            relations: ['items', 'items.medicine', 'patient', 'user'],
+            order: { created_at: 'ASC' }
+        });
+    }
+
+    async getFEFOComplianceReport(startDate: Date, endDate: Date) {
+        // This report identifies cases where the sold batch was NOT the one with the earliest expiry
+        // (implying a FEFO override or error)
+        const saleItems = await this.saleItemsRepository.find({
+            where: {
+                sale: { created_at: Between(startDate, endDate) }
+            },
+            relations: ['sale', 'batch', 'medicine', 'medicine.batches'],
+        });
+
+        const anomalies: any[] = [];
+
+        saleItems.forEach(item => {
+            if (!item.batch || !item.medicine?.batches) return;
+
+            // Find if there was an earlier non-expired batch available at the time of sale
+            const availableBatches = item.medicine.batches.filter(b =>
+                new Date(b.expiry_date) > new Date(item.sale.created_at) &&
+                new Date(b.expiry_date) < new Date(item.batch.expiry_date) &&
+                b.id !== item.batch.id
+            );
+
+            if (availableBatches.length > 0) {
+                anomalies.push({
+                    sale_id: item.sale.id,
+                    receipt_number: item.sale.receipt_number,
+                    medicine: item.medicine.name,
+                    batch_used: item.batch.batch_number,
+                    batch_expiry: item.batch.expiry_date,
+                    skipped_batch: availableBatches[0].batch_number,
+                    skipped_expiry: availableBatches[0].expiry_date,
+                    date: item.sale.created_at
+                });
+            }
+        });
+
+        return {
+            total_items_scanned: saleItems.length,
+            compliance_violations: anomalies.length,
+            violation_rate: saleItems.length > 0 ? (anomalies.length / saleItems.length) * 100 : 0,
+            violations: anomalies
+        };
+    }
+
+    async getInventoryValuation() {
+        const batches = await this.batchesRepository.find({
+            where: { quantity_remaining: MoreThan(0) },
+        });
+
+        const totalValue = batches.reduce((sum, b) => sum + (Number(b.quantity_remaining) * Number(b.purchase_price)), 0);
+        return { total_valuation: totalValue, batch_count: batches.length };
+    }
+
+    async getExpiryLossReport() {
+        // Actual loss (Locked/Expired)
+        const expiredBatches = await this.batchesRepository.find({
+            where: [
+                { is_locked: true },
+                { is_quarantined: true },
+                { expiry_date: LessThan(new Date()) }
+            ],
+            relations: ['medicine']
+        });
+
+        const actualLossValue = expiredBatches.reduce((sum, b) => sum + (Number(b.quantity_remaining) * Number(b.purchase_price)), 0);
+
+        // Projected loss (Expiring in 30 days)
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+        const atRiskBatches = await this.batchesRepository.find({
+            where: {
+                expiry_date: Between(new Date(), thirtyDaysFromNow),
+                quantity_remaining: Between(1, 999999),
+                is_locked: false
+            }
+        });
+
+        const projectedLossValue = atRiskBatches.reduce((sum, b) => sum + (Number(b.quantity_remaining) * Number(b.purchase_price)), 0);
+
+        return {
+            actual_loss: actualLossValue,
+            projected_30d_loss: projectedLossValue,
+            expired_batches_count: expiredBatches.length,
+            at_risk_count: atRiskBatches.length
+        };
+    }
+
+    async getBatchTurnoverReport() {
+        const sales = await this.saleItemsRepository.find({
+            relations: ['batch', 'medicine'],
+            order: { created_at: 'ASC' }
+        });
+
+        const batchStats = new Map<string, { start: Date, end: Date, qty: number, name: string, batchNo: string }>();
+
+        sales.forEach(s => {
+            if (!s.batch) return;
+            const existing = batchStats.get(s.batch.id);
+            if (!existing) {
+                batchStats.set(s.batch.id, {
+                    start: s.created_at,
+                    end: s.created_at,
+                    qty: s.quantity,
+                    name: s.medicine?.name,
+                    batchNo: s.batch.batch_number
+                });
+            } else {
+                existing.end = s.created_at;
+                existing.qty += s.quantity;
+            }
+        });
+
+        return Array.from(batchStats.values()).map(b => ({
+            ...b,
+            days_to_deplete: Math.floor((b.end.getTime() - b.start.getTime()) / (1000 * 3600 * 24)) || 1
+        }));
+    }
+
+    async getProfitMarginAnalysis() {
+        const medicines = await this.medicinesRepository.find({ relations: ['batches'] });
+        return medicines.map(m => {
+            const avgPurchasePrice = m.batches?.length ?
+                m.batches.reduce((sum, b) => sum + Number(b.purchase_price), 0) / m.batches.length : 0;
+            const margin = m.current_selling_price ?
+                ((Number(m.current_selling_price) - avgPurchasePrice) / Number(m.current_selling_price)) * 100 : 0;
+
+            return {
+                medicine: m.name,
+                avg_purchase_price: avgPurchasePrice,
+                selling_price: m.current_selling_price,
+                margin_percentage: parseFloat(margin.toFixed(2))
+            };
+        }).sort((a, b) => b.margin_percentage - a.margin_percentage);
+    }
+
+    async getParetoAnalysis(startDate: Date, endDate: Date) {
+        const sales = await this.saleItemsRepository.find({
+            where: { created_at: Between(startDate, endDate) },
+            relations: ['medicine']
+        });
+
+        const revenueMap = new Map<string, { name: string, revenue: number }>();
+        let totalRevenue = 0;
+
+        sales.forEach(s => {
+            const rev = Number(s.unit_price) * s.quantity;
+            totalRevenue += rev;
+            const existing = revenueMap.get(s.medicine_id);
+            if (existing) existing.revenue += rev;
+            else revenueMap.set(s.medicine_id, { name: s.medicine?.name || 'Unknown', revenue: rev });
+        });
+
+        const sorted = Array.from(revenueMap.values()).sort((a, b) => b.revenue - a.revenue);
+        let cumulative = 0;
+        return sorted.map(item => {
+            cumulative += item.revenue;
+            return {
+                ...item,
+                cumulative_percentage: parseFloat(((cumulative / totalRevenue) * 100).toFixed(2))
+            };
+        });
+    }
+
+    async getInventoryTurnoverRatio(startDate: Date, endDate: Date) {
+        const cogsItems = await this.saleItemsRepository.find({
+            where: { created_at: Between(startDate, endDate) },
+            relations: ['batch']
+        });
+
+        const totalCOGS = cogsItems.reduce((sum, item) => {
+            const cost = item.batch?.purchase_price || 0;
+            return sum + (Number(cost) * item.quantity);
+        }, 0);
+
+        // Average Inventory = (Beginning + Ending) / 2
+        // Since we don't have historical snapshots easily, we'll use current valuation as ending 
+        // and estimate average via batch creation dates.
+        const currentValuation = await this.getInventoryValuation();
+        const avgInventory = currentValuation.total_valuation || 1; // Prevent div by zero
+
+        return {
+            cogs: totalCOGS,
+            avg_inventory: avgInventory,
+            turnover_ratio: parseFloat((totalCOGS / avgInventory).toFixed(2))
+        };
+    }
+
+    async getExpenseTrendReport() {
+        const expenses = await this.expensesRepository.find({
+            order: { created_at: 'ASC' }
+        });
+
+        const trends = new Map<string, number>();
+        expenses.forEach(e => {
+            const monthStr = e.created_at.toISOString().substring(0, 7); // YYYY-MM
+            trends.set(monthStr, (trends.get(monthStr) || 0) + Number(e.amount));
+        });
+
+        return Array.from(trends.entries()).map(([month, amount]) => ({ month, amount }));
+    }
+
+    async getWorkingCapital() {
+        const [inventory, credits, orders] = await Promise.all([
+            this.getInventoryValuation(),
+            this.creditRecordRepository.find({ select: ['original_amount', 'paid_amount'] }),
+            this.poRepository.find({ select: ['total_amount', 'total_paid'] })
+        ]);
+
+        const totalInventoryValue = inventory.total_valuation;
+        const totalReceivables = credits.reduce((sum, c) => sum + (Number(c.original_amount) - Number(c.paid_amount)), 0);
+        const totalPayables = orders.reduce((sum, o) => sum + (Number(o.total_amount) - Number(o.total_paid)), 0);
+
+        return {
+            inventory_valuation: totalInventoryValue,
+            outstanding_receivables: totalReceivables,
+            outstanding_payables: totalPayables,
+            net_working_capital: totalInventoryValue + totalReceivables - totalPayables
+        };
+    }
+
+    async getDailyExpenseSummary() {
+        const recurring = await this.expensesRepository.find({ where: { is_recurring: true } });
+        let dailyCost = 0;
+
+        recurring.forEach(e => {
+            let divisor = 1;
+            if (e.frequency === ExpenseFrequency.MONTHLY) divisor = 30;
+            else if (e.frequency === ExpenseFrequency.WEEKLY) divisor = 7;
+            dailyCost += Number(e.amount) / divisor;
+        });
+
+        return {
+            total_expected_daily: parseFloat(dailyCost.toFixed(2)),
+            recurring_count: recurring.length
+        };
     }
 }

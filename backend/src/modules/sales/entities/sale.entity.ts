@@ -8,7 +8,9 @@ export enum PaymentMethod {
     CASH = 'CASH',
     CREDIT_CARD = 'CREDIT_CARD',
     INSURANCE = 'INSURANCE',
-    MOBILE_PAYMENT = 'MOBILE_PAYMENT',
+    CREDIT = 'CREDIT',
+    CHEQUE = 'CHEQUE',
+    SPLIT = 'SPLIT',
 }
 
 @Entity('sales')
@@ -46,12 +48,30 @@ export class Sale {
     })
     payment_method: PaymentMethod;
 
+    @Column('jsonb', { nullable: true })
+    split_payments: { method: PaymentMethod; amount: number }[];
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'created_by' })
     user: User;
 
     @Column()
     created_by: string;
+
+    @Column({ default: false })
+    is_refunded: boolean;
+
+    @Column('decimal', { precision: 10, scale: 2, default: 0 })
+    refund_amount: number;
+
+    @Column({ nullable: true })
+    prescription_image_url: string;
+
+    @Column({ default: false })
+    is_controlled_transaction: boolean;
+
+    @Column({ nullable: true })
+    branch_id: string;
 
     @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
     items: SaleItem[];

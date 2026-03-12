@@ -41,6 +41,17 @@ export class ReportingController {
         return this.reportingService.getProfitLossReport(startDate, endDate);
     }
 
+    @Get('daily-profit-analytics')
+    @Roles(UserRole.ADMIN, UserRole.AUDITOR)
+    async getDailyProfitAnalytics(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const startDate = start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 7));
+        const endDate = end ? new Date(end) : new Date();
+        return this.reportingService.getDailyProfitAnalytics(startDate, endDate);
+    }
+
     @Get('medicines')
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
     async getMedicineReport() {
@@ -186,6 +197,82 @@ export class ReportingController {
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     async getExpiryReport(@Query('days') days: string) {
         return this.reportingService.getExpiryReport(parseInt(days, 10) || 30);
+    }
+
+    @Get('regulatory-narcotics')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
+    async getRegulatoryNarcotics(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        return this.reportingService.getRegulatoryNarcoticsReport(startDate, endDate);
+    }
+
+    @Get('fefo-compliance')
+    @Roles(UserRole.ADMIN, UserRole.AUDITOR)
+    async getFEFOCompliance(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        return this.reportingService.getFEFOComplianceReport(startDate, endDate);
+    }
+
+    @Get('expiry-loss')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    async getExpiryLoss() {
+        return this.reportingService.getExpiryLossReport();
+    }
+
+    @Get('batch-turnover')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    async getBatchTurnover() {
+        return this.reportingService.getBatchTurnoverReport();
+    }
+
+    @Get('profit-margin')
+    @Roles(UserRole.ADMIN)
+    async getProfitMargin() {
+        return this.reportingService.getProfitMarginAnalysis();
+    }
+
+    @Get('pareto-analysis')
+    @Roles(UserRole.ADMIN)
+    async getParetoAnalysis(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        return this.reportingService.getParetoAnalysis(startDate, endDate);
+    }
+
+    @Get('inventory-turnover')
+    @Roles(UserRole.ADMIN)
+    async getInventoryTurnover(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        return this.reportingService.getInventoryTurnoverRatio(startDate, endDate);
+    }
+
+    @Get('expense-trend')
+    @Roles(UserRole.ADMIN)
+    async getExpenseTrend() {
+        return this.reportingService.getExpenseTrendReport();
+    }
+
+    @Get('working-capital')
+    @Roles(UserRole.ADMIN)
+    async getWorkingCapital() {
+        return this.reportingService.getWorkingCapital();
+    }
+
+    @Get('expected-daily-expense')
+    @Roles(UserRole.ADMIN)
+    async getExpectedDailyExpense() {
+        return this.reportingService.getDailyExpenseSummary();
     }
 
     // ─── HELPERS ────────────────────────────────────────────────

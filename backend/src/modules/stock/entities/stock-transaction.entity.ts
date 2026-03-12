@@ -50,6 +50,12 @@ export class StockTransaction {
     @Column({ nullable: true })
     notes: string;
 
+    @Column({ default: false })
+    is_fefo_override: boolean; // True if pharmacist manually overrode FEFO order
+
+    @Column({ type: 'text', nullable: true })
+    override_reason: string; // Required reason when FEFO is overridden
+
     @ManyToOne(() => User, { nullable: true })
     @JoinColumn({ name: 'created_by' })
     user: User;

@@ -13,4 +13,8 @@ export class CreateUserDto {
 
     @IsEnum(UserRole)
     role: UserRole;
+
+    @IsString()
+    @IsNotEmpty()
+    manager_pin: string;
 }

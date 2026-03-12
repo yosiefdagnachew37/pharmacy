@@ -15,7 +15,9 @@ import {
   BarChart3,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Shield,
+  DollarSign
 } from 'lucide-react';
 import {
   BarChart,
@@ -43,6 +45,9 @@ const Dashboard = () => {
   });
   const [trending, setTrending] = useState<any[]>([]);
   const [revenue, setRevenue] = useState<any>(null);
+  const [expiryData, setExpiryData] = useState<any>(null);
+  const [workingCapital, setWorkingCapital] = useState<any>(null);
+  const [dailyExpense, setDailyExpense] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSales, setExpandedSales] = useState(false);
   const [expandedStock, setExpandedStock] = useState(false);
@@ -50,14 +55,20 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, trendRes, revRes] = await Promise.all([
+        const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes] = await Promise.all([
           client.get('/reporting/dashboard'),
           client.get('/reporting/trending-medicines?limit=10'),
-          client.get('/reporting/revenue-comparison')
+          client.get('/reporting/revenue-comparison'),
+          client.get('/stock/expiry-dashboard').catch(() => ({ data: null })),
+          client.get('/reporting/working-capital').catch(() => ({ data: null })),
+          client.get('/reporting/expected-daily-expense').catch(() => ({ data: null })),
         ]);
         setStats(statsRes.data);
         setTrending(trendRes.data);
         setRevenue(revRes.data);
+        setExpiryData(expiryRes.data);
+        setWorkingCapital(wcRes.data);
+        setDailyExpense(expRes.data);
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
       } finally {
@@ -117,6 +128,26 @@ const Dashboard = () => {
       secondaryColor: "bg-indigo-50",
       textColor: "text-indigo-600",
       path: "/alerts"
+    },
+    {
+      label: "Working Capital",
+      value: workingCapital ? `$${workingCapital.net_working_capital.toLocaleString()}` : "---",
+      desc: "Liquidity status",
+      icon: DollarSign,
+      color: "bg-cyan-500",
+      secondaryColor: "bg-cyan-50",
+      textColor: "text-cyan-600",
+      path: "/reports"
+    },
+    {
+      label: "Daily Overhead",
+      value: dailyExpense ? `$${dailyExpense.total_expected_daily}` : "---",
+      desc: "Expected recurring",
+      icon: BarChart3,
+      color: "bg-violet-500",
+      secondaryColor: "bg-violet-50",
+      textColor: "text-violet-600",
+      path: "/expenses"
     }
   ];
 
@@ -357,6 +388,82 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Expiry Intelligence Section */}
+      {expiryData && (
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+              <Shield className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">Expiry Intelligence (FEFO)</h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-rose-50 to-rose-100 p-5 rounded-2xl border border-rose-200">
+              <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Inventory at Risk</p>
+              <p className="text-2xl font-black text-rose-700">{expiryData.total_at_risk_value?.toFixed(2)} ETB</p>
+              <p className="text-xs text-rose-500 mt-1">{expiryData.critical_count} critical, {expiryData.high_risk_count} high risk</p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-5 rounded-2xl border border-amber-200">
+              <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">Near Expiry %</p>
+              <p className="text-2xl font-black text-amber-700">{expiryData.percent_near_expiry}%</p>
+              <p className="text-xs text-amber-500 mt-1">of total inventory value</p>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-2xl border border-purple-200">
+              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Predicted Loss (30d)</p>
+              <p className="text-2xl font-black text-purple-700">{expiryData.predicted_loss_30_days?.toFixed(2)} ETB</p>
+              <p className="text-xs text-purple-500 mt-1">estimated expiry loss</p>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-5 rounded-2xl border border-emerald-200">
+              <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Batches Analyzed</p>
+              <p className="text-2xl font-black text-emerald-700">{expiryData.total_batches_analyzed}</p>
+              <p className="text-xs text-emerald-500 mt-1">active non-expired batches</p>
+            </div>
+          </div>
+
+          {/* Top 10 Expiry Risk Medicines */}
+          {expiryData.top_10_risks?.length > 0 && (
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-50">
+              <h4 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Top Expiry Risks</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                      <th className="text-left py-3 px-2">Medicine</th>
+                      <th className="text-left py-3 px-2">Batch</th>
+                      <th className="text-right py-3 px-2">Stock</th>
+                      <th className="text-right py-3 px-2">Days Left</th>
+                      <th className="text-right py-3 px-2">Risk Score</th>
+                      <th className="text-center py-3 px-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {expiryData.top_10_risks.map((risk: any) => (
+                      <tr key={risk.batch_id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3 px-2 font-medium text-gray-800">{risk.medicine_name}</td>
+                        <td className="py-3 px-2 text-gray-500 font-mono text-xs">{risk.batch_number}</td>
+                        <td className="py-3 px-2 text-right text-gray-700">{risk.current_stock}</td>
+                        <td className="py-3 px-2 text-right text-gray-700">{risk.days_until_expiry}d</td>
+                        <td className="py-3 px-2 text-right font-bold text-gray-800">{risk.risk_score}</td>
+                        <td className="py-3 px-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${risk.risk_status === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                            risk.risk_status === 'HIGH_RISK' ? 'bg-orange-100 text-orange-700' :
+                              risk.risk_status === 'MONITOR' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                            }`}>
+                            {risk.risk_status.replace('_', ' ')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

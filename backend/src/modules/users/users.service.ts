@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserRole } from '../../common/enums/user-role.enum';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class UsersService {
     ) { }
 
     async create(createUserDto: CreateUserDto): Promise<User> {
-        const { username, password, role } = createUserDto;
+        const { username, password, role, manager_pin } = createUserDto;
 
         const existingUser = await this.usersRepository.findOne({ where: { username } });
         if (existingUser) {
@@ -27,6 +28,7 @@ export class UsersService {
             username,
             password_hash,
             role,
+            manager_pin,
         });
 
         return this.usersRepository.save(user);
@@ -42,5 +44,15 @@ export class UsersService {
 
     async findAll(): Promise<User[]> {
         return this.usersRepository.find();
+    }
+
+    async verifyPin(pin: string): Promise<User | null> {
+        // Find any user with roles ADMIN or PHARMACIST that has this PIN
+        return this.usersRepository.findOne({
+            where: [
+                { manager_pin: pin, role: UserRole.ADMIN, is_active: true },
+                { manager_pin: pin, role: UserRole.PHARMACIST, is_active: true }
+            ]
+        });
     }
 }

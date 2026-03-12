@@ -1,14 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Between, In } from 'typeorm';
 import { Sale, PaymentMethod } from './entities/sale.entity';
 import { SaleItem } from './entities/sale-item.entity';
+import { Medicine } from '../medicines/entities/medicine.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { StockService } from '../stock/stock.service';
 import { ReferenceType } from '../stock/entities/stock-transaction.entity';
 import { AlertsService } from '../alerts/alerts.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { CreditService } from '../credit/credit.service';
+import { Refund } from './entities/refund.entity';
 
 @Injectable()
 export class SalesService {
@@ -17,9 +20,12 @@ export class SalesService {
         private readonly salesRepository: Repository<Sale>,
         @InjectRepository(SaleItem)
         private readonly itemsRepository: Repository<SaleItem>,
+        @InjectRepository(Refund)
+        private readonly refundRepository: Repository<Refund>,
         private readonly stockService: StockService,
         private readonly alertsService: AlertsService,
         private readonly notificationsService: NotificationsService,
+        private readonly creditService: CreditService,
         private dataSource: DataSource,
     ) { }
 
@@ -27,14 +33,54 @@ export class SalesService {
         const { items, total_price, payment_method, ...rest } = createSaleDto;
 
         const sale = await this.dataSource.transaction(async (manager) => {
+            // 0. Check for Controlled Substances
+            const medIds = items.map(i => i.medicine_id);
+            const medicines = await manager.getRepository(Medicine).find({
+                where: { id: In(medIds) }
+            });
+
+            const hasControlled = medicines.some(m => m.is_controlled);
+            if (hasControlled && !createSaleDto.prescription_image_url && !createSaleDto.prescription_id) {
+                throw new BadRequestException('Prescription (upload or link) is required for controlled substances.');
+            }
+
             // 1. Create Sale Header
+            const finalPaymentMethod = (payment_method as PaymentMethod) || PaymentMethod.CASH;
             const saleHeader = manager.create(Sale, {
                 ...rest,
                 total_amount: total_price,
-                payment_method: (payment_method as PaymentMethod) || PaymentMethod.CASH,
+                payment_method: finalPaymentMethod,
+                split_payments: createSaleDto.split_payments as { method: PaymentMethod; amount: number }[],
+                prescription_image_url: createSaleDto.prescription_image_url,
+                is_controlled_transaction: hasControlled,
                 created_by: userId,
             });
             const savedSale = await manager.save(saleHeader);
+
+            // If it's a credit sale, ensure we have a patient/customer ID and record it
+            let creditAmount = 0;
+            if (finalPaymentMethod === PaymentMethod.CREDIT) {
+                creditAmount = total_price;
+            } else if (finalPaymentMethod === PaymentMethod.SPLIT && createSaleDto.split_payments) {
+                const creditSplit = createSaleDto.split_payments.find(p => p.method === PaymentMethod.CREDIT);
+                if (creditSplit) creditAmount = creditSplit.amount;
+            }
+
+            if (creditAmount > 0) {
+                if (!rest.patient_id) {
+                    throw new BadRequestException('A registered customer/patient is required for credit sales.');
+                }
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 30); // Default 30 days due date
+
+                await this.creditService.recordCreditSale(
+                    rest.patient_id,
+                    savedSale.id,
+                    creditAmount,
+                    dueDate,
+                    `Credit sale automatically logged from POS`
+                );
+            }
 
             // 2. Process Items and Reduce Stock
             for (const item of items) {
@@ -95,7 +141,52 @@ export class SalesService {
     async findOne(id: string): Promise<Sale | null> {
         return await this.salesRepository.findOne({
             where: { id },
-            relations: ['items', 'items.medicine', 'patient', 'user'],
+            relations: ['items', 'items.medicine', 'items.batch', 'patient', 'user'],
+        });
+    }
+
+    async processRefund(createRefundDto: any, userId: string): Promise<Refund> {
+        const { sale_id, medicine_id, quantity, amount, reason } = createRefundDto;
+
+        return await this.dataSource.transaction(async (manager) => {
+            const sale = await manager.findOne(Sale, {
+                where: { id: sale_id },
+                relations: ['items']
+            });
+            if (!sale) throw new NotFoundException('Sale not found');
+
+            const item = sale.items.find(i => i.medicine_id === medicine_id);
+            if (!item) throw new BadRequestException('Item not found in this sale');
+            if (item.quantity < quantity) throw new BadRequestException('Refund quantity exceeds original sale quantity');
+
+            // 1. Create Refund Record
+            const refund = manager.create(Refund, {
+                sale_id,
+                medicine_id,
+                quantity,
+                amount,
+                reason,
+                processed_by_id: userId
+            });
+            const savedRefund = await manager.save(refund);
+
+            // 2. Update Sale Header
+            sale.is_refunded = true;
+            sale.refund_amount = Number(sale.refund_amount) + Number(amount);
+            await manager.save(sale);
+
+            // 3. Reverse Stock (Add back to batch)
+            const TransactionType = (await import('../stock/entities/stock-transaction.entity')).TransactionType;
+            await this.stockService.recordTransaction(
+                item.batch_id,
+                TransactionType.IN,
+                quantity,
+                ReferenceType.SALE, // Or maybe REFUND if we had it, but SALE works for now
+                sale_id,
+                userId
+            );
+
+            return savedRefund;
         });
     }
 }

@@ -4,6 +4,7 @@ import { User } from '../../users/entities/user.entity';
 export enum NotificationType {
     LOW_STOCK = 'LOW_STOCK',
     EXPIRING = 'EXPIRING',
+    FRAUD_ALERT = 'FRAUD_ALERT',
     SALE = 'SALE',
     SYSTEM = 'SYSTEM',
     INFO = 'INFO',

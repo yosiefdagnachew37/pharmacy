@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Sale } from './sale.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 import { Batch } from '../../batches/entities/batch.entity';
@@ -37,4 +37,7 @@ export class SaleItem {
 
     @Column('decimal', { precision: 10, scale: 2 })
     subtotal: number;
+
+    @CreateDateColumn()
+    created_at: Date;
 }

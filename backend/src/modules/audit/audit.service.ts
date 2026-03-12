@@ -18,6 +18,7 @@ export class AuditService {
         old_values?: any;
         new_values?: any;
         ip_address?: string;
+        is_controlled_transaction?: boolean;
     }) {
         const logEntry = this.auditRepository.create(data);
         return await this.auditRepository.save(logEntry);

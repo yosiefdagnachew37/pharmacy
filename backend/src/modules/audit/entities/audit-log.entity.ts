@@ -9,6 +9,7 @@ export enum AuditAction {
     LOGOUT = 'LOGOUT',
     DISPENSE = 'DISPENSE',
     SELL = 'SELL',
+    REFUND = 'REFUND',
 }
 
 @Entity('audit_logs')
@@ -43,6 +44,9 @@ export class AuditLog {
 
     @Column({ nullable: true })
     ip_address: string;
+
+    @Column({ default: false })
+    is_controlled_transaction: boolean;
 
     @CreateDateColumn()
     created_at: Date;

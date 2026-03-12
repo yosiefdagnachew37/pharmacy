@@ -36,4 +36,12 @@ export class CreateSaleDto {
     @IsString()
     @IsOptional()
     payment_method?: string;
+
+    @IsString()
+    @IsOptional()
+    prescription_image_url?: string;
+
+    @IsArray()
+    @IsOptional()
+    split_payments?: { method: string; amount: number }[];
 }

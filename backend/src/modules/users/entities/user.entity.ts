@@ -22,6 +22,12 @@ export class User {
     @Column({ default: true })
     is_active: boolean;
 
+    @Column({ nullable: true })
+    manager_pin: string;
+
+    @Column({ nullable: true })
+    branch_id: string;
+
     @CreateDateColumn()
     created_at: Date;
 

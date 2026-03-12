@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Edit2, Trash2, Save, Upload, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Save, Upload, AlertCircle, CheckCircle2, Loader2, DollarSign } from 'lucide-react';
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
 
@@ -14,6 +14,7 @@ interface Medicine {
   minimum_stock_level: number;
   unit: string;
   is_controlled: boolean;
+  current_selling_price: number;
 }
 
 interface ImportResult {
@@ -35,7 +36,8 @@ const Medicines = () => {
     category: '',
     unit: '',
     minimum_stock_level: 10,
-    is_controlled: false
+    is_controlled: false,
+    current_selling_price: 0
   });
 
   // Excel Import States
@@ -91,7 +93,8 @@ const Medicines = () => {
         category: '',
         unit: 'TAB',
         minimum_stock_level: 10,
-        is_controlled: false
+        is_controlled: false,
+        current_selling_price: 0
       });
     }
     setIsModalOpen(true);
@@ -105,7 +108,8 @@ const Medicines = () => {
       category: formData.category,
       unit: formData.unit,
       minimum_stock_level: Number(formData.minimum_stock_level),
-      is_controlled: formData.is_controlled
+      is_controlled: formData.is_controlled,
+      current_selling_price: Number(formData.current_selling_price)
     };
 
     try {
@@ -274,6 +278,7 @@ const Medicines = () => {
                   selectedValues={columnFilters.status}
                   onFilterChange={(v) => updateFilter('status', v)}
                 />
+                <th className="px-6 py-3 text-sm font-bold">Selling Price</th>
                 <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -307,13 +312,28 @@ const Medicines = () => {
                         <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">In Stock</span>
                       )}
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-black text-indigo-700">
+                        ${Number(med.current_selling_price || 0).toFixed(2)}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       {canUpdate('medicines') && (
                         <button
                           onClick={() => handleOpenModal(med)}
-                          className="text-gray-400 hover:text-indigo-600"
+                          className="text-gray-400 hover:text-indigo-600 transition-colors"
+                          title="Edit Medicine"
                         >
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canUpdate('medicines') && (
+                        <button
+                          onClick={() => handleOpenModal(med)}
+                          className="text-gray-400 hover:text-emerald-600 transition-colors"
+                          title="Update Price"
+                        >
+                          <DollarSign className="w-4 h-4" />
                         </button>
                       )}
                       {canDelete('medicines') && (
@@ -403,6 +423,21 @@ const Medicines = () => {
                   Controlled Substance
                 </label>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price Override ($)</label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm font-bold text-indigo-700"
+                  value={formData.current_selling_price}
+                  onChange={(e) => setFormData({ ...formData, current_selling_price: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1">This overrides the default batch selling price in the POS.</p>
             </div>
           </div>
           <div className="pt-4 flex justify-end space-x-3">
