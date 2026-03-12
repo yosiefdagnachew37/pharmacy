@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -115,9 +115,19 @@ export class ForecastingService {
 
         await this.forecastRepository.save(forecast);
 
-        const reorderPoint = medicine.minimum_stock_level || 10;
+        const dailySalesValues = timeSeriesData.map(t => t[1]);
+        const avgDailySales = ss.mean(dailySalesValues);
+        const stdDevDailySales = ss.standardDeviation(dailySalesValues);
+        const leadTime = 7; // Default lead time if not explicitly provided by a joined supplier
 
-        // Order if running out OR if demand surpasses total stock
+        // Rule 3.2: Dynamic Reorder Algorithm
+        // Safety Stock = Z × StdDev(Daily Sales) × √(Lead Time), where Z = 1.65
+        const safetyStock = Math.ceil(1.65 * stdDevDailySales * Math.sqrt(leadTime));
+        // Reorder Point = (Avg Daily Sales × Lead Time) + Safety Stock
+        const calculatedReorderPoint = Math.ceil((avgDailySales * leadTime) + safetyStock);
+        const reorderPoint = calculatedReorderPoint > 0 ? calculatedReorderPoint : (medicine.minimum_stock_level || 10);
+
+        // Order if running out OR if demand surpasses total stock OR if below reorder point
         if (medicine.total_stock <= reorderPoint || medicine.total_stock < predictedTotalNext7Days) {
             const existingRec = await this.recommendationRepository.findOne({
                 where: {
@@ -142,9 +152,13 @@ export class ForecastingService {
                 const recommendation = this.recommendationRepository.create({
                     medicine_id: medicine.id,
                     recommended_quantity: orderQty,
+                    reorder_point: reorderPoint,
+                    safety_stock: safetyStock,
+                    avg_daily_sales: parseFloat(avgDailySales.toFixed(2)),
+                    suggested_supplier_id: (medicine as any).preferred_supplier_id || null, // Best-scoring supplier or default
                     estimated_cost: estimatedCost,
                     urgency: urgency,
-                    reasoning: `Predicted 7-day demand is ${Math.ceil(predictedTotalNext7Days)} units based on historical sales trends. Current stock is ${medicine.total_stock}. 30-day forecast recommends ordering ${orderQty} units.`,
+                    reasoning: `Avg Daily Sales: ${avgDailySales.toFixed(1)}. Safety Stock: ${safetyStock}. Reorder Point: ${reorderPoint}. Predicted 7-day demand is ${Math.ceil(predictedTotalNext7Days)} units based on historical sales trends. Current stock is ${medicine.total_stock}. 30-day forecast recommends ordering ${orderQty} units.`,
                 });
 
                 await this.recommendationRepository.save(recommendation);
@@ -199,9 +213,21 @@ export class ForecastingService {
 
     async getRecommendations() {
         return this.recommendationRepository.find({
+            where: { status: RecommendationStatus.PENDING },
             relations: ['medicine'],
             order: { created_at: 'DESC' }
         });
+    }
+
+    async updateRecommendationStatus(id: string, status: RecommendationStatus, reason?: string) {
+        const rec = await this.recommendationRepository.findOne({ where: { id } });
+        if (!rec) throw new NotFoundException('Recommendation not found');
+
+        rec.status = status;
+        if (reason) {
+            rec.reasoning = rec.reasoning ? `${rec.reasoning} | Update Reason: ${reason}` : `Update Reason: ${reason}`;
+        }
+        return this.recommendationRepository.save(rec);
     }
 
     async getDeadStock() {

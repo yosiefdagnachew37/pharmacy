@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     TrendingUp, AlertTriangle, PackageX, Calendar, Search,
     ShoppingCart, RefreshCw, BarChart2, Zap, CheckCircle
@@ -8,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const IntelligentForecasting = () => {
     const { role } = useAuth();
+    const navigate = useNavigate();
     const [recommendations, setRecommendations] = useState<any[]>([]);
     const [deadStock, setDeadStock] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -42,6 +44,44 @@ const IntelligentForecasting = () => {
             alert('Error triggering forecast');
         } finally {
             setTriggering(false);
+        }
+    };
+
+    const handleConvert = async (rec: any) => {
+        if (!rec.suggested_supplier_id) {
+            alert('No preferred supplier assigned to this medicine. Please create a PO manually from the Purchases page.');
+            navigate('/purchases');
+            return;
+        }
+        try {
+            await client.post('/purchase-orders', {
+                supplier_id: rec.suggested_supplier_id,
+                payment_method: 'CASH',
+                notes: `Auto-generated from recommendation. Avg Daily Sales: ${rec.avg_daily_sales}. Reorder Pt: ${rec.reorder_point}`,
+                items: [{
+                    medicine_id: rec.medicine_id,
+                    quantity_ordered: rec.recommended_quantity,
+                    unit_price: rec.medicine?.current_selling_price || 0
+                }]
+            });
+            await client.put(`/forecasting/recommendations/${rec.id}/status`, { status: 'CONVERTED' });
+            alert('Successfully converted to Draft Purchase Order!');
+            fetchData();
+        } catch (err) {
+            console.error('Failed to convert', err);
+            alert('Error converting to PO. Please try again or create manually.');
+        }
+    };
+
+    const handleDismiss = async (rec: any) => {
+        const reason = window.prompt("Reason for dismissal:");
+        if (reason === null) return;
+        try {
+            await client.put(`/forecasting/recommendations/${rec.id}/status`, { status: 'DISMISSED', reason });
+            fetchData();
+        } catch (err) {
+            console.error('Failed to dismiss', err);
+            alert('Error dismissing recommendation.');
         }
     };
 
@@ -153,10 +193,10 @@ const IntelligentForecasting = () => {
                                     <div className="text-xs text-gray-400 font-medium text-right mb-2">
                                         Generated: {new Date(rec.created_at).toLocaleDateString()}
                                     </div>
-                                    <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-200 transition-colors">
+                                    <button onClick={() => handleConvert(rec)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-200 transition-colors">
                                         Draft PO
                                     </button>
-                                    <button className="w-full bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                                    <button onClick={() => handleDismiss(rec)} className="w-full bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl text-sm font-bold transition-colors">
                                         Dismiss
                                     </button>
                                 </div>

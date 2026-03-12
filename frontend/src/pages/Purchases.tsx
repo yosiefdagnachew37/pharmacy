@@ -428,14 +428,20 @@ const Purchases = () => {
                                         placeholder="PO notes..."
                                     />
                                 </div>
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-4">
+                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-4 mb-2">
                                     <div className="flex justify-between items-center text-sm font-bold">
                                         <span className="text-gray-600">Total Order Val:</span>
-                                        <span className="text-xl text-indigo-700">
+                                        <span className={`text-xl ${orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0) > 10000 ? 'text-rose-600' : 'text-indigo-700'}`}>
                                             ${orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0).toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
+                                {orderItems.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_price || 0), 0) > 10000 && (
+                                    <div className="flex items-start gap-2 text-rose-600 bg-rose-50 p-3 rounded-lg text-xs font-bold border border-rose-100">
+                                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                        <p>Budget Cap Warning: This purchase order exceeds the $10,000 standard order limit. Ensure you have management approval before confirming.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

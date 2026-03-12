@@ -1,5 +1,6 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, UseGuards } from '@nestjs/common';
 import { ForecastingService } from './forecasting.service';
+import { RecommendationStatus } from './entities/purchase-recommendation.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -14,6 +15,15 @@ export class ForecastingController {
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     async getRecommendations() {
         return this.forecastingService.getRecommendations();
+    }
+
+    @Put('recommendations/:id/status')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    async updateRecommendationStatus(
+        @Param('id') id: string,
+        @Body() body: { status: RecommendationStatus, reason?: string }
+    ) {
+        return this.forecastingService.updateRecommendationStatus(id, body.status, body.reason);
     }
 
     @Get('dead-stock')
