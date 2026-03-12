@@ -67,17 +67,20 @@ const POS = () => {
       try {
         const [medRes, custRes] = await Promise.all([
           client.get('/medicines'),
-          client.get('/credit/customers') // Using the new credit module endpoint for all registered customers
+          client.get('/credit/customers').catch(() => ({ data: [] }))
         ]);
 
-        // Use current_selling_price if it exists, otherwise fallback to selling_price
-        const formattedMeds = medRes.data.map((m: any) => ({
-          ...m,
-          selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
-        }));
-
-        setMedicines(formattedMeds);
-        setCustomers(custRes.data);
+        if (medRes?.data) {
+          const formattedMeds = medRes.data.map((m: any) => ({
+            ...m,
+            selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
+          }));
+          setMedicines(formattedMeds);
+        }
+        
+        if (custRes?.data) {
+          setCustomers(custRes.data);
+        }
       } catch (err) {
         console.error('Error fetching POS data:', err);
       }

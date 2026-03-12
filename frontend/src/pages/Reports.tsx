@@ -16,7 +16,8 @@ import {
     FileSpreadsheet,
     File as FileIcon,
     Loader2,
-    RefreshCcw
+    RefreshCcw,
+    AlertCircle
 } from 'lucide-react';
 import {
     BarChart,
@@ -41,7 +42,12 @@ const Reports = () => {
     });
 
     // Data States
-    const [profitLoss, setProfitLoss] = useState<any>(null);
+    const defaultProfitLoss = {
+        summary: { totalRevenue: 0, totalCost: 0, grossProfit: 0, profitMargin: 0 },
+        dailyBreakdown: [],
+        medicineBreakdown: []
+    };
+    const [profitLoss, setProfitLoss] = useState<any>(defaultProfitLoss);
     const [sales, setSales] = useState<any[]>([]);
     const [medicines, setMedicines] = useState<any[]>([]);
     const [batches, setBatches] = useState<any[]>([]);
@@ -60,7 +66,11 @@ const Reports = () => {
                     client.get(`/reporting/profit-loss?start=${dateRange.start}&end=${dateRange.end}`),
                     client.get(`/reporting/daily-profit-analytics?start=${dateRange.start}&end=${dateRange.end}`)
                 ]);
-                setProfitLoss(plRes.data);
+                setProfitLoss({
+                    summary: plRes.data?.summary || defaultProfitLoss.summary,
+                    dailyBreakdown: plRes.data?.dailyBreakdown || [],
+                    medicineBreakdown: plRes.data?.medicineBreakdown || []
+                });
                 setNetProfitAnalytics(dailyNetRes.data);
             } else if (activeTab === 'sales') {
                 const res = await client.get(`/reporting/sales?start=${dateRange.start}&end=${dateRange.end}`);
@@ -204,8 +214,25 @@ const Reports = () => {
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                     {/* PROFIT & LOSS View */}
-                    {activeTab === 'profit-loss' && profitLoss && (
+                    {activeTab === 'profit-loss' && (
                         <div className="space-y-6">
+                            {(!profitLoss?.summary || profitLoss.summary.totalRevenue === 0) && (
+                                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl">
+                                    <div className="flex">
+                                        <div className="flex-shrink-0">
+                                            <AlertCircle className="h-5 w-5 text-amber-400" />
+                                        </div>
+                                        <div className="ml-3">
+                                            <p className="text-sm text-amber-700 font-bold">
+                                                No financial data found for the selected period.
+                                            </p>
+                                            <p className="text-sm text-amber-600 mt-1">
+                                                The charts below will appear empty until sales are recorded in this date range.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <StatCard title="Total Revenue" value={`$${profitLoss.summary.totalRevenue.toLocaleString()}`} color="bg-indigo-500" icon={DollarSign} />
                                 <StatCard title="Total Cost" value={`$${profitLoss.summary.totalCost.toLocaleString()}`} color="bg-orange-500" icon={ShoppingCart} />

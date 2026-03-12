@@ -43,7 +43,6 @@ interface Prescription {
 
 const Patients = () => {
   const { canCreate, canDelete } = useAuth();
-  const [activeTab, setActiveTab] = useState<'directory' | 'prescriptions'>('directory');
 
   // ─── Patient State ──────────────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -131,7 +130,8 @@ const Patients = () => {
   }, []);
 
   // ─── Patient Handlers ──────────────────────────────────────────
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!confirm('Are you sure you want to delete this patient record?')) return;
     try {
       await client.delete(`/patients/${id}`);
@@ -191,25 +191,17 @@ const Patients = () => {
     (p.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
-  const filteredPrescriptions = prescriptions.filter(rx =>
-    (rx.patient?.name?.toLowerCase() || '').includes(prescriptionSearch.toLowerCase()) ||
-    (rx.doctor_name?.toLowerCase() || '').includes(prescriptionSearch.toLowerCase())
-  );
-
-  // ─── Tab Buttons ────────────────────────────────────────────────
-  const tabs = [
-    { key: 'directory' as const, label: 'Patient Directory', icon: User },
-    { key: 'prescriptions' as const, label: 'Prescriptions', icon: FileText },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* Header + Tabs */}
+      {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">Patient Management</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Patient Directory</h1>
+            <p className="text-sm text-gray-500">Manage patient records and medical history</p>
+          </div>
           <div className="flex gap-3 w-full sm:w-auto">
-            {activeTab === 'directory' && canCreate('patients') && (
+            {canCreate('patients') && (
               <button
                 onClick={() => setIsModalOpen(true)}
                 className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
@@ -218,42 +210,11 @@ const Patients = () => {
                 Register Patient
               </button>
             )}
-            {activeTab === 'prescriptions' && canCreate('prescriptions') && (
-              <button
-                onClick={() => setIsPrescriptionModalOpen(true)}
-                className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-all font-bold shadow-sm active:scale-95"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Prescription
-              </button>
-            )}
           </div>
-        </div>
-
-        {/* Tab Bar */}
-        <div className="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1 gap-1">
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === tab.key
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-                }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* PATIENT DIRECTORY TAB                                         */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'directory' && (
-        <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -290,10 +251,7 @@ const Patients = () => {
                     </div>
                     {canDelete('patients') && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(patient.id);
-                        }}
+                        onClick={(e) => handleDelete(patient.id, e)}
                         className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                         title="Delete Patient"
                       >
@@ -342,92 +300,6 @@ const Patients = () => {
               ))
             )}
           </div>
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* PRESCRIPTIONS TAB                                             */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'prescriptions' && (
-        <>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by patient name or doctor..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                value={prescriptionSearch}
-                onChange={(e) => setPrescriptionSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {prescriptionLoading ? (
-              <div className="bg-white p-12 text-center text-gray-400 italic rounded-xl border border-gray-100 shadow-sm">
-                Retrieving medical files...
-              </div>
-            ) : filteredPrescriptions.length === 0 ? (
-              <div className="bg-white p-12 text-center text-gray-400 italic rounded-xl border border-gray-100 shadow-sm">
-                No active prescriptions on file.
-              </div>
-            ) : (
-              filteredPrescriptions.map((prescription) => (
-                <div key={prescription.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:border-indigo-200 transition-all">
-                  <div className="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900">{prescription.patient?.name || prescription.patient_name}</h3>
-                        <div className="flex items-center text-xs text-gray-400 mt-0.5">
-                          <User className="w-3 h-3 mr-1" />
-                          Dr. {prescription.doctor_name}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">Prescribed On</p>
-                        <div className="flex items-center text-sm font-medium text-gray-700">
-                          <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                          {new Date(prescription.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <button className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">
-                        <ExternalLink className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-5 bg-gray-50/50">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {prescription.items.map((item, idx) => (
-                        <div key={idx} className="bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
-                          <h4 className="font-bold text-gray-800 text-sm mb-2">{item.medicine?.name || 'Unknown Medicine'}</h4>
-                          <div className="space-y-1.5">
-                            <div className="flex items-center text-xs text-gray-600">
-                              <ClipboardCheck className="w-3.5 h-3.5 mr-2 text-indigo-400" />
-                              {item.dosage}
-                            </div>
-                            <div className="flex items-center text-xs text-gray-600">
-                              <Clock className="w-3.5 h-3.5 mr-2 text-orange-400" />
-                              {item.duration}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </>
-      )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* MODALS                                                        */}
@@ -522,7 +394,23 @@ const Patients = () => {
         onClose={() => setIsHistoryModalOpen(false)}
         title={`${selectedHistory?.name || 'Patient'}'s Full History`}
       >
-        <div className="max-h-[70vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
+        <div className="mb-4 flex justify-between items-center bg-gray-50 border border-gray-100 p-3 rounded-xl">
+            <span className="text-sm font-medium text-gray-600 flex items-center">
+              <FileText className="w-4 h-4 mr-2" /> Medical & Purchase Records
+            </span>
+            {canCreate('prescriptions') && (
+              <button
+                onClick={() => {
+                  setRxFormData({ ...rxFormData, patient_id: selectedHistory?.id || '' });
+                  setIsPrescriptionModalOpen(true);
+                }}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-indigo-700 transition shadow-sm"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Prescription
+              </button>
+            )}
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto px-1 pr-3 custom-scrollbar">
           {historyLoading ? (
             <div className="py-12 flex flex-col items-center justify-center text-gray-400 italic">
               <Loader2 className="w-8 h-8 animate-spin mb-3 text-indigo-500" />
@@ -610,24 +498,24 @@ const Patients = () => {
       {/* New Prescription Modal */}
       <Modal isOpen={isPrescriptionModalOpen} onClose={() => setIsPrescriptionModalOpen(false)} title="Issue New Prescription">
         <form onSubmit={handleRxSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Patient</label>
-              <select
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={rxFormData.patient_id}
-                onChange={(e) => setRxFormData({ ...rxFormData, patient_id: e.target.value })}
-              >
-                <option value="">Choose a patient...</option>
-                {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">Patient</p>
+              <p className="text-base font-bold text-indigo-900">{selectedHistory?.name}</p>
             </div>
+            <div className="text-right">
+               <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">Patient ID</p>
+               <p className="text-xs font-mono font-bold text-indigo-600">#{selectedHistory?.id.slice(0, 8)}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
               <input
                 required
                 type="text"
+                placeholder="Name of the prescribing doctor"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 value={rxFormData.doctor_name}
                 onChange={(e) => setRxFormData({ ...rxFormData, doctor_name: e.target.value })}

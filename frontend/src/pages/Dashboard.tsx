@@ -74,8 +74,8 @@ const Dashboard = () => {
         setTrending(trendRes.data);
         setRevenue(revRes.data);
         setExpiryData(expiryRes.data);
-        setWorkingCapital(wcRes.data);
-        setDailyExpense(expRes.data);
+        setWorkingCapital(wcRes.data || { net_working_capital: 0, inventory_valuation: 0, outstanding_receivables: 0, outstanding_payables: 0 });
+        setDailyExpense(expRes.data || { total_expected_daily: 0, expenses: [] });
         setSupplierRanking((rankRes as any).data || []);
         setTurnover(turnRes.data);
       } catch (error) {
