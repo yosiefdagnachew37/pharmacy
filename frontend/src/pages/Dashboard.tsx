@@ -17,7 +17,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Shield,
-  DollarSign
+  DollarSign,
+  Building2,
+  Award,
+  Star
 } from 'lucide-react';
 import {
   BarChart,
@@ -51,17 +54,19 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [expandedSales, setExpandedSales] = useState(false);
   const [expandedStock, setExpandedStock] = useState(false);
+  const [supplierRanking, setSupplierRanking] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes] = await Promise.all([
+        const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes, rankRes] = await Promise.all([
           client.get('/reporting/dashboard'),
           client.get('/reporting/trending-medicines?limit=10'),
           client.get('/reporting/revenue-comparison'),
           client.get('/stock/expiry-dashboard').catch(() => ({ data: null })),
           client.get('/reporting/working-capital').catch(() => ({ data: null })),
           client.get('/reporting/expected-daily-expense').catch(() => ({ data: null })),
+          client.get('/suppliers/ranking?limit=5').catch(() => ({ data: [] })),
         ]);
         setStats(statsRes.data);
         setTrending(trendRes.data);
@@ -69,6 +74,7 @@ const Dashboard = () => {
         setExpiryData(expiryRes.data);
         setWorkingCapital(wcRes.data);
         setDailyExpense(expRes.data);
+        setSupplierRanking((rankRes as any).data || []);
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
       } finally {
@@ -389,6 +395,51 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Top 5 Supplier Ranking Widget */}
+      {supplierRanking.length > 0 && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-50">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                <Award className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Top Suppliers</h3>
+            </div>
+            <button onClick={() => navigate('/suppliers')} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center uppercase tracking-wider">
+              All Suppliers <ExternalLink className="w-3 h-3 ml-1.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+            {supplierRanking.map((r: any, i: number) => {
+              const scoreClass = r.score >= 0.8
+                ? 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-700'
+                : r.score >= 0.6
+                  ? 'from-amber-50 to-amber-100 border-amber-200 text-amber-700'
+                  : 'from-rose-50 to-rose-100 border-rose-200 text-rose-700';
+              return (
+                <div key={r.id} onClick={() => navigate(`/suppliers/${r.id}`)}
+                  className={`bg-gradient-to-br ${scoreClass} border p-4 rounded-2xl cursor-pointer hover:shadow-md transition-all`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-400 text-white' : 'bg-amber-700 text-white'}`}>
+                      {i + 1}
+                    </span>
+                    <Building2 className="w-4 h-4 opacity-60" />
+                  </div>
+                  <p className="font-bold text-sm truncate mb-1">{r.name}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-black">{(r.score * 100).toFixed(0)}%</span>
+                    <div className="flex items-center gap-0.5">
+                      <Star className="w-3 h-3 fill-current opacity-70" />
+                      <span className="text-xs font-bold">{r.quality_rating || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Expiry Intelligence Section */}
       {expiryData && (
         <div className="space-y-6">
@@ -454,6 +505,9 @@ const Dashboard = () => {
                             }`}>
                             {risk.risk_status.replace('_', ' ')}
                           </span>
+                          <p className="text-[8px] font-black text-gray-400 mt-1 uppercase tracking-tighter">
+                            {risk.suggested_action?.replace(/_/g, ' ')}
+                          </p>
                         </td>
                       </tr>
                     ))}

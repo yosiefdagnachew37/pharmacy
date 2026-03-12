@@ -8,6 +8,7 @@ import { Batch } from '../batches/entities/batch.entity';
 import { StockTransaction, TransactionType, ReferenceType } from '../stock/entities/stock-transaction.entity';
 import { ForecastingService } from '../forecasting/forecasting.service';
 import { Medicine } from '../medicines/entities/medicine.entity';
+import { ExpiryIntelligenceService } from '../stock/expiry-intelligence.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -21,6 +22,7 @@ export class PurchaseOrdersService {
         @InjectRepository(Medicine)
         private readonly medicineRepo: Repository<Medicine>,
         private forecastingService: ForecastingService,
+        private expiryIntelligenceService: ExpiryIntelligenceService,
         private dataSource: DataSource,
     ) { }
 
@@ -91,6 +93,13 @@ export class PurchaseOrdersService {
                     where: { id: item.medicine_id },
                     relations: ['batches']
                 });
+                // Phase 1.5: Expiry Risk Blocking
+                const riskData = await this.expiryIntelligenceService.calculateExpiryRisk();
+                const medRisk = riskData.find(r => r.medicine_id === item.medicine_id && r.risk_status === 'CRITICAL');
+                if (medRisk) {
+                    throw new BadRequestException(`Purchase blocked: ${medicine?.name} is at CRITICAL expiry risk (Score: ${medRisk.risk_score}). Suggest supplier return instead of new purchase.`);
+                }
+
                 if (medicine) {
                     const currentStock = (medicine.batches || []).reduce((sum, b) => sum + Number(b.quantity_remaining || 0), 0);
                     const forecasted60DayDemand = await this.forecastingService.getForecastedDemand(item.medicine_id, 60);

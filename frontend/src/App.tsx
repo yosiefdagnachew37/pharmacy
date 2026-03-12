@@ -13,6 +13,7 @@ import System from './pages/System';
 import SalesLog from './pages/SalesLog';
 import Reports from './pages/Reports';
 import Suppliers from './pages/Suppliers';
+import SupplierDetail from './pages/SupplierDetail';
 import Purchases from './pages/Purchases';
 import Expenses from './pages/Expenses';
 import CreditManagement from './pages/CreditManagement';
@@ -107,6 +108,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <Suppliers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="suppliers/:id"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <SupplierDetail />
                 </ProtectedRoute>
               }
             />

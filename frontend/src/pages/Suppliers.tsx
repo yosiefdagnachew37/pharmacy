@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus, Pencil, Trash2, X, Building2, Phone, Mail, MapPin,
     Star, Award, ChevronDown, ChevronUp, Search
@@ -19,6 +20,7 @@ interface Supplier {
 }
 
 const Suppliers = () => {
+    const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [ranking, setRanking] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -170,7 +172,7 @@ const Suppliers = () => {
             {/* Supplier Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filtered.map((s) => (
-                    <div key={s.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 hover:shadow-lg transition-all group">
+                    <div key={s.id} onClick={() => navigate(`/suppliers/${s.id}`)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 hover:shadow-lg transition-all group cursor-pointer">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">

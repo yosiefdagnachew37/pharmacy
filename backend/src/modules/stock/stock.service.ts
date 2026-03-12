@@ -72,16 +72,19 @@ export class StockService {
         userId: string,
     ) {
         return await this.dataSource.transaction(async (manager) => {
-            const now = new Date();
+            const tomorrow = new Date();
+            tomorrow.setHours(tomorrow.getHours() + 24);
 
             // FEFO query: find non-locked, non-quarantined batches sorted by earliest expiry
+            // Using pessimistic_write (FOR UPDATE) for transactional safety
             const availableBatches = await manager
                 .createQueryBuilder(Batch, 'b')
+                .setLock('pessimistic_write')
                 .where('b.medicine_id = :medicineId', { medicineId })
                 .andWhere('b.quantity_remaining > 0')
                 .andWhere('b.is_locked = :locked', { locked: false })
                 .andWhere('b.is_quarantined = :quarantined', { quarantined: false })
-                .andWhere('b.expiry_date > :now', { now })
+                .andWhere('b.expiry_date > :tomorrow', { tomorrow })
                 .orderBy('b.expiry_date', 'ASC')
                 .addOrderBy('b.created_at', 'ASC')
                 .getMany();

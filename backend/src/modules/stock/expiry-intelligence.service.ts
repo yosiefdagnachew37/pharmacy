@@ -18,6 +18,7 @@ export interface ExpiryRiskResult {
     risk_score: number;
     risk_status: 'SAFE' | 'MONITOR' | 'HIGH_RISK' | 'CRITICAL';
     estimated_loss_value: number;
+    suggested_action: string;
 }
 
 @Injectable()
@@ -97,9 +98,18 @@ export class ExpiryIntelligenceService {
             }
 
             let riskStatus: ExpiryRiskResult['risk_status'] = 'SAFE';
-            if (riskScore >= 2.0) riskStatus = 'CRITICAL';
-            else if (riskScore >= 1.0) riskStatus = 'HIGH_RISK';
-            else if (riskScore >= 0.5) riskStatus = 'MONITOR';
+            let suggestedAction = 'NONE';
+
+            if (riskScore >= 2.0) {
+                riskStatus = 'CRITICAL';
+                suggestedAction = 'BLOCK_PURCHASE_AND_SUGGEST_RETURN';
+            } else if (riskScore >= 1.0) {
+                riskStatus = 'HIGH_RISK';
+                suggestedAction = 'APPLY_DISCOUNT_OR_PROMOTION';
+            } else if (riskScore >= 0.5) {
+                riskStatus = 'MONITOR';
+                suggestedAction = 'WATCH_STOCK_LEVELS';
+            }
 
             const estimatedLossValue = batch.quantity_remaining * (batch.purchase_price || 0);
 
@@ -114,6 +124,7 @@ export class ExpiryIntelligenceService {
                 risk_score: Math.round(riskScore * 100) / 100,
                 risk_status: riskStatus,
                 estimated_loss_value: Math.round(estimatedLossValue * 100) / 100,
+                suggested_action: suggestedAction,
             });
         }
 
