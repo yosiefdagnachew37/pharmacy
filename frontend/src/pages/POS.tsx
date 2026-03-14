@@ -17,10 +17,12 @@ import {
   Lock,
   Percent,
   Banknote,
-  FileText
+  Barcode
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import PrescriptionAttachment from '../components/PrescriptionAttachment';
+import { toastError, toastWarning } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Medicine {
   id: string;
@@ -57,16 +59,16 @@ const POS = () => {
   const [authError, setAuthError] = useState('');
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
 
-  // New Phase 5 features
+  // Phase 5 features
   const [cartDiscount, setCartDiscount] = useState<number>(0);
   const [splitAmounts, setSplitAmounts] = useState({ cash: 0, card: 0 });
-  const [chequeDetails, setChequeDetails] = useState({ bank_name: '', cheque_number: '', due_date: '' });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [medRes, custRes] = await Promise.all([
+        const [medRes, patientRes, custRes] = await Promise.all([
           client.get('/medicines'),
+          client.get('/patients').catch(() => ({ data: [] })),
           client.get('/credit/customers').catch(() => ({ data: [] }))
         ]);
 
@@ -77,10 +79,13 @@ const POS = () => {
           }));
           setMedicines(formattedMeds);
         }
-        
-        if (custRes?.data) {
-          setCustomers(custRes.data);
-        }
+
+        // Merge patients and credit customers, deduplicate by id
+        const patients = (patientRes?.data || []).map((p: any) => ({ id: p.id, name: p.name, phone: p.phone || '' }));
+        const creditCusts = (custRes?.data || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone || '' }));
+        const merged = [...patients];
+        creditCusts.forEach((c: any) => { if (!merged.find((p: any) => p.id === c.id)) merged.push(c); });
+        setCustomers(merged);
       } catch (err) {
         console.error('Error fetching POS data:', err);
       }
@@ -222,12 +227,12 @@ const POS = () => {
     if (cart.length === 0) return;
 
     if (hasControlledItems && !prescriptionUrl) {
-      alert('Prescription attachment is required for controlled substances.');
+      toastWarning('Prescription required', 'Please attach a prescription for controlled substances before charging.');
       return;
     }
 
     if (paymentMethod === 'CREDIT' && !patientId) {
-      alert('Credit sales require selecting a registered customer.');
+      toastWarning('Customer required', 'Credit sales require selecting a registered customer.');
       return;
     }
 
@@ -253,9 +258,6 @@ const POS = () => {
           { method: 'CASH', amount: splitAmounts.cash },
           { method: 'CARD', amount: splitAmounts.card }
         ];
-      } else if (paymentMethod === 'CHEQUE') {
-        payload.cheque_details = chequeDetails; // Assuming backend handles this or just stores in notes/credit service
-        payload.notes = `Cheque Payment - Bank: ${chequeDetails.bank_name}, CC: ${chequeDetails.cheque_number}, Due: ${chequeDetails.due_date}`;
       }
 
       const res = await client.post('/sales', payload);
@@ -266,14 +268,16 @@ const POS = () => {
       setPaymentMethod('CASH');
       setCartDiscount(0);
       setSplitAmounts({ cash: 0, card: 0 });
-      setChequeDetails({ bank_name: '', cheque_number: '', due_date: '' });
 
       // Refresh medicines stock
       const stockRes = await client.get('/medicines');
-      setMedicines(stockRes.data);
+      setMedicines(stockRes.data.map((m: any) => ({
+        ...m,
+        selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
+      })));
     } catch (err: any) {
-      console.error('Checkout failed:', err.response?.data || err.message);
-      alert(err.response?.data?.message || 'Checkout failed. Please check stock availability.');
+      const msg = extractErrorMessage(err, 'Checkout failed. Please check stock availability.');
+      toastError('Checkout failed', msg);
     } finally {
       setLoading(false);
     }
@@ -432,10 +436,14 @@ const POS = () => {
           <input
             type="text"
             placeholder="Search medicine (Name or Generic)..."
-            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm font-medium"
+            className="w-full pl-12 pr-36 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm font-medium"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg" title="USB barcode scanner supported: plug in your scanner and scan any medicine barcode to instantly add it to the cart.">
+            <Barcode className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold">Barcode Scanner Ready</span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
@@ -466,8 +474,8 @@ const POS = () => {
       </div>
 
       {/* Cart / Checkout */}
-      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full overflow-hidden flex-shrink-0">
-        <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-[calc(100vh-8rem)] min-h-[600px] flex-shrink-0">
+        <div className="p-4 border-b border-gray-50 flex items-center justify-between flex-none">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
               <ShoppingCart className="w-5 h-5" />
@@ -529,7 +537,8 @@ const POS = () => {
           )}
         </div>
 
-        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 space-y-2">
+        {/* Bottom Section: Customer, Payment, Totals & Charge Button */}
+        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 flex flex-col gap-2 flex-none">
           {/* Customer Selection */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Customer / Patient</label>
@@ -550,7 +559,7 @@ const POS = () => {
 
           {/* Payment Method */}
           <div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPaymentMethod('CASH')}
                 className={`py-1.5 px-1 text-[10px] font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CASH' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
@@ -564,20 +573,14 @@ const POS = () => {
                 <Building2 className="w-3.5 h-3.5" /> Credit
               </button>
               <button
-                onClick={() => setPaymentMethod('CHEQUE')}
-                className={`py-1.5 px-1 text-[10px] font-bold rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${paymentMethod === 'CHEQUE' ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-              >
-                <FileText className="w-3.5 h-3.5" /> Cheque
-              </button>
-              <button
                 onClick={() => setPaymentMethod('SPLIT')}
-                className={`py-1.5 px-2 text-[10px] font-bold rounded-xl border flex items-center justify-center gap-2 transition-all col-span-3 ${paymentMethod === 'SPLIT' ? 'bg-purple-50 border-purple-200 text-purple-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
+                className={`py-1.5 px-2 text-[10px] font-bold rounded-xl border flex items-center justify-center gap-2 transition-all col-span-2 ${paymentMethod === 'SPLIT' ? 'bg-purple-50 border-purple-200 text-purple-700 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
                 <Banknote className="w-3.5 h-3.5" /> <span>Split Payment (Cash + Card)</span>
               </button>
             </div>
 
-            {/* Split/Cheque Inputs - constrained height */}
+            {/* Split Inputs - constrained height */}
             <div className="max-h-[120px] overflow-y-auto custom-scrollbar mt-2">
               {paymentMethod === 'SPLIT' && (
                 <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 flex gap-3">
@@ -596,40 +599,6 @@ const POS = () => {
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card</label>
                     <div className="w-full px-2 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-[11px] font-black text-gray-600 flex items-center h-[30px]">
                       ETB {splitAmounts.card.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'CHEQUE' && (
-                <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100 space-y-2">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Bank Name</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                      value={chequeDetails.bank_name}
-                      onChange={(e) => setChequeDetails(prev => ({ ...prev, bank_name: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cheque No.</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                        value={chequeDetails.cheque_number}
-                        onChange={(e) => setChequeDetails(prev => ({ ...prev, cheque_number: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Due Date</label>
-                      <input
-                        type="date"
-                        className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-300"
-                        value={chequeDetails.due_date}
-                        onChange={(e) => setChequeDetails(prev => ({ ...prev, due_date: e.target.value }))}
-                      />
                     </div>
                   </div>
                 </div>
@@ -671,9 +640,9 @@ const POS = () => {
             <div className="flex justify-between items-end text-gray-900 mt-1">
               <div className="flex flex-col">
                 {discountAmount > 0 && <span className="text-[10px] font-bold text-rose-500 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
-                <span className="text-xs font-black uppercase leading-none">Total Due</span>
+                <span className="text-[11px] font-black uppercase leading-none text-gray-500">Total Due</span>
               </div>
-              <span className="text-2xl font-black leading-none">ETB {total.toFixed(2)}</span>
+              <span className="text-xl font-black leading-none text-indigo-700">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -706,6 +675,9 @@ const POS = () => {
           <form onSubmit={handleAuthorize} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Manager Authorization PIN</label>
+              <p className="text-[10px] text-indigo-500 mb-2 ml-1 flex items-center gap-1">
+                <Lock className="w-3 h-3" /> PINs are set per-user in <strong>System → User Management</strong>.
+              </p>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input

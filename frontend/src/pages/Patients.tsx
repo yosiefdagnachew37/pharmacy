@@ -7,6 +7,8 @@ import {
   ClipboardCheck, ExternalLink
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Patient {
   id: string;
@@ -136,8 +138,9 @@ const Patients = () => {
     try {
       await client.delete(`/patients/${id}`);
       fetchPatients();
+      toastSuccess('Patient record deleted.');
     } catch (err) {
-      alert('Failed to delete patient record.');
+      toastError('Delete failed', 'Patient may be linked to sales or prescriptions.');
     }
   };
 
@@ -147,9 +150,11 @@ const Patients = () => {
       await client.post('/patients', formData);
       setIsModalOpen(false);
       fetchPatients();
+      toastSuccess('Patient registered successfully.');
     } catch (err: any) {
       console.error('Error registering patient:', err.response?.data || err.message);
-      alert(err.response?.data?.message || 'Error registering patient.');
+      const msg = extractErrorMessage(err, 'Error registering patient.');
+      toastError('Registration failed', msg);
     }
   };
 
@@ -181,7 +186,8 @@ const Patients = () => {
       });
     } catch (err: any) {
       console.error('Error creating prescription:', err.response?.data || err.message);
-      alert(err.response?.data?.message || 'Error creating prescription. Ensure all fields are filled.');
+      const msg = extractErrorMessage(err, 'Error creating prescription. Ensure all fields are filled.');
+      toastError('Prescription failed', msg);
     }
   };
 
@@ -325,7 +331,7 @@ const Patients = () => {
                 type="number"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, age: e.target.value === '' ? undefined as any : parseInt(e.target.value) || 0 })}
               />
             </div>
             <div>

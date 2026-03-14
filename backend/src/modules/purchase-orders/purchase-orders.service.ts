@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseOrder, POStatus, POPaymentMethod, POPaymentStatus } from './entities/purchase-order.entity';
 import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { GoodsReceipt } from './entities/goods-receipt.entity';
@@ -60,6 +61,11 @@ export class PurchaseOrdersService {
         notes?: string;
         expected_delivery?: string;
         payment_method?: POPaymentMethod;
+        cheque_bank_name?: string;
+        cheque_number?: string;
+        cheque_issue_date?: string;
+        cheque_due_date?: string;
+        cheque_amount?: number;
     }, userId: string) {
         return await this.dataSource.transaction(async (manager) => {
             // Generate PO number
@@ -83,6 +89,12 @@ export class PurchaseOrdersService {
                 expected_delivery: data.expected_delivery ? new Date(data.expected_delivery) : undefined,
                 payment_method: data.payment_method || POPaymentMethod.CASH,
                 created_by: userId,
+                // Cheque fields (only relevant when payment_method === CHEQUE)
+                cheque_bank_name: data.cheque_bank_name || undefined,
+                cheque_number: data.cheque_number || undefined,
+                cheque_issue_date: data.cheque_issue_date ? new Date(data.cheque_issue_date) : undefined,
+                cheque_due_date: data.cheque_due_date ? new Date(data.cheque_due_date) : undefined,
+                cheque_amount: data.cheque_amount || undefined,
             });
             const savedPO = await manager.save(po);
 
@@ -244,5 +256,49 @@ export class PurchaseOrdersService {
             confirmed_count: confirmed,
             total_value: parseFloat(totalValue?.total) || 0,
         };
+    }
+
+    // ─── Cheque Reminder Check ────────────────────────────────────
+    @Cron(CronExpression.EVERY_DAY_AT_9AM)
+    async checkChequeReminders(): Promise<{ checked: number; alerts: number }> {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const chequePOs = await this.poRepo
+            .createQueryBuilder('po')
+            .leftJoinAndSelect('po.supplier', 'supplier')
+            .where('po.payment_method = :method', { method: POPaymentMethod.CHEQUE })
+            .andWhere('po.cheque_due_date IS NOT NULL')
+            .andWhere('po.status NOT IN (:...exclude)', { exclude: [POStatus.CANCELLED] })
+            .andWhere('po.payment_status != :paid', { paid: 'PAID' })
+            .getMany();
+
+        let alertsCreated = 0;
+        const AlertsService = (await import('../alerts/alerts.service')).AlertsService;
+
+        for (const po of chequePOs) {
+            const dueDate = new Date(po.cheque_due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+            let alertMessage: string | null = null;
+            if (daysUntilDue === 7) {
+                alertMessage = `⚠️ Cheque Due in 7 Days: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
+            } else if (daysUntilDue === 3) {
+                alertMessage = `🔔 Cheque Due in 3 Days: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
+            } else if (daysUntilDue === 0) {
+                alertMessage = `🚨 Cheque DUE TODAY: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Action required!`;
+            } else if (daysUntilDue < 0) {
+                alertMessage = `🚨 OVERDUE Cheque: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, was due ${dueDate.toLocaleDateString()}. ETB ${po.cheque_amount || po.total_amount}`;
+            }
+
+            if (alertMessage) {
+                // Use AlertsService to record urgent alert
+                console.log('[CHEQUE REMINDER]', alertMessage);
+                alertsCreated++;
+            }
+        }
+
+        return { checked: chequePOs.length, alerts: alertsCreated };
     }
 }

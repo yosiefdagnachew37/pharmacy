@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { toastSuccess, toastError, toastInfo } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 const IntelligentForecasting = () => {
     const { role } = useAuth();
@@ -38,10 +40,10 @@ const IntelligentForecasting = () => {
         setTriggering(true);
         try {
             await client.post('/forecasting/trigger-manual');
-            alert('Forecast generation started in the background. It may take a few moments. Please refresh later.');
-        } catch (err) {
+            toastInfo('Forecast triggered', 'Running in the background. Refresh in a few moments.');
+        } catch (err: any) {
             console.error('Failed to trigger forecast', err);
-            alert('Error triggering forecast');
+            toastError('Forecast failed', extractErrorMessage(err, 'Error triggering forecast.'));
         } finally {
             setTriggering(false);
         }
@@ -49,7 +51,7 @@ const IntelligentForecasting = () => {
 
     const handleConvert = async (rec: any) => {
         if (!rec.suggested_supplier_id) {
-            alert('No preferred supplier assigned to this medicine. Please create a PO manually from the Purchases page.');
+            toastInfo('No supplier assigned', 'Please create a PO manually from the Purchases page.');
             navigate('/purchases');
             return;
         }
@@ -65,11 +67,11 @@ const IntelligentForecasting = () => {
                 }]
             });
             await client.put(`/forecasting/recommendations/${rec.id}/status`, { status: 'CONVERTED' });
-            alert('Successfully converted to Draft Purchase Order!');
+            toastSuccess('Converted to Draft Purchase Order!');
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to convert', err);
-            alert('Error converting to PO. Please try again or create manually.');
+            toastError('Conversion failed', extractErrorMessage(err, 'Error converting to PO.'));
         }
     };
 
@@ -79,9 +81,9 @@ const IntelligentForecasting = () => {
         try {
             await client.put(`/forecasting/recommendations/${rec.id}/status`, { status: 'DISMISSED', reason });
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to dismiss', err);
-            alert('Error dismissing recommendation.');
+            toastError('Dismiss failed', extractErrorMessage(err, 'Error dismissing recommendation.'));
         }
     };
 

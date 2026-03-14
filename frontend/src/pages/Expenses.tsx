@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 const frequencies = [
     { value: 'ONE_TIME', label: 'One Time' },
@@ -73,9 +75,10 @@ const Expenses = () => {
             setEditing(null);
             resetForm();
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to save expense', err);
-            alert('Error saving expense');
+            const msg = extractErrorMessage(err, 'Error saving expense.');
+            toastError('Failed to save expense', msg);
         }
     };
 

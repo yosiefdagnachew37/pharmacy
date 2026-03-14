@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Medicine {
   id: string;
@@ -95,9 +97,10 @@ const Batches = () => {
         initial_quantity: 0,
       });
       fetchBatches();
+      toastSuccess('Batch created successfully.');
     } catch (error: any) {
-      console.error('Error creating batch:', error.response?.data || error.message);
-      alert(error.response?.data?.message || 'Error creating batch. Please check all fields.');
+      const msg = extractErrorMessage(error, 'Error creating batch. Please check all fields.');
+      toastError('Failed to create batch', msg);
     }
   };
 
@@ -106,8 +109,9 @@ const Batches = () => {
     try {
       await client.delete(`/batches/${id}`);
       fetchBatches();
+      toastSuccess('Batch deleted.');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to delete batch. It might be linked to other records.');
+      toastError('Delete failed', 'This batch may be linked to sales records.');
     }
   };
 
@@ -376,8 +380,8 @@ const Batches = () => {
                 type="number"
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={formData.initial_quantity}
-                onChange={(e) => setFormData({ ...formData, initial_quantity: parseInt(e.target.value) || 0 })}
+               value={formData.initial_quantity ?? ''}
+                onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
               />
             </div>
             <div>
@@ -387,8 +391,8 @@ const Batches = () => {
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={formData.purchase_price}
-                onChange={(e) => setFormData({ ...formData, purchase_price: parseFloat(e.target.value) || 0 })}
+               value={formData.purchase_price ?? ''}
+                onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
               />
             </div>
             <div>
@@ -398,8 +402,8 @@ const Batches = () => {
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={formData.selling_price}
-                onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) || 0 })}
+               value={formData.selling_price ?? ''}
+                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
               />
             </div>
           </div>

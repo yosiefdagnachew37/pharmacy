@@ -1,0 +1,30 @@
+/**
+ * Extracts a readable error message from an Axios/API error response.
+ * Handles NestJS class-validator array messages (e.g., { message: ["field must be..."] })
+ */
+export function extractErrorMessage(error: any, fallback = 'An unexpected error occurred.'): string {
+  const data = error?.response?.data;
+
+  if (!data) {
+    return error?.message || fallback;
+  }
+
+  // NestJS validation errors return { message: string[] }
+  if (Array.isArray(data.message)) {
+    return data.message.join('\n');
+  }
+
+  if (typeof data.message === 'string') {
+    return data.message;
+  }
+
+  if (typeof data.error === 'string') {
+    return data.error;
+  }
+
+  if (typeof data === 'string') {
+    return data;
+  }
+
+  return error?.message || fallback;
+}

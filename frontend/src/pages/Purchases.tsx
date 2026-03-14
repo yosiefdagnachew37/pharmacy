@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { toastSuccess, toastError, toastWarning } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 const Purchases = () => {
     const { role } = useAuth();
@@ -17,12 +19,19 @@ const Purchases = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPO, setSelectedPO] = useState<any>(null);
     const [search, setSearch] = useState('');
+    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED'>('ALL');
 
     // Form states
     const [supplierId, setSupplierId] = useState('');
     const [orderItems, setOrderItems] = useState([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
     const [paymentMethod, setPaymentMethod] = useState('CASH');
     const [notes, setNotes] = useState('');
+    
+    // Cheque specific states
+    const [chequeBankName, setChequeBankName] = useState('');
+    const [chequeNumber, setChequeNumber] = useState('');
+    const [chequeIssueDate, setChequeIssueDate] = useState('');
+    const [chequeDueDate, setChequeDueDate] = useState('');
 
     // Receive items state
     const [receiveData, setReceiveData] = useState<any[]>([]);
@@ -58,13 +67,20 @@ const Purchases = () => {
                 payment_method: paymentMethod,
                 notes,
                 items: orderItems,
+                ...(paymentMethod === 'CHEQUE' && {
+                    cheque_bank_name: chequeBankName,
+                    cheque_number: chequeNumber,
+                    cheque_issue_date: chequeIssueDate,
+                    cheque_due_date: chequeDueDate,
+                })
             });
             setShowCreateModal(false);
             resetForm();
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to create purchase order', err);
-            alert('Error creating purchase order');
+            const msg = extractErrorMessage(err, 'Error creating purchase order.');
+            toastError('Failed to create PO', msg);
         }
     };
 
@@ -105,7 +121,7 @@ const Purchases = () => {
             // Validate
             for (const item of receiveData) {
                 if (!item.batch_number || !item.expiry_date) {
-                    alert(`Please fill batch number and expiry date for all items being received.`);
+                    toastWarning('Incomplete items', 'Please fill batch number and expiry date for all items being received.');
                     return;
                 }
             }
@@ -118,10 +134,11 @@ const Purchases = () => {
             setShowReceiveModal(false);
             setSelectedPO(null);
             fetchData();
-            alert('Goods received and stock updated successfully. Batches were auto-created.');
-        } catch (error) {
+            toastSuccess('Goods received and stock updated. Batches auto-created.');
+        } catch (error: any) {
             console.error('Failed to receive goods', error);
-            alert('Error receiving goods.');
+            const msg = extractErrorMessage(error, 'Error receiving goods.');
+            toastError('Receive failed', msg);
         }
     };
 
@@ -138,10 +155,11 @@ const Purchases = () => {
             });
             setShowPaymentModal(false);
             fetchData();
-            alert('Payment recorded successfully.');
-        } catch (err) {
+            toastSuccess('Payment recorded successfully.');
+        } catch (err: any) {
             console.error('Failed to record payment', err);
-            alert('Error recording payment.');
+            const msg = extractErrorMessage(err, 'Error recording payment.');
+            toastError('Payment failed', msg);
         }
     };
 
@@ -150,6 +168,10 @@ const Purchases = () => {
         setPaymentMethod('CASH');
         setNotes('');
         setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
+        setChequeBankName('');
+        setChequeNumber('');
+        setChequeIssueDate('');
+        setChequeDueDate('');
     };
 
     const getStatusBadge = (status: string) => {
@@ -171,10 +193,14 @@ const Purchases = () => {
         }
     };
 
-    const filtered = purchases.filter(p =>
-        p.po_number.toLowerCase().includes(search.toLowerCase()) ||
-        p.supplier?.name.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = purchases.filter(p => {
+        const matchesSearch = p.po_number.toLowerCase().includes(search.toLowerCase()) ||
+                              p.supplier?.name.toLowerCase().includes(search.toLowerCase());
+        if (activeTab === 'PLANNED') {
+            return matchesSearch && (p.status === 'DRAFT' || p.status === 'APPROVED');
+        }
+        return matchesSearch && p.status !== 'DRAFT'; // Hide drafts from "All Orders" to avoid clutter
+    });
 
     if (loading) {
         return (
@@ -201,15 +227,32 @@ const Purchases = () => {
                 )}
             </div>
 
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Search by PO number or supplier..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                />
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-full sm:w-auto">
+                    <button
+                        onClick={() => setActiveTab('ALL')}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === 'ALL' ? 'bg-white text-indigo-700 shadow border border-gray-200/50' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Active Orders
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('PLANNED')}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === 'PLANNED' ? 'bg-white text-indigo-700 shadow border border-gray-200/50' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        Planned Purchases
+                    </button>
+                </div>
+
+                <div className="relative w-full sm:w-auto sm:min-w-[300px]">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search by PO number or supplier..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                    />
+                </div>
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
@@ -418,6 +461,31 @@ const Purchases = () => {
                                         <option value="CHEQUE">Cheque</option>
                                     </select>
                                 </div>
+                                {paymentMethod === 'CHEQUE' && (
+                                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-3">
+                                        <h4 className="text-xs font-bold text-indigo-800 uppercase flex items-center gap-1.5 mb-2">
+                                            <FileText className="w-3.5 h-3.5" /> Cheque Details
+                                        </h4>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Bank Name *</label>
+                                            <input type="text" value={chequeBankName} onChange={e => setChequeBankName(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-indigo-200 outline-none focus:ring-2 focus:ring-indigo-400 text-xs" placeholder="e.g. Commercial Bank of Ethiopia" required />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Cheque Number *</label>
+                                            <input type="text" value={chequeNumber} onChange={e => setChequeNumber(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-indigo-200 outline-none focus:ring-2 focus:ring-indigo-400 text-xs" required />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Issue Date *</label>
+                                                <input type="date" value={chequeIssueDate} onChange={e => setChequeIssueDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-indigo-200 outline-none focus:ring-2 focus:ring-indigo-400 text-xs" required />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Due Date *</label>
+                                                <input type="date" value={chequeDueDate} onChange={e => setChequeDueDate(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-indigo-200 outline-none focus:ring-2 focus:ring-indigo-400 text-xs" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Notes</label>
                                     <textarea

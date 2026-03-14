@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, Save, Upload, AlertCircle, CheckCircle2, Loader2, DollarSign } from 'lucide-react';
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Medicine {
   id: string;
@@ -76,8 +78,9 @@ const Medicines = () => {
     try {
       await client.delete(`/medicines/${id}`);
       fetchMedicines();
-    } catch (error) {
-      alert('Failed to delete medicine. It might be linked to other records.');
+      toastSuccess('Medicine deleted successfully.');
+    } catch (error: any) {
+      toastError('Delete failed', 'This medicine may be linked to batches or sales records.');
     }
   };
 
@@ -115,14 +118,16 @@ const Medicines = () => {
     try {
       if (editingMed) {
         await client.patch(`/medicines/${editingMed.id}`, payload);
+        toastSuccess('Medicine updated successfully.');
       } else {
         await client.post('/medicines', payload);
+        toastSuccess('Medicine created successfully.');
       }
       setIsModalOpen(false);
       fetchMedicines();
     } catch (error: any) {
-      console.error('Error saving medicine:', error.response?.data || error.message);
-      alert(error.response?.data?.message || 'Error saving medicine. Please check all fields.');
+      const msg = extractErrorMessage(error, 'Error saving medicine. Please check all fields.');
+      toastError('Failed to save medicine', msg);
     }
   };
 
@@ -407,8 +412,8 @@ const Medicines = () => {
                 <input
                   type="number"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  value={formData.minimum_stock_level}
-                  onChange={(e) => setFormData({ ...formData, minimum_stock_level: parseInt(e.target.value) || 0 })}
+                  value={formData.minimum_stock_level ?? ''}
+                  onChange={(e) => setFormData({ ...formData, minimum_stock_level: e.target.value === '' ? undefined : parseInt(e.target.value) })}
                 />
               </div>
               <div className="flex items-center mt-6">
@@ -433,8 +438,8 @@ const Medicines = () => {
                   step="0.01"
                   placeholder="0.00"
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm font-bold text-indigo-700"
-                  value={formData.current_selling_price}
-                  onChange={(e) => setFormData({ ...formData, current_selling_price: parseFloat(e.target.value) || 0 })}
+                  value={formData.current_selling_price ?? ''}
+                  onChange={(e) => setFormData({ ...formData, current_selling_price: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
                 />
               </div>
               <p className="text-[10px] text-gray-500 mt-1">This overrides the default batch selling price in the POS.</p>

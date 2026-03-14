@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus, Pencil, Trash2, X, Building2, Phone, Mail, MapPin,
-    Star, Award, ChevronDown, ChevronUp, Search
+    Star, Award, ChevronDown, ChevronUp, Search, Info
 } from 'lucide-react';
 import client from '../api/client';
 
@@ -264,12 +264,28 @@ const Suppliers = () => {
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Credit Limit (ETB)</label>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
+                                        Credit Limit (ETB)
+                                        <div className="relative">
+                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
+                                                Maximum credit allowed by this supplier. Used for automated purchase warnings.
+                                            </div>
+                                        </div>
+                                    </label>
                                     <input type="number" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: Number(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Payment Terms</label>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
+                                        Payment Terms
+                                        <div className="relative">
+                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
+                                                Standard payment timeframe (e.g., Cash on Delivery, Net 15 days, 30 days).
+                                            </div>
+                                        </div>
+                                    </label>
                                     <select value={form.payment_terms} onChange={e => setForm({ ...form, payment_terms: e.target.value })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm">
                                         <option value="COD">COD</option>
@@ -279,7 +295,15 @@ const Suppliers = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Lead Time (days)</label>
+                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
+                                        Lead Time (days)
+                                        <div className="relative">
+                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
+                                                Average business days to receive stock. Used by the Intelligent Forecaster.
+                                            </div>
+                                        </div>
+                                    </label>
                                     <input type="number" value={form.average_lead_time} onChange={e => setForm({ ...form, average_lead_time: Number(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                                 </div>

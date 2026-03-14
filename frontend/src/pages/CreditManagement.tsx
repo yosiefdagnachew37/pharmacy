@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 const CreditManagement = () => {
     const { role } = useAuth();
@@ -51,10 +53,11 @@ const CreditManagement = () => {
             setShowPayModal(false);
             resetForm();
             fetchData();
-            alert('Repayment processed successfully.');
+            toastSuccess('Repayment processed successfully.');
         } catch (err: any) {
             console.error('Failed to process payment', err);
-            alert(err.response?.data?.message || 'Error processing payment');
+            const msg = extractErrorMessage(err, 'Error processing payment.');
+            toastError('Payment failed', msg);
         }
     };
 

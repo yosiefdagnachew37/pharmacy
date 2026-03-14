@@ -77,6 +77,22 @@ export class PurchaseOrder {
     @Column({ type: 'date', nullable: true })
     expected_delivery: Date;
 
+    // ─── Cheque Payment Details ───────────────────────────────────
+    @Column({ nullable: true })
+    cheque_bank_name: string;
+
+    @Column({ nullable: true })
+    cheque_number: string;
+
+    @Column({ type: 'date', nullable: true })
+    cheque_issue_date: Date;
+
+    @Column({ type: 'date', nullable: true })
+    cheque_due_date: Date;
+
+    @Column('decimal', { precision: 12, scale: 2, nullable: true })
+    cheque_amount: number;
+
     @CreateDateColumn()
     created_at: Date;
 

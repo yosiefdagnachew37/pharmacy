@@ -21,11 +21,13 @@ import SalesHistory from './pages/SalesHistory';
 import StockAudit from './pages/StockAudit';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ToastContainer } from './components/Toast';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ToastContainer />
         <OfflineBanner />
         <Routes>
           <Route path="/" element={<DashboardLayout />}>

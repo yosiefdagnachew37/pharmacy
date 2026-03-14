@@ -3,6 +3,8 @@ import client from '../api/client';
 import { Search, Calendar, ChevronRight, RotateCcw, FileText, User, Printer, Lock, Image as ImageIcon, Download, Loader2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
+import { toastSuccess, toastError } from '../components/Toast';
+import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Sale {
     id: string;
@@ -127,12 +129,13 @@ const SalesHistory = () => {
                 amount: Number(refundItem.price) * Number(refundItem.quantity),
                 reason: refundReason
             });
-            alert('Refund processed successfully');
+            toastSuccess('Refund processed successfully.');
             setIsRefundModalOpen(false);
             setIsDetailModalOpen(false);
             fetchSales();
         } catch (error: any) {
-            alert(error.response?.data?.message || 'Refund failed');
+            const msg = extractErrorMessage(error, 'Refund failed. Please try again.');
+            toastError('Refund failed', msg);
         }
     };
 
