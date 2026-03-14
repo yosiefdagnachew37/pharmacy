@@ -115,12 +115,18 @@ const System = () => {
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
+    
+    // Sanitize data
+    const payload = { ...userFormData };
+    if (!payload.manager_pin) payload.manager_pin = null as any;
+    if (editingUser && !payload.password) delete (payload as any).password;
+
     try {
       if (editingUser) {
-        await client.patch(`/users/${editingUser.id}`, userFormData);
+        await client.patch(`/users/${editingUser.id}`, payload);
         toastSuccess('User updated', 'User information successfully modified.');
       } else {
-        await client.post('/users', userFormData);
+        await client.post('/users', payload);
         toastSuccess('User created', 'New user added to the system.');
       }
       setShowUserModal(false);
