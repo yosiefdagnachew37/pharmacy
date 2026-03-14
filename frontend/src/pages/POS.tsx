@@ -428,7 +428,7 @@ const POS = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full max-h-screen overflow-hidden gap-6">
+    <div className="flex flex-col lg:flex-row h-full min-h-0 gap-6">
       {/* Product Selection */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="relative mb-4">
@@ -474,7 +474,7 @@ const POS = () => {
       </div>
 
       {/* Cart / Checkout */}
-      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-[calc(100vh-8rem)] min-h-[600px] flex-shrink-0">
+      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 lg:max-h-full">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between flex-none">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -538,7 +538,7 @@ const POS = () => {
         </div>
 
         {/* Bottom Section: Customer, Payment, Totals & Charge Button */}
-        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 flex flex-col gap-2 flex-none">
+        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 flex flex-col gap-1.5 flex-none overflow-y-auto custom-scrollbar">
           {/* Customer Selection */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Customer / Patient</label>
@@ -640,7 +640,7 @@ const POS = () => {
             <div className="flex justify-between items-end text-gray-900 mt-1">
               <div className="flex flex-col">
                 {discountAmount > 0 && <span className="text-[10px] font-bold text-rose-500 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
-                <span className="text-[11px] font-black uppercase leading-none text-gray-500">Total Due</span>
+                <span className="text-[10px] font-black uppercase leading-none text-gray-400">Total Due</span>
               </div>
               <span className="text-xl font-black leading-none text-indigo-700">ETB {total.toFixed(2)}</span>
             </div>
@@ -649,7 +649,7 @@ const POS = () => {
           <button
             disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (paymentMethod === 'SPLIT' && (splitAmounts.cash + splitAmounts.card !== total)) || (hasControlledItems && !prescriptionUrl)}
             onClick={handleCheckout}
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-2"
+            className="w-full bg-indigo-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1"
           >
             {loading ? 'Processing...' : `Charge ETB ${total.toFixed(2)}`}
           </button>
