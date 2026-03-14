@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import PrescriptionAttachment from '../components/PrescriptionAttachment';
-import { toastError, toastWarning } from '../components/Toast';
+import { toastError, toastWarning, toastSuccess } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Medicine {
@@ -63,33 +63,47 @@ const POS = () => {
   const [cartDiscount, setCartDiscount] = useState<number>(0);
   const [splitAmounts, setSplitAmounts] = useState({ cash: 0, card: 0 });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [medRes, patientRes, custRes] = await Promise.all([
-          client.get('/medicines'),
-          client.get('/patients').catch(() => ({ data: [] })),
-          client.get('/credit/customers').catch(() => ({ data: [] }))
-        ]);
+  // Quick Add Patient
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
+  const [newPatient, setNewPatient] = useState({ name: '', phone: '', address: '' });
+  const [addPatientLoading, setAddPatientLoading] = useState(false);
 
-        if (medRes?.data) {
-          const formattedMeds = medRes.data.map((m: any) => ({
-            ...m,
-            selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
-          }));
-          setMedicines(formattedMeds);
-        }
+  const fetchData = async () => {
+    try {
+      const [medRes, patientRes, custRes] = await Promise.all([
+        client.get('/medicines'),
+        client.get('/patients').catch(() => ({ data: [] })),
+        client.get('/credit/customers').catch(() => ({ data: [] }))
+      ]);
 
-        // Merge patients and credit customers, deduplicate by id
-        const patients = (patientRes?.data || []).map((p: any) => ({ id: p.id, name: p.name, phone: p.phone || '' }));
-        const creditCusts = (custRes?.data || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone || '' }));
-        const merged = [...patients];
-        creditCusts.forEach((c: any) => { if (!merged.find((p: any) => p.id === c.id)) merged.push(c); });
-        setCustomers(merged);
-      } catch (err) {
-        console.error('Error fetching POS data:', err);
+      if (medRes?.data) {
+        const formattedMeds = medRes.data.map((m: any) => ({
+          ...m,
+          selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
+        }));
+        setMedicines(formattedMeds);
       }
-    };
+
+      // Merge patients and credit customers, deduplicate by Name (case-insensitive)
+      const patientList = (patientRes?.data || []).map((p: any) => ({ id: p.id, name: p.name, phone: p.phone || '' }));
+      const creditList = (custRes?.data || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone || '' }));
+      
+      const mergedMap = new Map();
+      patientList.forEach((p: any) => mergedMap.set(p.name.toLowerCase(), p));
+      creditList.forEach((c: any) => {
+        const key = c.name.toLowerCase();
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, c);
+        }
+      });
+
+      setCustomers(Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err) {
+      console.error('Error fetching POS data:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -210,6 +224,25 @@ const POS = () => {
     ));
   };
 
+  const handleQuickAddPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPatient.name) return;
+    setAddPatientLoading(true);
+    try {
+      const res = await client.post('/patients', newPatient);
+      toastSuccess('Success', 'New customer registered successfully.');
+      setShowAddPatientModal(false);
+      setNewPatient({ name: '', phone: '', address: '' });
+      await fetchData();
+      setPatientId(res.data.id);
+    } catch (err) {
+      console.error('Failed to add patient', err);
+      toastError('Error', 'Failed to register customer.');
+    } finally {
+      setAddPatientLoading(false);
+    }
+  };
+
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const discountAmount = (subtotal * (cartDiscount / 100));
   const total = subtotal - discountAmount;
@@ -270,11 +303,7 @@ const POS = () => {
       setSplitAmounts({ cash: 0, card: 0 });
 
       // Refresh medicines stock
-      const stockRes = await client.get('/medicines');
-      setMedicines(stockRes.data.map((m: any) => ({
-        ...m,
-        selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
-      })));
+      fetchData();
     } catch (err: any) {
       const msg = extractErrorMessage(err, 'Checkout failed. Please check stock availability.');
       toastError('Checkout failed', msg);
@@ -546,10 +575,17 @@ const POS = () => {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select
                 value={patientId}
-                onChange={(e) => setPatientId(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value === 'NEW_CUSTOMER') {
+                    setShowAddPatientModal(true);
+                  } else {
+                    setPatientId(e.target.value);
+                  }
+                }}
                 className={`w-full pl-9 pr-4 py-2.5 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 text-xs font-medium appearance-none ${paymentMethod === 'CREDIT' && !patientId ? 'border-amber-300 ring-2 ring-amber-50' : 'border-gray-200'}`}
               >
                 <option value="">Walk-in Customer (Unregistered)</option>
+                <option value="NEW_CUSTOMER" className="text-indigo-600 font-bold">+ New Customer (Quick Add)</option>
                 {customers.map(c => (
                   <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>
                 ))}
@@ -709,6 +745,62 @@ const POS = () => {
             </div>
           </form>
         </div>
+      </Modal>
+
+      {/* QUICK ADD PATIENT MODAL */}
+      <Modal
+        isOpen={showAddPatientModal}
+        onClose={() => setShowAddPatientModal(false)}
+        title="Quick Register Customer"
+      >
+        <form onSubmit={handleQuickAddPatient} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
+            <input
+              type="text"
+              required
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm"
+              placeholder="e.g. Abebe Kebede"
+              value={newPatient.name}
+              onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+            <input
+              type="text"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm"
+              placeholder="09..."
+              value={newPatient.phone}
+              onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Address (Optional)</label>
+            <textarea
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm resize-none"
+              rows={2}
+              value={newPatient.address}
+              onChange={(e) => setNewPatient({ ...newPatient, address: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowAddPatientModal(false)}
+              className="flex-1 py-3 border border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-all text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={addPatientLoading}
+              className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all text-sm disabled:opacity-50"
+            >
+              {addPatientLoading ? 'Registering...' : 'Register & Select'}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
