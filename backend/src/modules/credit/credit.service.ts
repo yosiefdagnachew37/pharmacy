@@ -235,16 +235,6 @@ export class CreditService {
             take: 100,
         });
     }
-    async getCheques(customerId?: string) {
-        const query: any = {};
-        if (customerId) query.customer_id = customerId;
-
-        return this.chequeRepo.find({
-            where: query,
-            order: { due_date: 'ASC' },
-            relations: ['customer'],
-        });
-    }
 
     async findAllCreditRecords(customerId?: string) {
         const query: any = {};

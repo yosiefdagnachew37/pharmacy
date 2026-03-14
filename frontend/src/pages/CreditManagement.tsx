@@ -11,13 +11,12 @@ const CreditManagement = () => {
     const { role } = useAuth();
     const [customers, setCustomers] = useState<any[]>([]);
     const [summary, setSummary] = useState<any>(null);
-    const [cheques, setCheques] = useState<any[]>([]);
     const [creditRecords, setCreditRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showPayModal, setShowPayModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<'CUSTOMERS' | 'CHEQUES' | 'RECORDS'>('CUSTOMERS');
+    const [activeTab, setActiveTab] = useState<'CUSTOMERS' | 'RECORDS'>('CUSTOMERS');
 
     // Repayment form
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -26,15 +25,13 @@ const CreditManagement = () => {
 
     const fetchData = async () => {
         try {
-            const [custRes, sumRes, chequeRes, recordRes] = await Promise.all([
+            const [custRes, sumRes, recordRes] = await Promise.all([
                 client.get('/credit/customers'),
                 client.get('/credit/summary'),
-                client.get('/credit/cheques'),
                 client.get('/credit/records'),
             ]);
             setCustomers(custRes.data);
             setSummary(sumRes.data);
-            setCheques(chequeRes.data);
             setCreditRecords(recordRes.data);
         } catch (err) {
             console.error('Failed to load credit data', err);
@@ -143,19 +140,13 @@ const CreditManagement = () => {
                 >
                     <Clock className="w-4 h-4" /> Credit History ({creditRecords.length})
                 </button>
-                <button
-                    onClick={() => setActiveTab('CHEQUES')}
-                    className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'CHEQUES' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-                >
-                    <FileText className="w-4 h-4" /> Cheque Tracker ({cheques.length})
-                </button>
             </div>
 
             <div className="relative max-w-md">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     type="text"
-                    placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : activeTab === 'CHEQUES' ? 'cheques' : 'receipts or customers'}...`}
+                    placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : 'receipts or customers'}...`}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
@@ -274,55 +265,6 @@ const CreditManagement = () => {
                                         <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
                                             <Clock className="w-8 h-8 mx-auto mb-3 text-gray-300" />
                                             No credit sales found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'CHEQUES' && (
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
-                                <tr>
-                                    <th className="px-6 py-4">Cheque #</th>
-                                    <th className="px-6 py-4">Customer</th>
-                                    <th className="px-6 py-4">Bank</th>
-                                    <th className="px-6 py-4">Amount</th>
-                                    <th className="px-6 py-4">Due Date</th>
-                                    <th className="px-6 py-4 text-right">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {cheques.filter(c =>
-                                    c.cheque_number.toLowerCase().includes(search.toLowerCase()) ||
-                                    c.customer?.name.toLowerCase().includes(search.toLowerCase())
-                                ).map((c) => (
-                                    <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-mono font-bold text-indigo-600">{c.cheque_number}</td>
-                                        <td className="px-6 py-4 font-bold text-gray-800">{c.customer?.name}</td>
-                                        <td className="px-6 py-4 text-gray-500">{c.bank_name}</td>
-                                        <td className="px-6 py-4 font-black text-gray-900">ETB {Number(c.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                        <td className="px-6 py-4 text-gray-600 font-medium">{new Date(c.due_date).toLocaleDateString()}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border ${c.status === 'CLEARED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                    c.status === 'BOUNCED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                        'bg-amber-50 text-amber-600 border-amber-100'
-                                                }`}>
-                                                {c.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {cheques.length === 0 && (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">
-                                            <FileText className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-                                            No cheque records found.
                                         </td>
                                     </tr>
                                 )}

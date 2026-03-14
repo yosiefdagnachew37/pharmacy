@@ -31,10 +31,6 @@ export class CreditController {
         return this.creditService.getPaymentsHistory(customerId);
     }
 
-    @Get('cheques')
-    getCheques(@Query('customerId') customerId?: string) {
-        return this.creditService.getCheques(customerId);
-    }
 
     @Get('records')
     getCreditRecords(@Query('customerId') customerId?: string) {
