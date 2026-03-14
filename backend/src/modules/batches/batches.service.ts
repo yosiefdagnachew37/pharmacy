@@ -58,7 +58,7 @@ export class BatchesService {
 
     async remove(id: string): Promise<void> {
         const batch = await this.findOne(id);
-        await this.batchesRepository.remove(batch);
+        await this.batchesRepository.softRemove(batch);
     }
 
     async findExpiring(days: number): Promise<Batch[]> {

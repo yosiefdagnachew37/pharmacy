@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, Index, DeleteDateColumn } from 'typeorm';
 import { Batch } from '../../batches/entities/batch.entity';
 
 @Entity('medicines')
@@ -54,4 +54,7 @@ export class Medicine {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @DeleteDateColumn()
+    deleted_at: Date;
 }

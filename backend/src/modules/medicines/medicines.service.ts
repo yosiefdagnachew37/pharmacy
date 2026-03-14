@@ -20,7 +20,7 @@ export class MedicinesService {
     async findAll() {
         try {
             const results = await this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now', { now: new Date().toISOString().split('T')[0] })
+                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now AND b.deleted_at IS NULL', { now: new Date().toISOString().split('T')[0] })
                 .select([
                     'm.id',
                     'm.name',
@@ -33,6 +33,7 @@ export class MedicinesService {
                 ])
                 .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
                 .addSelect('MAX(b.selling_price)', 'selling_price')
+                .where('m.deleted_at IS NULL')
                 .groupBy('m.id')
                 .addGroupBy('m.name')
                 .addGroupBy('m.generic_name')
@@ -77,7 +78,7 @@ export class MedicinesService {
 
     async remove(id: string): Promise<void> {
         const medicine = await this.findOne(id);
-        await this.medicinesRepository.remove(medicine);
+        await this.medicinesRepository.softRemove(medicine);
     }
 
     async importFromExcel(buffer: Buffer): Promise<{ created: number; errors: { row: number; message: string }[] }> {
