@@ -7,6 +7,7 @@ import {
   ClipboardCheck, ExternalLink
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
 
@@ -55,6 +56,7 @@ const Patients = () => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<Patient | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<Patient>>({
     name: '',
@@ -132,9 +134,8 @@ const Patients = () => {
   }, []);
 
   // ─── Patient Handlers ──────────────────────────────────────────
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this patient record?')) return;
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
       await client.delete(`/patients/${id}`);
       fetchPatients();
@@ -257,7 +258,7 @@ const Patients = () => {
                     </div>
                     {canDelete('patients') && (
                       <button
-                        onClick={(e) => handleDelete(patient.id, e)}
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirm(patient.id); }}
                         className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                         title="Delete Patient"
                       >
@@ -613,6 +614,14 @@ const Patients = () => {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Patient Record"
+        message="Are you sure you want to delete this patient record? This action cannot be undone."
+      />
     </div>
   );
 };

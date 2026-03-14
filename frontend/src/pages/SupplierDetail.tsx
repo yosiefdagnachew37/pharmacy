@@ -10,6 +10,8 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, Legend, BarChart, Bar, Cell
 } from 'recharts';
+import { toastSuccess, toastError } from '../components/Toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 const SupplierDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -26,6 +28,7 @@ const SupplierDetail = () => {
     const [activeTab, setActiveTab] = useState<'overview' | 'contracts' | 'performance' | 'prices'>('overview');
     const [showContractModal, setShowContractModal] = useState(false);
     const [showPerfModal, setShowPerfModal] = useState(false);
+    const [deleteContractConfirm, setDeleteContractConfirm] = useState<string | null>(null);
     const [contractForm, setContractForm] = useState({
         effective_date: '', expiry_date: '', discount_percentage: 0, return_policy: '', notes: ''
     });
@@ -96,7 +99,6 @@ const SupplierDetail = () => {
     };
 
     const deleteContract = async (contractId: string) => {
-        if (!confirm('Delete this contract?')) return;
         await client.delete(`/suppliers/contracts/${contractId}`);
         const res = await client.get(`/suppliers/${id}/contracts`);
         setContracts(res.data);
@@ -254,7 +256,7 @@ const SupplierDetail = () => {
                                     {c.return_policy && <p className="text-xs text-gray-500 mt-1">Return Policy: {c.return_policy}</p>}
                                     {c.notes && <p className="text-xs text-gray-400 mt-1 italic">{c.notes}</p>}
                                 </div>
-                                <button onClick={() => deleteContract(c.id)} className="p-2 hover:bg-rose-50 text-gray-400 hover:text-rose-600 rounded-xl transition-colors">
+                                <button onClick={() => setDeleteContractConfirm(c.id)} className="p-2 hover:bg-rose-50 text-gray-400 hover:text-rose-600 rounded-xl transition-colors">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
@@ -430,6 +432,14 @@ const SupplierDetail = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!deleteContractConfirm}
+                onClose={() => setDeleteContractConfirm(null)}
+                onConfirm={() => deleteContractConfirm && deleteContract(deleteContractConfirm)}
+                title="Delete Contract"
+                message="Are you sure you want to delete this contract? This action cannot be undone."
+            />
         </div>
     );
 };

@@ -5,6 +5,8 @@ import {
     Star, Award, ChevronDown, ChevronUp, Search, Info
 } from 'lucide-react';
 import client from '../api/client';
+import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface Supplier {
     id: string;
@@ -27,6 +29,7 @@ const Suppliers = () => {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Supplier | null>(null);
     const [search, setSearch] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [form, setForm] = useState({
         name: '', contact_person: '', phone: '', email: '', address: '',
         credit_limit: 0, payment_terms: 'COD', average_lead_time: 7, is_active: true,
@@ -66,7 +69,6 @@ const Suppliers = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Delete this supplier?')) return;
         try {
             await client.delete(`/suppliers/${id}`);
             fetchData();
@@ -187,7 +189,7 @@ const Suppliers = () => {
                                 <button onClick={() => openEdit(s)} className="p-2 bg-gray-50 rounded-xl hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
                                     <Pencil className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => handleDelete(s.id)} className="p-2 bg-gray-50 rounded-xl hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors">
+                                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(s.id); }} className="p-2 bg-gray-50 rounded-xl hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
@@ -328,6 +330,14 @@ const Suppliers = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!deleteConfirm}
+                onClose={() => setDeleteConfirm(null)}
+                onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+                title="Delete Supplier"
+                message="Are you sure you want to delete this supplier? This action cannot be undone."
+            />
         </div>
     );
 };

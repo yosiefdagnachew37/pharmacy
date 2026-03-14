@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface Backup {
   filename: string;
@@ -31,6 +32,7 @@ const System = () => {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -66,8 +68,6 @@ const System = () => {
   };
 
   const handleRestore = async (filename: string) => {
-    if (!confirm(`Are you sure you want to restore from ${filename}? This will overwrite current data.`)) return;
-    
     setActionLoading(true);
     try {
       await client.post(`/system/restore/${filename}`);
@@ -183,7 +183,7 @@ const System = () => {
                     <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                         onClick={() => handleRestore(backup.filename)}
+                         onClick={() => setRestoreConfirm(backup.filename)}
                          disabled={actionLoading}
                          className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
                       >
@@ -209,6 +209,19 @@ const System = () => {
             </p>
          </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!restoreConfirm}
+        onClose={() => setRestoreConfirm(null)}
+        onConfirm={() => {
+            if (restoreConfirm) {
+                handleRestore(restoreConfirm);
+                setRestoreConfirm(null);
+            }
+        }}
+        title="Restore Backup"
+        message={`Are you sure you want to restore from this backup? This will overwrite your current data.`}
+      />
     </div>
   );
 };

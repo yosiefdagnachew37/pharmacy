@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
 
@@ -27,6 +28,7 @@ const Expenses = () => {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<any>(null);
     const [search, setSearch] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
     // Form states
     const [form, setForm] = useState({
@@ -83,7 +85,6 @@ const Expenses = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this expense?')) return;
         try {
             await client.delete(`/expenses/${id}`);
             fetchData();
@@ -241,7 +242,7 @@ const Expenses = () => {
                                                     <Pencil className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(e.id)}
+                                                    onClick={() => setDeleteConfirm(e.id)}
                                                     className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -390,6 +391,14 @@ const Expenses = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!deleteConfirm}
+                onClose={() => setDeleteConfirm(null)}
+                onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+                title="Delete Expense"
+                message="Are you sure you want to delete this expense record? This action cannot be undone."
+            />
         </div>
     );
 };

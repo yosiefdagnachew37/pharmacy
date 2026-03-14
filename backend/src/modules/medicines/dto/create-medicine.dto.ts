@@ -24,4 +24,8 @@ export class CreateMedicineDto {
     @IsNumber()
     @IsOptional()
     minimum_stock_level?: number;
+
+    @IsNumber()
+    @IsOptional()
+    current_selling_price?: number;
 }

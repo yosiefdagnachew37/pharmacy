@@ -3,6 +3,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import ColumnFilter from '../components/ColumnFilter';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
@@ -53,6 +54,7 @@ const Batches = () => {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [filterMedicine, setFilterMedicine] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
@@ -105,7 +107,6 @@ const Batches = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this batch?')) return;
     try {
       await client.delete(`/batches/${id}`);
       fetchBatches();
@@ -313,7 +314,7 @@ const Batches = () => {
                     <td className="px-6 py-4 text-right">
                       {canDelete('batches') && (
                         <button
-                          onClick={() => handleDelete(batch.id)}
+                          onClick={() => setDeleteConfirm(batch.id)}
                           className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -471,6 +472,14 @@ const Batches = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Batch"
+        message="Are you sure you want to delete this batch? This action cannot be undone."
+      />
     </div>
   );
 };

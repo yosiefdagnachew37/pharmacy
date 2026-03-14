@@ -17,6 +17,7 @@ import {
     Info
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface AuditItem {
     id: string;
@@ -47,6 +48,7 @@ interface AuditSession {
 const StockAudit = () => {
     const [sessions, setSessions] = useState<AuditSession[]>([]);
     const [activeSession, setActiveSession] = useState<AuditSession | null>(null);
+    const [finalizeConfirm, setFinalizeConfirm] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showNewModal, setShowNewModal] = useState(false);
     const [newNotes, setNewNotes] = useState('');
@@ -155,8 +157,6 @@ const StockAudit = () => {
 
     const handleFinalize = async () => {
         if (!activeSession) return;
-        if (!confirm('Are you sure you want to finalize this audit? This will update actual stock levels and create adjustment logs.')) return;
-
         try {
             await client.post(`/stock-audit/sessions/${activeSession.id}/finalize`);
             setActiveSession(null);
@@ -357,6 +357,14 @@ const StockAudit = () => {
                     </button>
                 </div>
             </Modal>
+
+            <ConfirmModal
+                isOpen={finalizeConfirm}
+                onClose={() => setFinalizeConfirm(false)}
+                onConfirm={() => { handleFinalize(); setFinalizeConfirm(false); }}
+                title="Finalize Audit"
+                message="Are you sure you want to finalize this audit? This will update actual stock levels and create adjustment logs."
+            />
         </div>
     );
 };

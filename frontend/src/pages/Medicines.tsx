@@ -3,6 +3,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Search, Edit2, Trash2, Save, Upload, AlertCircle, CheckCircle2, Loader2, DollarSign } from 'lucide-react';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import ColumnFilter from '../components/ColumnFilter';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
@@ -47,6 +48,7 @@ const Medicines = () => {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // ─── Column Filter State ────────────────────────────────────────
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
@@ -74,7 +76,6 @@ const Medicines = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this medicine?')) return;
     try {
       await client.delete(`/medicines/${id}`);
       fetchMedicines();
@@ -110,9 +111,9 @@ const Medicines = () => {
       generic_name: formData.generic_name,
       category: formData.category,
       unit: formData.unit,
-      minimum_stock_level: Number(formData.minimum_stock_level),
+      minimum_stock_level: formData.minimum_stock_level !== undefined ? Number(formData.minimum_stock_level) : undefined,
       is_controlled: formData.is_controlled,
-      current_selling_price: Number(formData.current_selling_price)
+      current_selling_price: formData.current_selling_price !== undefined ? Number(formData.current_selling_price) : undefined
     };
 
     try {
@@ -343,7 +344,7 @@ const Medicines = () => {
                       )}
                       {canDelete('medicines') && (
                         <button
-                          onClick={() => handleDelete(med.id)}
+                          onClick={() => setDeleteConfirm(med.id)}
                           className="text-gray-400 hover:text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -510,6 +511,14 @@ const Medicines = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Delete Medicine"
+        message="Are you sure you want to delete this medicine? This action cannot be undone."
+      />
     </div>
   );
 };
