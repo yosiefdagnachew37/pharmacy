@@ -46,8 +46,15 @@ export class SalesService {
 
             // 1. Create Sale Header
             const finalPaymentMethod = (payment_method as PaymentMethod) || PaymentMethod.CASH;
+            
+            // Generate unique receipt number (format: RCPT-YYYYMMDD-XXXX)
+            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const receiptNumber = `RCPT-${dateStr}-${randomStr}`;
+
             const saleHeader = manager.create(Sale, {
                 ...rest,
+                receipt_number: receiptNumber,
                 total_amount: total_price,
                 payment_method: finalPaymentMethod,
                 split_payments: createSaleDto.split_payments as { method: PaymentMethod; amount: number }[],

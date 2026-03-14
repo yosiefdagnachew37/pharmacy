@@ -11,7 +11,8 @@ export class RefundItemDto {
 
 export class CreateRefundDto {
     @IsUUID()
-    sale_id: string;
+    @IsOptional()
+    sale_id?: string;
 
     @IsString()
     @IsOptional()
