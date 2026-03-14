@@ -36,6 +36,11 @@ export class CreditController {
         return this.creditService.getCheques(customerId);
     }
 
+    @Get('records')
+    getCreditRecords(@Query('customerId') customerId?: string) {
+        return this.creditService.findAllCreditRecords(customerId);
+    }
+
     @Get('customers/:id')
     getCustomerData(@Param('id') id: string) {
         return this.creditService.getCustomerWithCredit(id);

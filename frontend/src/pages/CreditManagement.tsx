@@ -12,11 +12,12 @@ const CreditManagement = () => {
     const [customers, setCustomers] = useState<any[]>([]);
     const [summary, setSummary] = useState<any>(null);
     const [cheques, setCheques] = useState<any[]>([]);
+    const [creditRecords, setCreditRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showPayModal, setShowPayModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<'CUSTOMERS' | 'CHEQUES'>('CUSTOMERS');
+    const [activeTab, setActiveTab] = useState<'CUSTOMERS' | 'CHEQUES' | 'RECORDS'>('CUSTOMERS');
 
     // Repayment form
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -25,14 +26,16 @@ const CreditManagement = () => {
 
     const fetchData = async () => {
         try {
-            const [custRes, sumRes, chequeRes] = await Promise.all([
+            const [custRes, sumRes, chequeRes, recordRes] = await Promise.all([
                 client.get('/credit/customers'),
                 client.get('/credit/summary'),
                 client.get('/credit/cheques'),
+                client.get('/credit/records'),
             ]);
             setCustomers(custRes.data);
             setSummary(sumRes.data);
             setCheques(chequeRes.data);
+            setCreditRecords(recordRes.data);
         } catch (err) {
             console.error('Failed to load credit data', err);
         } finally {
@@ -83,6 +86,11 @@ const CreditManagement = () => {
         (c.phone && c.phone.includes(search))
     );
 
+    const filteredRecords = creditRecords.filter(r =>
+        r.customer?.name.toLowerCase().includes(search.toLowerCase()) ||
+        (r.sale?.receipt_number && r.sale.receipt_number.toLowerCase().includes(search.toLowerCase()))
+    );
+
     if (loading) {
         return (
             <div className="h-[60vh] flex items-center justify-center">
@@ -130,6 +138,12 @@ const CreditManagement = () => {
                     <Users className="w-4 h-4" /> Customer Debtors ({customers.length})
                 </button>
                 <button
+                    onClick={() => setActiveTab('RECORDS')}
+                    className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'RECORDS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                >
+                    <Clock className="w-4 h-4" /> Credit History ({creditRecords.length})
+                </button>
+                <button
                     onClick={() => setActiveTab('CHEQUES')}
                     className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'CHEQUES' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
@@ -141,7 +155,7 @@ const CreditManagement = () => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     type="text"
-                    placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : 'cheques'}...`}
+                    placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : activeTab === 'CHEQUES' ? 'cheques' : 'receipts or customers'}...`}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
@@ -200,6 +214,66 @@ const CreditManagement = () => {
                                         <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">
                                             <Users className="w-8 h-8 mx-auto mb-3 text-gray-300" />
                                             No customers found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'RECORDS' && (
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
+                                <tr>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">Receipt #</th>
+                                    <th className="px-6 py-4">Customer</th>
+                                    <th className="px-6 py-4">Original Amount</th>
+                                    <th className="px-6 py-4">Balance Due</th>
+                                    <th className="px-6 py-4">Due Date</th>
+                                    <th className="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filteredRecords.map((r) => (
+                                    <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 text-gray-500 text-xs font-medium">
+                                            {new Date(r.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 font-mono font-bold text-indigo-600">
+                                            {r.sale?.receipt_number || 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 font-bold text-gray-800">
+                                            {r.customer?.name}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 font-medium">
+                                            ETB {Number(r.original_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 font-black text-gray-900">
+                                            ETB {(Number(r.original_amount) - Number(r.paid_amount)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 font-medium">
+                                            {new Date(r.due_date).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border ${r.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                    r.status === 'PARTIAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                        'bg-rose-50 text-rose-600 border-rose-100'
+                                                }`}>
+                                                {r.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredRecords.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
+                                            <Clock className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                                            No credit sales found.
                                         </td>
                                     </tr>
                                 )}

@@ -245,4 +245,16 @@ export class CreditService {
             relations: ['customer'],
         });
     }
+
+    async findAllCreditRecords(customerId?: string) {
+        const query: any = {};
+        if (customerId) query.customer_id = customerId;
+
+        return this.creditRecordRepo.find({
+            where: query,
+            order: { created_at: 'DESC' },
+            relations: ['customer', 'sale'],
+            take: 100, // Limit for performance
+        });
+    }
 }
