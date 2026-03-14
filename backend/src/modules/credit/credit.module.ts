@@ -8,11 +8,12 @@ import { CreditService } from './credit.service';
 import { CreditController } from './credit.controller';
 import { AlertCronService } from './alert-cron.service';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
+import { Patient } from '../patients/entities/patient.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Customer, CreditRecord, CreditPayment, PurchaseOrder, ChequeRecord]),
+        TypeOrmModule.forFeature([Customer, CreditRecord, CreditPayment, PurchaseOrder, ChequeRecord, Patient]),
         NotificationsModule,
     ],
     controllers: [CreditController],

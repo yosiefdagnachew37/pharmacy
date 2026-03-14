@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreditRecord, CreditStatus } from './entities/credit-record.entity';
 import { CreditPayment } from './entities/credit-payment.entity';
 import { ChequeRecord, ChequeStatus } from './entities/cheque-record.entity';
+import { Patient } from '../patients/entities/patient.entity';
 
 @Injectable()
 export class CreditService {
@@ -17,6 +18,8 @@ export class CreditService {
         private readonly paymentRepo: Repository<CreditPayment>,
         @InjectRepository(ChequeRecord)
         private readonly chequeRepo: Repository<ChequeRecord>,
+        @InjectRepository(Patient)
+        private readonly patientRepo: Repository<Patient>,
         private dataSource: DataSource,
     ) { }
 
@@ -65,10 +68,29 @@ export class CreditService {
         amount: number,
         dueDate: Date,
         notes?: string,
+        externalManager?: EntityManager,
     ) {
-        return await this.dataSource.transaction(async (manager) => {
-            const customer = await manager.findOne(Customer, { where: { id: customerId } });
-            if (!customer) throw new NotFoundException('Customer not found');
+        const work = async (manager: EntityManager) => {
+            let customer = await manager.findOne(Customer, { where: { id: customerId } });
+            
+            if (!customer) {
+                // Try to find as a Patient and auto-migrate to Customer
+                const patient = await manager.findOne(Patient, { where: { id: customerId } });
+                if (!patient) {
+                    throw new NotFoundException(`Customer or Patient with ID ${customerId} not found`);
+                }
+
+                // Auto-create customer entry from patient
+                customer = manager.create(Customer, {
+                    id: patient.id, // Keep the same ID for link consistency
+                    name: patient.name,
+                    phone: patient.phone,
+                    address: patient.address,
+                    total_credit: 0,
+                    is_active: true
+                });
+                await manager.save(customer);
+            }
 
             // 1. Create Credit Record
             const record = manager.create(CreditRecord, {
@@ -85,7 +107,13 @@ export class CreditService {
             await manager.save(customer);
 
             return record;
-        });
+        };
+
+        if (externalManager) {
+            return await work(externalManager);
+        } else {
+            return await this.dataSource.transaction(work);
+        }
     }
 
     /**

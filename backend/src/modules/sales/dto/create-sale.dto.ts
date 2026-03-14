@@ -15,6 +15,16 @@ export class CreateSaleItemDto {
     unit_price: number;
 }
 
+export class SplitPaymentDto {
+    @IsString()
+    @IsNotEmpty()
+    method: string;
+
+    @IsNumber()
+    @IsNotEmpty()
+    amount: number;
+}
+
 export class CreateSaleDto {
     @IsUUID()
     @IsOptional()
@@ -33,6 +43,10 @@ export class CreateSaleDto {
     @IsNotEmpty()
     total_price: number;
 
+    @IsNumber()
+    @IsOptional()
+    discount?: number;
+
     @IsString()
     @IsOptional()
     payment_method?: string;
@@ -43,5 +57,7 @@ export class CreateSaleDto {
 
     @IsArray()
     @IsOptional()
-    split_payments?: { method: string; amount: number }[];
+    @ValidateNested({ each: true })
+    @Type(() => SplitPaymentDto)
+    split_payments?: SplitPaymentDto[];
 }

@@ -256,7 +256,7 @@ const POS = () => {
       if (paymentMethod === 'SPLIT') {
         payload.split_payments = [
           { method: 'CASH', amount: splitAmounts.cash },
-          { method: 'CARD', amount: splitAmounts.card }
+          { method: 'CREDIT_CARD', amount: splitAmounts.card }
         ];
       }
 

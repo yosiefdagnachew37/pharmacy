@@ -78,7 +78,8 @@ export class SalesService {
                     savedSale.id,
                     creditAmount,
                     dueDate,
-                    `Credit sale automatically logged from POS`
+                    `Credit sale automatically logged from POS`,
+                    manager
                 );
             }
 
