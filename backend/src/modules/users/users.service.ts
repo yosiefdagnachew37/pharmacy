@@ -46,6 +46,28 @@ export class UsersService {
         return this.usersRepository.find();
     }
 
+    async update(id: string, updateUserDto: any): Promise<User> {
+        const user = await this.findById(id);
+        if (!user) throw new NotFoundException('User not found');
+
+        const { password, ...rest } = updateUserDto;
+        
+        if (password) {
+            const salt = await bcrypt.genSalt();
+            user.password_hash = await bcrypt.hash(password, salt);
+        }
+
+        Object.assign(user, rest);
+        return this.usersRepository.save(user);
+    }
+
+    async remove(id: string): Promise<void> {
+        const user = await this.findById(id);
+        if (!user) throw new NotFoundException('User not found');
+        user.is_active = false;
+        await this.usersRepository.save(user);
+    }
+
     async verifyPin(pin: string): Promise<User | null> {
         // Find any user with roles ADMIN or PHARMACIST that has this PIN
         return this.usersRepository.findOne({

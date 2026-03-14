@@ -9,9 +9,17 @@ import {
   HardDrive,
   Cpu,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Edit,
+  Trash2,
+  Plus,
+  Lock,
+  Check
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
+import Modal from '../components/Modal';
+import { toastSuccess, toastError } from '../components/Toast';
 
 interface Backup {
   filename: string;
@@ -27,22 +35,47 @@ interface SystemStatus {
   backupCount: number;
 }
 
+interface User {
+  id: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+  manager_pin: string | null;
+}
+
 const System = () => {
+  const [activeTab, setActiveTab] = useState<'system' | 'users'>('system');
   const [backups, setBackups] = useState<Backup[]>([]);
   const [status, setStatus] = useState<SystemStatus | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
+  
+  // User Edit State
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userFormData, setUserFormData] = useState({
+    username: '',
+    password: '',
+    role: 'CASHIER',
+    manager_pin: ''
+  });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [backupsRes, statusRes] = await Promise.all([
-        client.get('/system/backups'),
-        client.get('/system/status')
-      ]);
-      setBackups(backupsRes.data);
-      setStatus(statusRes.data);
+      if (activeTab === 'system') {
+        const [backupsRes, statusRes] = await Promise.all([
+          client.get('/system/backups'),
+          client.get('/system/status')
+        ]);
+        setBackups(backupsRes.data);
+        setStatus(statusRes.data);
+      } else {
+        const res = await client.get('/users');
+        setUsers(res.data);
+      }
     } catch (err) {
       console.error('Failed to fetch system data:', err);
     } finally {
@@ -52,16 +85,16 @@ const System = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeTab]);
 
   const handleBackup = async () => {
     setActionLoading(true);
     try {
       await client.post('/system/backup');
       await fetchData();
-      alert('Backup created successfully!');
+      toastSuccess('Backup created', 'System backup successfully generated.');
     } catch (err) {
-      alert('Backup failed.');
+      toastError('Backup failed', 'Could not create system backup.');
     } finally {
       setActionLoading(false);
     }
@@ -71,11 +104,42 @@ const System = () => {
     setActionLoading(true);
     try {
       await client.post(`/system/restore/${filename}`);
-      alert('System restored successfully! Please restart the application.');
+      toastSuccess('Restore successful', 'System restored. Please restart the app.');
     } catch (err) {
-      alert('Restore failed.');
+      toastError('Restore failed', 'Could not restore from backup.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      if (editingUser) {
+        await client.patch(`/users/${editingUser.id}`, userFormData);
+        toastSuccess('User updated', 'User information successfully modified.');
+      } else {
+        await client.post('/users', userFormData);
+        toastSuccess('User created', 'New user added to the system.');
+      }
+      setShowUserModal(false);
+      fetchData();
+    } catch (err) {
+      toastError('Operation failed', 'Could not save user changes.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeactivate = async (id: string) => {
+    if (!confirm('Are you sure you want to deactivate this user?')) return;
+    try {
+      await client.delete(`/users/${id}`);
+      toastSuccess('User deactivated', 'Access revoked for this user.');
+      fetchData();
+    } catch (err) {
+      toastError('Failed', 'Could not deactivate user.');
     }
   };
 
@@ -95,120 +159,304 @@ const System = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-10">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">System Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage database backups, restores, and monitor system health.</p>
+          <p className="text-sm text-gray-500 mt-1">Configure system security, manage users, and database maintenance.</p>
         </div>
-        <button 
-          onClick={handleBackup}
-          disabled={actionLoading}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all disabled:opacity-50"
+        <div className="flex gap-4">
+           {activeTab === 'system' ? (
+              <button 
+                onClick={handleBackup}
+                disabled={actionLoading}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all disabled:opacity-50"
+              >
+                <Download className="w-5 h-5 mr-3" />
+                {actionLoading ? 'Creating...' : 'Create Backup'}
+              </button>
+           ) : (
+              <button 
+                onClick={() => {
+                  setEditingUser(null);
+                  setUserFormData({ username: '', password: '', role: 'CASHIER', manager_pin: '' });
+                  setShowUserModal(true);
+                }}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all"
+              >
+                <Plus className="w-5 h-5 mr-3" />
+                Add New User
+              </button>
+           )}
+        </div>
+      </div>
+
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'system' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
         >
-          <Download className="w-5 h-5 mr-3" />
-          {actionLoading ? 'Processing...' : 'Create Backup Now'}
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4" /> System Status & Backups
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'users' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4" /> User Management
+          </div>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center text-gray-400 mb-2">
-            <Activity className="w-4 h-4 mr-2 text-indigo-500" />
-            <span className="text-xs font-bold uppercase tracking-widest">Uptime</span>
-          </div>
-          <h3 className="text-xl font-black text-gray-800 tracking-tight">
-            {status ? formatUptime(status.uptime) : 'Loading...'}
-          </h3>
-        </div>
-        
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center text-gray-400 mb-2">
-            <HardDrive className="w-4 h-4 mr-2 text-indigo-500" />
-            <span className="text-xs font-bold uppercase tracking-widest">Backups</span>
-          </div>
-          <h3 className="text-xl font-black text-gray-800 tracking-tight">
-            {status?.backupCount || 0} Saved
-          </h3>
-        </div>
+      {activeTab === 'system' ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex items-center text-gray-400 mb-2">
+                <Activity className="w-4 h-4 mr-2 text-indigo-500" />
+                <span className="text-xs font-bold uppercase tracking-widest">Uptime</span>
+              </div>
+              <h3 className="text-xl font-black text-gray-800 tracking-tight">
+                {status ? formatUptime(status.uptime) : 'Loading...'}
+              </h3>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex items-center text-gray-400 mb-2">
+                <HardDrive className="w-4 h-4 mr-2 text-indigo-500" />
+                <span className="text-xs font-bold uppercase tracking-widest">Backups</span>
+              </div>
+              <h3 className="text-xl font-black text-gray-800 tracking-tight">
+                {status?.backupCount || 0} Saved
+              </h3>
+            </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center text-gray-400 mb-2">
-            <Cpu className="w-4 h-4 mr-2 text-indigo-500" />
-            <span className="text-xs font-bold uppercase tracking-widest">Memory</span>
-          </div>
-          <h3 className="text-xl font-black text-gray-800 tracking-tight">
-            {status ? `${(status.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB` : 'Loading...'}
-          </h3>
-        </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex items-center text-gray-400 mb-2">
+                <Cpu className="w-4 h-4 mr-2 text-indigo-500" />
+                <span className="text-xs font-bold uppercase tracking-widest">Memory</span>
+              </div>
+              <h3 className="text-xl font-black text-gray-800 tracking-tight">
+                {status ? `${(status.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB` : 'Loading...'}
+              </h3>
+            </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center text-gray-400 mb-2">
-            <Shield className="w-4 h-4 mr-2 text-green-500" />
-            <span className="text-xs font-bold uppercase tracking-widest">Security</span>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex items-center text-gray-400 mb-2">
+                <Shield className="w-4 h-4 mr-2 text-green-500" />
+                <span className="text-xs font-bold uppercase tracking-widest">Security</span>
+              </div>
+              <div className="flex items-center">
+                <CheckCircle2 className="w-5 h-5 text-green-500 mr-2" />
+                <span className="font-bold text-gray-800 text-sm italic">Encrypted</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center">
-            <CheckCircle2 className="w-5 h-5 text-green-500 mr-2" />
-            <span className="font-bold text-gray-800 text-sm italic">Encrypted</span>
-          </div>
-        </div>
-      </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-50 flex items-center">
-          <Database className="w-5 h-5 text-indigo-600 mr-3" />
-          <h2 className="font-bold text-gray-800">Backup History</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
-              <tr>
-                <th className="px-6 py-4">Filename</th>
-                <th className="px-6 py-4">Created At</th>
-                <th className="px-6 py-4 text-center">Size</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
-              {loading ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Scanning archives...</td></tr>
-              ) : backups.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">No backups available yet.</td></tr>
-              ) : (
-                backups.map((backup) => (
-                  <tr key={backup.filename} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
-                    <td className="px-6 py-4 text-sm">{new Date(backup.createdAt).toLocaleString()}</td>
-                    <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button 
-                         onClick={() => setRestoreConfirm(backup.filename)}
-                         disabled={actionLoading}
-                         className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Restore
-                      </button>
-                    </td>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex items-center">
+              <Database className="w-5 h-5 text-indigo-600 mr-3" />
+              <h2 className="font-bold text-gray-800">Backup History</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
+                  <tr>
+                    <th className="px-6 py-4">Filename</th>
+                    <th className="px-6 py-4">Created At</th>
+                    <th className="px-6 py-4 text-center">Size</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                  {loading ? (
+                    <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Scanning archives...</td></tr>
+                  ) : backups.length === 0 ? (
+                    <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">No backups available yet.</td></tr>
+                  ) : (
+                    backups.map((backup) => (
+                      <tr key={backup.filename} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
+                        <td className="px-6 py-4 text-sm">{new Date(backup.createdAt).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                             onClick={() => setRestoreConfirm(backup.filename)}
+                             disabled={actionLoading}
+                             className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
+                          >
+                            <RotateCcw className="w-4 h-4 mr-2" /> Restore
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center">
+              <Users className="w-5 h-5 text-indigo-600 mr-3" />
+              <h2 className="font-bold text-gray-800">System Users</h2>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
+                <tr>
+                  <th className="px-6 py-4">Username</th>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Manager PIN</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                {loading ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400 italic">Loading users...</td></tr>
+                ) : (
+                  users.map((u) => (
+                    <tr key={u.id} className={`hover:bg-gray-50/50 transition-colors ${!u.is_active ? 'opacity-50' : ''}`}>
+                      <td className="px-6 py-4 text-sm font-bold text-gray-800">{u.username}</td>
+                      <td className="px-6 py-4">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          u.role === 'ADMIN' ? 'bg-rose-100 text-rose-700' : 
+                          u.role === 'PHARMACIST' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-mono font-bold">
+                        {u.manager_pin ? (
+                          <span className="flex items-center gap-1.5 text-emerald-600">
+                            <Lock className="w-3 h-3" /> {u.manager_pin}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 italic text-xs">Not Set</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`text-[10px] font-bold uppercase ${u.is_active ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {u.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => {
+                              setEditingUser(u);
+                              setUserFormData({
+                                username: u.username,
+                                password: '',
+                                role: u.role,
+                                manager_pin: u.manager_pin || ''
+                              });
+                              setShowUserModal(true);
+                            }}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          {u.username !== 'admin' && (
+                            <button 
+                              onClick={() => handleDeactivate(u.id)}
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100 flex items-start">
-         <AlertCircle className="w-6 h-6 text-orange-600 mr-4 flex-shrink-0" />
-         <div>
-            <h4 className="font-bold text-orange-800 mb-1">Backup Recommendation</h4>
-            <p className="text-sm text-orange-700">
-              Daily automated backups are active at 12:00 AM. It is highly recommended to perform a manual backup before major inventory updates or system maintenance. 
-              Store physical copies of your backup archives on an external drive for maximum durability.
-            </p>
-         </div>
-      </div>
+      <Modal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        title={editingUser ? 'Edit User Profile' : 'Register New User'}
+      >
+        <form onSubmit={handleSaveUser} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Username</label>
+              <input
+                required
+                type="text"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-bold"
+                value={userFormData.username}
+                onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">{editingUser ? 'New Password' : 'Password'}</label>
+              <input
+                required={!editingUser}
+                type="password"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-bold"
+                value={userFormData.password}
+                onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                placeholder={editingUser ? 'Leave blank to keep same' : '••••••'}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Account Role</label>
+              <select
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-bold"
+                value={userFormData.role}
+                onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value })}
+              >
+                <option value="ADMIN">ADMIN</option>
+                <option value="PHARMACIST">PHARMACIST</option>
+                <option value="CASHIER">CASHIER</option>
+                <option value="AUDITOR">AUDITOR</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Manager Authorization PIN</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="e.g. 1234"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-bold tracking-widest"
+                  value={userFormData.manager_pin}
+                  onChange={(e) => setUserFormData({ ...userFormData, manager_pin: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-4 border-t border-gray-100">
+            <button
+               type="button"
+               onClick={() => setShowUserModal(false)}
+               className="flex-1 py-3 bg-white border border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={actionLoading}
+              className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2"
+            >
+              {actionLoading ? 'Saving...' : (editingUser ? <><Check className="w-4 h-4" /> Save Changes</> : <><Plus className="w-4 h-4" /> Create Account</>)}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmModal
         isOpen={!!restoreConfirm}

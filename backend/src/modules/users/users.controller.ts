@@ -33,6 +33,20 @@ export class UsersController {
         return this.usersService.findById(id);
     }
 
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Patch(':id')
+    @Roles(UserRole.ADMIN)
+    update(@Param('id') id: string, @Body() updateUserDto: any) {
+        return this.usersService.update(id, updateUserDto);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Delete(':id')
+    @Roles(UserRole.ADMIN)
+    remove(@Param('id') id: string) {
+        return this.usersService.remove(id);
+    }
+
     @UseGuards(JwtAuthGuard)
     @Post('verify-pin')
     async verifyPin(@Body('pin') pin: string) {
