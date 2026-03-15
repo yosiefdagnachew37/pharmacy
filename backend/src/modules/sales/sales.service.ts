@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between, In } from 'typeorm';
+import { Repository, DataSource, Between, In, QueryFailedError } from 'typeorm';
 import { Sale, PaymentMethod } from './entities/sale.entity';
 import { SaleItem } from './entities/sale-item.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
@@ -32,111 +32,118 @@ export class SalesService {
     async create(createSaleDto: CreateSaleDto, userId: string): Promise<Sale> {
         const { items, total_price, payment_method, ...rest } = createSaleDto;
 
-        const sale = await this.dataSource.transaction(async (manager) => {
-            // 0. Check for Controlled Substances
-            const medIds = items.map(i => i.medicine_id);
-            const medicines = await manager.getRepository(Medicine).find({
-                where: { id: In(medIds) }
-            });
+        try {
+            const sale = await this.dataSource.transaction(async (manager) => {
+                // 0. Check for Controlled Substances
+                const medIds = items.map(i => i.medicine_id);
+                const medicines = await manager.getRepository(Medicine).find({
+                    where: { id: In(medIds) }
+                });
 
-            const hasControlled = medicines.some(m => m.is_controlled);
-            if (hasControlled && !createSaleDto.prescription_image_url && !createSaleDto.prescription_id) {
-                throw new BadRequestException('Prescription (upload or link) is required for controlled substances.');
-            }
-
-            // 1. Create Sale Header
-            const finalPaymentMethod = (payment_method as PaymentMethod) || PaymentMethod.CASH;
-            
-            // Generate unique receipt number (format: RCPT-YYYYMMDD-XXXX)
-            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-            const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-            const receiptNumber = `RCPT-${dateStr}-${randomStr}`;
-
-            const saleHeader = manager.create(Sale, {
-                ...rest,
-                receipt_number: receiptNumber,
-                total_amount: total_price,
-                payment_method: finalPaymentMethod,
-                split_payments: createSaleDto.split_payments as { method: PaymentMethod; amount: number }[],
-                prescription_image_url: createSaleDto.prescription_image_url,
-                is_controlled_transaction: hasControlled,
-                created_by: userId,
-            });
-            const savedSale = await manager.save(saleHeader);
-
-            // If it's a credit sale, ensure we have a patient/customer ID and record it
-            let creditAmount = 0;
-            if (finalPaymentMethod === PaymentMethod.CREDIT) {
-                creditAmount = total_price;
-            } else if (finalPaymentMethod === PaymentMethod.SPLIT && createSaleDto.split_payments) {
-                const creditSplit = createSaleDto.split_payments.find(p => p.method === PaymentMethod.CREDIT);
-                if (creditSplit) creditAmount = creditSplit.amount;
-            }
-
-            if (creditAmount > 0) {
-                if (!rest.patient_id) {
-                    throw new BadRequestException('A registered customer/patient is required for credit sales.');
+                const hasControlled = medicines.some(m => m.is_controlled);
+                if (hasControlled && !createSaleDto.prescription_image_url && !createSaleDto.prescription_id) {
+                    throw new BadRequestException('Prescription (upload or link) is required for controlled substances.');
                 }
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + 30); // Default 30 days due date
 
-                await this.creditService.recordCreditSale(
-                    rest.patient_id,
-                    savedSale.id,
-                    creditAmount,
-                    dueDate,
-                    `Credit sale automatically logged from POS`,
-                    manager
-                );
-            }
+                // 1. Create Sale Header
+                const finalPaymentMethod = (payment_method as PaymentMethod) || PaymentMethod.CASH;
+                
+                // Generate unique receipt number (format: RCPT-YYYYMMDD-XXXX)
+                const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const receiptNumber = `RCPT-${dateStr}-${randomStr}`;
 
-            // 2. Process Items and Reduce Stock
-            for (const item of items) {
-                // Issue stock using FIFO logic - returns array of transactions (one per batch)
-                const transactions = await this.stockService.issueStock(
-                    item.medicine_id,
-                    item.quantity,
-                    ReferenceType.SALE,
-                    savedSale.id,
-                    userId
-                );
+                const saleHeader = manager.create(Sale, {
+                    ...rest,
+                    receipt_number: receiptNumber,
+                    total_amount: total_price,
+                    payment_method: finalPaymentMethod,
+                    split_payments: createSaleDto.split_payments as { method: PaymentMethod; amount: number }[],
+                    prescription_image_url: createSaleDto.prescription_image_url,
+                    is_controlled_transaction: hasControlled,
+                    created_by: userId,
+                });
+                const savedSale = await manager.save(saleHeader);
 
-                // Create SaleItem records for each batch transaction involved
-                for (const tx of transactions) {
-                    const saleItem = manager.create(SaleItem, {
-                        sale_id: savedSale.id,
-                        medicine_id: item.medicine_id,
-                        batch_id: tx.batch_id,
-                        quantity: tx.quantity,
-                        unit_price: item.unit_price,
-                        subtotal: tx.quantity * item.unit_price,
-                    });
-                    await manager.save(saleItem);
+                // If it's a credit sale, ensure we have a patient/customer ID and record it
+                let creditAmount = 0;
+                if (finalPaymentMethod === PaymentMethod.CREDIT) {
+                    creditAmount = total_price;
+                } else if (finalPaymentMethod === PaymentMethod.SPLIT && createSaleDto.split_payments) {
+                    const creditSplit = createSaleDto.split_payments.find(p => p.method === PaymentMethod.CREDIT);
+                    if (creditSplit) creditAmount = creditSplit.amount;
                 }
-            }
 
-            const finalSale = await manager.findOne(Sale, {
-                where: { id: savedSale.id },
-                relations: ['items', 'items.medicine', 'items.batch', 'patient'],
+                if (creditAmount > 0) {
+                    if (!rest.patient_id) {
+                        throw new BadRequestException('A registered customer/patient is required for credit sales.');
+                    }
+                    const dueDate = new Date();
+                    dueDate.setDate(dueDate.getDate() + 30); // Default 30 days due date
+
+                    await this.creditService.recordCreditSale(
+                        rest.patient_id,
+                        savedSale.id,
+                        creditAmount,
+                        dueDate,
+                        `Credit sale automatically logged from POS`,
+                        manager
+                    );
+                }
+
+                // 2. Process Items and Reduce Stock
+                for (const item of items) {
+                    // Issue stock using FIFO logic - returns array of transactions (one per batch)
+                    const transactions = await this.stockService.issueStock(
+                        item.medicine_id,
+                        item.quantity,
+                        ReferenceType.SALE,
+                        savedSale.id,
+                        userId
+                    );
+
+                    // Create SaleItem records for each batch transaction involved
+                    for (const tx of transactions) {
+                        const saleItem = manager.create(SaleItem, {
+                            sale_id: savedSale.id,
+                            medicine_id: item.medicine_id,
+                            batch_id: tx.batch_id,
+                            quantity: tx.quantity,
+                            unit_price: item.unit_price,
+                            subtotal: tx.quantity * item.unit_price,
+                        });
+                        await manager.save(saleItem);
+                    }
+                }
+
+                const finalSale = await manager.findOne(Sale, {
+                    where: { id: savedSale.id },
+                    relations: ['items', 'items.medicine', 'items.batch', 'patient'],
+                });
+
+                if (!finalSale) throw new Error('Sale creation failed');
+                return finalSale;
             });
 
-            if (!finalSale) throw new Error('Sale creation failed');
-            return finalSale;
-        });
+            // Trigger low stock check after sale (async)
+            this.alertsService.checkLowStock().catch(err =>
+                console.error('Error in reactive stock check:', err)
+            );
 
-        // Trigger low stock check after sale (async)
-        this.alertsService.checkLowStock().catch(err =>
-            console.error('Error in reactive stock check:', err)
-        );
+            // Notify admins of the new sale
+            this.notificationsService.create({
+                title: 'New Sale Completed',
+                message: `A sale of $${sale.total_amount.toLocaleString()} has been processed (Receipt: ${sale.receipt_number || 'N/A'})`,
+                type: NotificationType.SALE
+            }).catch(err => console.error('Error creating sale notification:', err));
 
-        // Notify admins of the new sale
-        this.notificationsService.create({
-            title: 'New Sale Completed',
-            message: `A sale of $${sale.total_amount.toLocaleString()} has been processed (Receipt: ${sale.receipt_number || 'N/A'})`,
-            type: NotificationType.SALE
-        }).catch(err => console.error('Error creating sale notification:', err));
-
-        return sale;
+            return sale;
+        } catch (err) {
+            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
+                throw new BadRequestException('A collision occurred generating the receipt number. Please try again.');
+            }
+            throw err;
+        }
     }
 
     async findAll(): Promise<Sale[]> {

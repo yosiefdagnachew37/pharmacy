@@ -18,7 +18,7 @@ export class Sale {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ nullable: true })
+    @Column({ unique: true })
     receipt_number: string;
 
     @ManyToOne(() => Patient, { nullable: true })

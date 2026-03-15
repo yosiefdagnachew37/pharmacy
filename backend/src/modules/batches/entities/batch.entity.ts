@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Index, DeleteDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Index, DeleteDateColumn, Unique } from 'typeorm';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 
 @Entity('batches')
+@Unique(['medicine_id', 'batch_number'])
 export class Batch {
     @PrimaryGeneratedColumn('uuid')
     id: string;

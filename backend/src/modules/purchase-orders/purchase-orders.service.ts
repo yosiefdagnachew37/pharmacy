@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PurchaseOrder, POStatus, POPaymentMethod, POPaymentStatus } from './entities/purchase-order.entity';
 import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
@@ -168,65 +168,83 @@ export class PurchaseOrdersService {
         userId: string,
         notes?: string,
     ) {
-        return await this.dataSource.transaction(async (manager) => {
-            const po = await manager.findOne(PurchaseOrder, { where: { id: poId } });
-            if (!po) throw new NotFoundException('PO not found');
+        try {
+            return await this.dataSource.transaction(async (manager) => {
+                const po = await manager.findOne(PurchaseOrder, { where: { id: poId } });
+                if (!po) throw new NotFoundException('PO not found');
 
-            // Create goods receipt
-            const gr = manager.create(GoodsReceipt, {
-                purchase_order_id: poId,
-                received_by: userId,
-                notes,
+                // Generate unique GRN number (format: GRN-YYYYMMDD-XXXX)
+                const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const grnNumber = `GRN-${dateStr}-${randomStr}`;
+
+                // Create goods receipt
+                const gr = manager.create(GoodsReceipt, {
+                    purchase_order_id: poId,
+                    received_by: userId,
+                    grn_number: grnNumber,
+                    notes,
+                });
+                const savedGR = await manager.save(gr);
+
+                for (const item of items) {
+                    // Update PO item received qty
+                    const poItem = await manager.findOne(PurchaseOrderItem, { where: { id: item.po_item_id } });
+                    if (!poItem) continue;
+
+                    poItem.quantity_received += item.quantity_received;
+                    await manager.save(poItem);
+
+                    // Auto-create batch
+                    const batch = manager.create(Batch, {
+                        batch_number: item.batch_number,
+                        medicine_id: poItem.medicine_id,
+                        expiry_date: new Date(item.expiry_date),
+                        purchase_price: poItem.unit_price,
+                        selling_price: item.selling_price || 0,
+                        initial_quantity: item.quantity_received,
+                        quantity_remaining: item.quantity_received,
+                        supplier_id: po.supplier_id,
+                    });
+                    const savedBatch = await manager.save(batch);
+
+                    // Record stock transaction
+                    const tx = manager.create(StockTransaction, {
+                        batch_id: savedBatch.id,
+                        type: TransactionType.IN,
+                        quantity: item.quantity_received,
+                        reference_type: ReferenceType.PURCHASE,
+                        reference_id: savedGR.id,
+                        created_by: userId,
+                    });
+                    await manager.save(tx);
+                }
+
+                // Update PO status based on received quantities
+                const allItems = await manager.find(PurchaseOrderItem, { where: { purchase_order_id: poId } });
+                const allFullyReceived = allItems.every(i => i.quantity_received >= i.quantity_ordered);
+                const anyReceived = allItems.some(i => i.quantity_received > 0);
+
+                if (allFullyReceived) {
+                    po.status = POStatus.COMPLETED;
+                } else if (anyReceived) {
+                    po.status = POStatus.PARTIALLY_RECEIVED;
+                }
+                await manager.save(po);
+
+                return savedGR;
             });
-            const savedGR = await manager.save(gr);
-
-            for (const item of items) {
-                // Update PO item received qty
-                const poItem = await manager.findOne(PurchaseOrderItem, { where: { id: item.po_item_id } });
-                if (!poItem) continue;
-
-                poItem.quantity_received += item.quantity_received;
-                await manager.save(poItem);
-
-                // Auto-create batch
-                const batch = manager.create(Batch, {
-                    batch_number: item.batch_number,
-                    medicine_id: poItem.medicine_id,
-                    expiry_date: new Date(item.expiry_date),
-                    purchase_price: poItem.unit_price,
-                    selling_price: item.selling_price || 0,
-                    initial_quantity: item.quantity_received,
-                    quantity_remaining: item.quantity_received,
-                    supplier_id: po.supplier_id,
-                });
-                const savedBatch = await manager.save(batch);
-
-                // Record stock transaction
-                const tx = manager.create(StockTransaction, {
-                    batch_id: savedBatch.id,
-                    type: TransactionType.IN,
-                    quantity: item.quantity_received,
-                    reference_type: ReferenceType.PURCHASE,
-                    reference_id: savedGR.id,
-                    created_by: userId,
-                });
-                await manager.save(tx);
+        } catch (err) {
+            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
+                if (err.message.includes('batches')) {
+                    throw new BadRequestException('One or more batch numbers already exist for their respective medicines.');
+                }
+                if (err.message.includes('goods_receipts')) {
+                    throw new BadRequestException('A collision occurred generating the GRN number. Please try again.');
+                }
             }
-
-            // Update PO status based on received quantities
-            const allItems = await manager.find(PurchaseOrderItem, { where: { purchase_order_id: poId } });
-            const allFullyReceived = allItems.every(i => i.quantity_received >= i.quantity_ordered);
-            const anyReceived = allItems.some(i => i.quantity_received > 0);
-
-            if (allFullyReceived) {
-                po.status = POStatus.COMPLETED;
-            } else if (anyReceived) {
-                po.status = POStatus.PARTIALLY_RECEIVED;
-            }
-            await manager.save(po);
-
-            return savedGR;
-        });
+            throw err;
+        }
     }
 
     async getReceipts(poId: string) {

@@ -7,6 +7,9 @@ export class GoodsReceipt {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @Column({ unique: true })
+    grn_number: string;
+
     @ManyToOne(() => PurchaseOrder, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'purchase_order_id' })
     purchase_order: PurchaseOrder;

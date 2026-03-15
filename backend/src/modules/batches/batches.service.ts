@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThanOrEqual } from 'typeorm';
+import { Repository, LessThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { Batch } from './entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { CreateBatchDto } from './dto/create-batch.dto';
@@ -25,7 +25,14 @@ export class BatchesService {
         };
 
         const batch = this.batchesRepository.create(batchData);
-        return await this.batchesRepository.save(batch);
+        try {
+            return await this.batchesRepository.save(batch);
+        } catch (err) {
+            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
+                throw new BadRequestException(`Batch number '${createBatchDto.batch_number}' already exists for this medicine.`);
+            }
+            throw err;
+        }
     }
 
     async findAll(): Promise<Batch[]> {
@@ -144,7 +151,11 @@ export class BatchesService {
                 await this.batchesRepository.save(batch);
                 savedCount++;
             } catch (err: any) {
-                errors.push({ row: i + 2, message: err.message || 'Failed to save' });
+                let message = err.message || 'Failed to save';
+                if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
+                    message = `Batch number '${toCreate[i].batch_number}' already exists for this medicine.`;
+                }
+                errors.push({ row: i + 2, message });
             }
         }
 
