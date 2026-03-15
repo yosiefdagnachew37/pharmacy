@@ -236,8 +236,8 @@ async function seed() {
         console.log('\n🛒 Seeding sales...');
         let receiptCounter = 1;
         for (let i = 0; i < 20; i++) {
-            const receiptNumber = `REC${1000 + receiptCounter}`;
-            receiptCounter++;
+            const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const receiptNumber = `REC-${Date.now() % 10000}-${i}-${randomSuffix}`;
             
             const saleDate = randomDateWithinPastDays(30);
             const isCredit = i % 5 === 0; // Every 5th sale is credit
