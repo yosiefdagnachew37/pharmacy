@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Plus, Search, User, Phone, MapPin, Save, Trash2, FileText,
   ShoppingCart, Loader2, Calendar, ChevronRight, Clock,
-  ClipboardCheck, ExternalLink
+  ClipboardCheck, ExternalLink, Edit2
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -53,6 +53,7 @@ const Patients = () => {
   const [loading, setLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<Patient | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -145,17 +146,38 @@ const Patients = () => {
     }
   };
 
+  const handleEdit = (patient: Patient, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingPatientId(patient.id);
+    setFormData({
+      name: patient.name,
+      phone: patient.phone,
+      age: patient.age,
+      gender: patient.gender,
+      address: patient.address,
+      allergies: patient.allergies || []
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await client.post('/patients', formData);
+      if (editingPatientId) {
+        await client.patch(`/patients/${editingPatientId}`, formData);
+        toastSuccess('Patient record updated successfully.');
+      } else {
+        await client.post('/patients', formData);
+        toastSuccess('Patient registered successfully.');
+      }
       setIsModalOpen(false);
+      setEditingPatientId(null);
+      setFormData({ name: '', phone: '', age: 30, gender: 'OTHER', address: '', allergies: [] });
       fetchPatients();
-      toastSuccess('Patient registered successfully.');
     } catch (err: any) {
-      console.error('Error registering patient:', err.response?.data || err.message);
-      const msg = extractErrorMessage(err, 'Error registering patient.');
-      toastError('Registration failed', msg);
+      console.error('Error saving patient:', err.response?.data || err.message);
+      const msg = extractErrorMessage(err, 'Error saving patient.');
+      toastError(editingPatientId ? 'Update failed' : 'Registration failed', msg);
     }
   };
 
@@ -256,15 +278,24 @@ const Patients = () => {
                         <User className="w-6 h-6" />
                       </div>
                     </div>
-                    {canDelete('patients') && (
+                    <div className="flex items-center space-x-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setDeleteConfirm(patient.id); }}
-                        className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                        title="Delete Patient"
+                        onClick={(e) => handleEdit(patient, e)}
+                        className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                        title="Edit Patient"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                    )}
+                      {canDelete('patients') && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirm(patient.id); }}
+                          className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                          title="Delete Patient"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
@@ -312,8 +343,16 @@ const Patients = () => {
       {/* MODALS                                                        */}
       {/* ═══════════════════════════════════════════════════════════════ */}
 
-      {/* Register Patient Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register New Patient">
+      {/* Register/Edit Patient Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPatientId(null);
+          setFormData({ name: '', phone: '', age: 30, gender: 'OTHER', address: '', allergies: [] });
+        }} 
+        title={editingPatientId ? "Edit Patient Record" : "Register New Patient"}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -379,7 +418,11 @@ const Patients = () => {
           <div className="pt-4 flex justify-end space-x-3">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingPatientId(null);
+                setFormData({ name: '', phone: '', age: 30, gender: 'OTHER', address: '', allergies: [] });
+              }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-md hover:bg-gray-100"
             >
               Cancel
@@ -389,7 +432,7 @@ const Patients = () => {
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 flex items-center shadow-sm"
             >
               <Save className="w-4 h-4 mr-2" />
-              Register Patient
+              {editingPatientId ? 'Update Patient' : 'Register Patient'}
             </button>
           </div>
         </form>

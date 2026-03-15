@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle, Edit2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import ColumnFilter from '../components/ColumnFilter';
@@ -40,6 +40,7 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
     medicine_id: string;
     batch_number: string;
@@ -92,11 +93,31 @@ const Batches = () => {
     fetchMedicines();
   }, []);
 
+  const handleEdit = (batch: Batch) => {
+    setEditingBatchId(batch.id);
+    setFormData({
+      medicine_id: batch.medicine_id,
+      batch_number: batch.batch_number,
+      expiry_date: batch.expiry_date.split('T')[0], // Extract date part for input
+      purchase_price: batch.purchase_price,
+      selling_price: batch.selling_price,
+      initial_quantity: batch.initial_quantity,
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await client.post('/batches', formData);
+      if (editingBatchId) {
+        await client.patch(`/batches/${editingBatchId}`, formData);
+        toastSuccess('Batch updated successfully.');
+      } else {
+        await client.post('/batches', formData);
+        toastSuccess('Batch created successfully.');
+      }
       setIsModalOpen(false);
+      setEditingBatchId(null);
       setFormData({
         medicine_id: '',
         batch_number: '',
@@ -106,10 +127,9 @@ const Batches = () => {
         initial_quantity: undefined,
       });
       fetchBatches();
-      toastSuccess('Batch created successfully.');
     } catch (error: any) {
-      const msg = extractErrorMessage(error, 'Error creating batch. Please check all fields.');
-      toastError('Failed to create batch', msg);
+      const msg = extractErrorMessage(error, 'Error saving batch. Please check all fields.');
+      toastError(editingBatchId ? 'Update failed' : 'Failed to create batch', msg);
     }
   };
 
@@ -319,14 +339,24 @@ const Batches = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {canDelete('batches') && (
+                      <div className="flex items-center justify-end space-x-2">
                         <button
-                          onClick={() => setDeleteConfirm(batch.id)}
-                          className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          onClick={() => handleEdit(batch)}
+                          className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Edit Batch"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Edit2 className="w-4 h-4" />
                         </button>
-                      )}
+                        {canDelete('batches') && (
+                          <button
+                            onClick={() => setDeleteConfirm(batch.id)}
+                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            title="Delete Batch"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -339,8 +369,19 @@ const Batches = () => {
       {/* Add Batch Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Batch"
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingBatchId(null);
+          setFormData({
+            medicine_id: '',
+            batch_number: '',
+            expiry_date: '',
+            purchase_price: undefined,
+            selling_price: undefined,
+            initial_quantity: undefined,
+          });
+        }}
+        title={editingBatchId ? "Edit Batch" : "Add New Batch"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -427,7 +468,7 @@ const Batches = () => {
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 shadow-sm"
             >
-              Create Batch
+              {editingBatchId ? 'Update Batch' : 'Create Batch'}
             </button>
           </div>
         </form>
