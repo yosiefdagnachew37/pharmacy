@@ -60,8 +60,8 @@ const POS = () => {
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
 
   // Phase 5 features
-  const [cartDiscount, setCartDiscount] = useState<number>(0);
-  const [splitAmounts, setSplitAmounts] = useState({ cash: 0, card: 0 });
+  const [cartDiscount, setCartDiscount] = useState<number | undefined>(0);
+  const [splitAmounts, setSplitAmounts] = useState<{ cash: number | undefined, card: number }>({ cash: 0, card: 0 });
 
   // Quick Add Patient
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
@@ -218,9 +218,9 @@ const POS = () => {
     }));
   };
 
-  const updatePrice = (id: string, newPrice: number) => {
+  const updatePrice = (id: string, newPrice: number | undefined) => {
     setCart(cart.map(item =>
-      item.medicine_id === id ? { ...item, unit_price: newPrice >= 0 ? newPrice : 0 } : item
+      item.medicine_id === id ? { ...item, unit_price: newPrice !== undefined ? (newPrice >= 0 ? newPrice : 0) : 0 } : item
     ));
   };
 
@@ -244,14 +244,15 @@ const POS = () => {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  const discountAmount = (subtotal * (cartDiscount / 100));
+  const discountAmount = (subtotal * ((cartDiscount ?? 0) / 100));
   const total = subtotal - discountAmount;
   const hasControlledItems = cart.some(item => medicines.find(m => m.id === item.medicine_id)?.is_controlled);
 
   useEffect(() => {
     // Auto-update split amounts if we switch away or total changes
     if (paymentMethod === 'SPLIT') {
-      const remaining = total - splitAmounts.cash;
+      const cashVal = splitAmounts.cash ?? 0;
+      const remaining = total - cashVal;
       setSplitAmounts(prev => ({ ...prev, card: remaining >= 0 ? remaining : 0 }));
     }
   }, [total, paymentMethod, splitAmounts.cash]);
@@ -288,7 +289,7 @@ const POS = () => {
 
       if (paymentMethod === 'SPLIT') {
         payload.split_payments = [
-          { method: 'CASH', amount: splitAmounts.cash },
+          { method: 'CASH', amount: splitAmounts.cash ?? 0 },
           { method: 'CREDIT_CARD', amount: splitAmounts.card }
         ];
       }
@@ -551,8 +552,8 @@ const POS = () => {
                       <input
                         type="number"
                         className="w-14 text-right text-xs font-bold text-indigo-600 bg-white border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-indigo-500 hide-arrows"
-                        value={item.unit_price}
-                        onChange={(e) => updatePrice(item.medicine_id, parseFloat(e.target.value) || 0)}
+                        value={item.unit_price ?? ''}
+                        onChange={(e) => updatePrice(item.medicine_id, e.target.value === '' ? undefined : parseFloat(e.target.value))}
                         step="0.01"
                       />
                     </div>
@@ -627,9 +628,9 @@ const POS = () => {
                       min="0"
                       step="0.01"
                       className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-purple-300 focus:ring-1 focus:ring-purple-100 font-black text-purple-700"
-                      value={splitAmounts.cash}
-                      onChange={(e) => setSplitAmounts(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
-                    />
+                       value={splitAmounts.cash ?? ''}
+                       onChange={(e) => setSplitAmounts(prev => ({ ...prev, cash: e.target.value === '' ? undefined : parseFloat(e.target.value) }))}
+                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Card</label>
@@ -661,8 +662,8 @@ const POS = () => {
                   min="0"
                   max="100"
                   className="w-full text-right bg-white border border-gray-200 rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none focus:border-indigo-400"
-                  value={cartDiscount}
-                  onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
+                  value={cartDiscount ?? ''}
+                  onChange={(e) => setCartDiscount(e.target.value === '' ? undefined : parseFloat(e.target.value))}
                 />
                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
               </div>
@@ -683,7 +684,7 @@ const POS = () => {
           </div>
 
           <button
-            disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (paymentMethod === 'SPLIT' && (splitAmounts.cash + splitAmounts.card !== total)) || (hasControlledItems && !prescriptionUrl)}
+            disabled={cart.length === 0 || loading || (paymentMethod === 'CREDIT' && !patientId) || (paymentMethod === 'SPLIT' && ((splitAmounts.cash ?? 0) + splitAmounts.card !== total)) || (hasControlledItems && !prescriptionUrl)}
             onClick={handleCheckout}
             className="w-full bg-indigo-600 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1"
           >

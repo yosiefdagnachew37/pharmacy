@@ -30,7 +30,17 @@ const Suppliers = () => {
     const [editing, setEditing] = useState<Supplier | null>(null);
     const [search, setSearch] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<{
+        name: string;
+        contact_person: string;
+        phone: string;
+        email: string;
+        address: string;
+        credit_limit: number | undefined;
+        payment_terms: string;
+        average_lead_time: number | undefined;
+        is_active: boolean;
+    }>({
         name: '', contact_person: '', phone: '', email: '', address: '',
         credit_limit: 0, payment_terms: 'COD', average_lead_time: 7, is_active: true,
     });
@@ -54,10 +64,15 @@ const Suppliers = () => {
 
     const handleSubmit = async () => {
         try {
+            const payload = {
+                ...form,
+                credit_limit: form.credit_limit ?? 0,
+                average_lead_time: form.average_lead_time ?? 0
+            };
             if (editing) {
-                await client.put(`/suppliers/${editing.id}`, form);
+                await client.put(`/suppliers/${editing.id}`, payload);
             } else {
-                await client.post('/suppliers', form);
+                await client.post('/suppliers', payload);
             }
             setShowModal(false);
             setEditing(null);
@@ -275,7 +290,7 @@ const Suppliers = () => {
                                             </div>
                                         </div>
                                     </label>
-                                    <input type="number" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: Number(e.target.value) })}
+                                    <input type="number" value={form.credit_limit ?? ''} onChange={e => setForm({ ...form, credit_limit: e.target.value === '' ? undefined : Number(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                                 </div>
                                 <div>
@@ -306,7 +321,7 @@ const Suppliers = () => {
                                             </div>
                                         </div>
                                     </label>
-                                    <input type="number" value={form.average_lead_time} onChange={e => setForm({ ...form, average_lead_time: Number(e.target.value) })}
+                                    <input type="number" value={form.average_lead_time ?? ''} onChange={e => setForm({ ...form, average_lead_time: e.target.value === '' ? undefined : Number(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
                                 </div>
                             </div>

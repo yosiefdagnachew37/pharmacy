@@ -29,10 +29,24 @@ const SupplierDetail = () => {
     const [showContractModal, setShowContractModal] = useState(false);
     const [showPerfModal, setShowPerfModal] = useState(false);
     const [deleteContractConfirm, setDeleteContractConfirm] = useState<string | null>(null);
-    const [contractForm, setContractForm] = useState({
+    const [contractForm, setContractForm] = useState<{
+        effective_date: string;
+        expiry_date: string;
+        discount_percentage: number | undefined;
+        return_policy: string;
+        notes: string;
+    }>({
         effective_date: '', expiry_date: '', discount_percentage: 0, return_policy: '', notes: ''
     });
-    const [perfForm, setPerfForm] = useState({
+    const [perfForm, setPerfForm] = useState<{
+        period: string;
+        on_time_deliveries: number | undefined;
+        total_deliveries: number | undefined;
+        price_variance: number | undefined;
+        returned_items: number | undefined;
+        total_items: number | undefined;
+        quality_rating: number | undefined;
+    }>({
         period: new Date().toISOString().substring(0, 7), on_time_deliveries: 0, total_deliveries: 1,
         price_variance: 0, returned_items: 0, total_items: 1, quality_rating: 3.5
     });
@@ -82,7 +96,8 @@ const SupplierDetail = () => {
 
     const submitContract = async () => {
         try {
-            await client.post(`/suppliers/${id}/contracts`, contractForm);
+            const payload = { ...contractForm, discount_percentage: contractForm.discount_percentage ?? 0 };
+            await client.post(`/suppliers/${id}/contracts`, payload);
             const res = await client.get(`/suppliers/${id}/contracts`);
             setContracts(res.data);
             setShowContractModal(false);
@@ -91,7 +106,16 @@ const SupplierDetail = () => {
 
     const submitPerformance = async () => {
         try {
-            await client.post(`/suppliers/${id}/performance`, perfForm);
+            const payload = {
+                ...perfForm,
+                on_time_deliveries: perfForm.on_time_deliveries ?? 0,
+                total_deliveries: perfForm.total_deliveries ?? 1,
+                price_variance: perfForm.price_variance ?? 0,
+                returned_items: perfForm.returned_items ?? 0,
+                total_items: perfForm.total_items ?? 1,
+                quality_rating: perfForm.quality_rating ?? 3.5
+            };
+            await client.post(`/suppliers/${id}/performance`, payload);
             const res = await client.get(`/suppliers/${id}/performance`);
             setPerformance(res.data);
             setShowPerfModal(false);
@@ -375,8 +399,8 @@ const SupplierDetail = () => {
                             ].map(f => (
                                 <div key={f.key}>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">{f.label}</label>
-                                    <input type={f.type} value={(contractForm as any)[f.key]}
-                                        onChange={e => setContractForm({ ...contractForm, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value })}
+                                    <input type={f.type} value={(contractForm as any)[f.key] ?? ''}
+                                        onChange={e => setContractForm({ ...contractForm, [f.key]: e.target.value === '' ? undefined : Number(e.target.value) })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
                                 </div>
                             ))}
@@ -418,8 +442,8 @@ const SupplierDetail = () => {
                             ].map(f => (
                                 <div key={f.key}>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">{f.label}</label>
-                                    <input type={f.type} value={(perfForm as any)[f.key]}
-                                        onChange={e => setPerfForm({ ...perfForm, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value })}
+                                    <input type={f.type} value={(perfForm as any)[f.key] ?? ''}
+                                        onChange={e => setPerfForm({ ...perfForm, [f.key]: e.target.value === '' ? undefined : (f.type === 'number' ? Number(e.target.value) : e.target.value) })}
                                         step={f.key === 'quality_rating' || f.key === 'price_variance' ? '0.1' : '1'}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
                                 </div>

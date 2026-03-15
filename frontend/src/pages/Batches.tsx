@@ -40,13 +40,20 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    medicine_id: string;
+    batch_number: string;
+    expiry_date: string;
+    purchase_price: number | undefined;
+    selling_price: number | undefined;
+    initial_quantity: number | undefined;
+  }>({
     medicine_id: '',
     batch_number: '',
     expiry_date: '',
-    purchase_price: 0,
-    selling_price: 0,
-    initial_quantity: 0,
+    purchase_price: undefined,
+    selling_price: undefined,
+    initial_quantity: undefined,
   });
 
   // Excel Import States
@@ -94,9 +101,9 @@ const Batches = () => {
         medicine_id: '',
         batch_number: '',
         expiry_date: '',
-        purchase_price: 0,
-        selling_price: 0,
-        initial_quantity: 0,
+        purchase_price: undefined,
+        selling_price: undefined,
+        initial_quantity: undefined,
       });
       fetchBatches();
       toastSuccess('Batch created successfully.');
@@ -381,8 +388,8 @@ const Batches = () => {
                 type="number"
                 min="0"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-               value={formData.initial_quantity ?? ''}
-                onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                value={formData.initial_quantity ?? ''}
+                onChange={(e) => setFormData({ ...formData, initial_quantity: e.target.value === '' ? undefined : parseInt(e.target.value) })}
               />
             </div>
             <div>
@@ -392,8 +399,8 @@ const Batches = () => {
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-               value={formData.purchase_price ?? ''}
-                onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                value={formData.purchase_price ?? ''}
+                onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
               />
             </div>
             <div>
@@ -403,8 +410,8 @@ const Batches = () => {
                 min="0"
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-               value={formData.selling_price ?? ''}
-                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                value={formData.selling_price ?? ''}
+                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
               />
             </div>
           </div>
