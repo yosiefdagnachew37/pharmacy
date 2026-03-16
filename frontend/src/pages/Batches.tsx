@@ -108,12 +108,23 @@ const Batches = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Create a clean payload object, ensuring numeric fields are numbers and optional fields are undefined if empty
+    const payload = {
+      medicine_id: formData.medicine_id,
+      batch_number: formData.batch_number,
+      expiry_date: formData.expiry_date,
+      purchase_price: formData.purchase_price !== undefined && formData.purchase_price !== null ? Number(formData.purchase_price) : undefined,
+      selling_price: formData.selling_price !== undefined && formData.selling_price !== null ? Number(formData.selling_price) : undefined,
+      initial_quantity: Number(formData.initial_quantity),
+    };
+
     try {
       if (editingBatchId) {
-        await client.patch(`/batches/${editingBatchId}`, formData);
+        await client.patch(`/batches/${editingBatchId}`, payload);
         toastSuccess('Batch updated successfully.');
       } else {
-        await client.post('/batches', formData);
+        await client.post('/batches', payload);
         toastSuccess('Batch created successfully.');
       }
       setIsModalOpen(false);
@@ -128,6 +139,8 @@ const Batches = () => {
       });
       fetchBatches();
     } catch (error: any) {
+      console.error('Batch Save Error payload:', payload);
+      console.error('Batch Save Error response:', error.response?.data);
       const msg = extractErrorMessage(error, 'Error saving batch. Please check all fields.');
       toastError(editingBatchId ? 'Update failed' : 'Failed to create batch', msg);
     }

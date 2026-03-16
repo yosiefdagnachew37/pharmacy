@@ -6,8 +6,8 @@ export class Medicine {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Index()
-    @Column()
+    @Index({ unique: true })
+    @Column({ unique: true })
     name: string;
 
     @Column({ nullable: true })

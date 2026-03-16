@@ -60,7 +60,14 @@ export class BatchesService {
     async update(id: string, updateBatchDto: UpdateBatchDto): Promise<Batch> {
         const batch = await this.findOne(id);
         const updated = Object.assign(batch, updateBatchDto);
-        return await this.batchesRepository.save(updated);
+        try {
+            return await this.batchesRepository.save(updated);
+        } catch (err) {
+            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
+                throw new BadRequestException(`Batch number '${updateBatchDto.batch_number || batch.batch_number}' already exists for this medicine.`);
+            }
+            throw err;
+        }
     }
 
     async remove(id: string): Promise<void> {

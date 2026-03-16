@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Medicine } from './entities/medicine.entity';
@@ -14,7 +14,14 @@ export class MedicinesService {
 
     async create(createMedicineDto: CreateMedicineDto): Promise<Medicine> {
         const medicine = this.medicinesRepository.create(createMedicineDto);
-        return await this.medicinesRepository.save(medicine);
+        try {
+            return await this.medicinesRepository.save(medicine);
+        } catch (err: any) {
+            if (err.message?.includes('unique constraint') || err.code === '23505') {
+                throw new BadRequestException(`Medicine with name '${createMedicineDto.name}' already exists.`);
+            }
+            throw err;
+        }
     }
 
     async findAll() {
@@ -73,7 +80,14 @@ export class MedicinesService {
     async update(id: string, updateMedicineDto: UpdateMedicineDto): Promise<Medicine> {
         const medicine = await this.findOne(id);
         const updated = Object.assign(medicine, updateMedicineDto);
-        return await this.medicinesRepository.save(updated);
+        try {
+            return await this.medicinesRepository.save(updated);
+        } catch (err: any) {
+            if (err.message?.includes('unique constraint') || err.code === '23505') {
+                throw new BadRequestException(`Medicine with name '${updateMedicineDto.name || medicine.name}' already exists.`);
+            }
+            throw err;
+        }
     }
 
     async remove(id: string): Promise<void> {
@@ -119,7 +133,11 @@ export class MedicinesService {
                 await this.medicinesRepository.save(medicine);
                 savedCount++;
             } catch (err: any) {
-                errors.push({ row: i + 2, message: err.message || 'Failed to save' });
+                let message = err.message || 'Failed to save';
+                if (err.message?.includes('unique constraint') || err.code === '23505') {
+                    message = `Medicine "${created[i].name}" already exists.`;
+                }
+                errors.push({ row: i + 2, message });
             }
         }
 
