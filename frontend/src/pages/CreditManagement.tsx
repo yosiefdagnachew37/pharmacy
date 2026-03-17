@@ -287,7 +287,14 @@ const CreditManagement = () => {
                                                 {isDept ? (
                                                     <span className="font-bold text-rose-600">ETB {Number(c.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 ) : (
-                                                    <span className="font-bold text-emerald-600 text-xs bg-emerald-50 px-2 py-1 rounded-md">CLEARED</span>
+                                                    <span className="font-bold text-gray-400">0.00</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {isDept ? (
+                                                    <span className="px-2 py-1 bg-rose-50 text-rose-700 text-[10px] font-black rounded-md border border-rose-100 uppercase">DEBT</span>
+                                                ) : (
+                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-100 uppercase">CLEARED</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right space-x-2">
@@ -354,6 +361,7 @@ const CreditManagement = () => {
                                         options={uniqueRecordStatuses}
                                         selectedValues={recordFilters.status}
                                         onFilterChange={(v) => updateRecordFilter('status', v)}
+                                        align="right"
                                     />
                                 </tr>
                             </thead>

@@ -317,17 +317,18 @@ const Purchases = () => {
                                         />
                                         <th className="px-6 py-4">Amount</th>
                                         <ColumnFilter
-                                            label="PO Status"
-                                            options={uniqueStatuses}
-                                            selectedValues={columnFilters.status}
-                                            onFilterChange={(v) => updateFilter('status', v)}
-                                        />
-                                        <ColumnFilter
                                             label="Payment"
                                             options={uniquePaymentStatuses}
                                             selectedValues={columnFilters.paymentStatus}
                                             onFilterChange={(v) => updateFilter('paymentStatus', v)}
                                         />
+                                        <ColumnFilter
+                                            label="PO Status"
+                                            options={uniqueStatuses}
+                                            selectedValues={columnFilters.status}
+                                            onFilterChange={(v) => updateFilter('status', v)}
+                                        />
+                                        <th className="px-6 py-4">Pymt Method</th>
                                         <ColumnFilter
                                             label="Date"
                                             options={uniqueDates}

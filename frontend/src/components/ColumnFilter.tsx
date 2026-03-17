@@ -6,7 +6,7 @@ interface ColumnFilterProps {
     options: string[];
     selectedValues: string[];
     onFilterChange: (values: string[]) => void;
-    align?: 'left' | 'right';
+    align?: 'left' | 'right' | 'center';
 }
 
 const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 'left' }: ColumnFilterProps) => {
@@ -48,9 +48,12 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 
         <th className={`px-6 py-3 relative ${isOpen ? 'z-[100]' : 'z-10'}`} ref={ref}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full ${align === 'right' ? 'justify-end text-right' : 'text-left'
-                    } ${isActive ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
-                    }`}
+                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full ${
+                    align === 'right' ? 'justify-end text-right' : 
+                    align === 'center' ? 'justify-center text-center' : 
+                    'text-left'
+                } ${isActive ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                }`}
             >
                 <span className={`truncate ${align === 'right' ? 'order-2' : ''}`}>{label}</span>
                 {isActive && (
@@ -70,8 +73,11 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 
             </button>
 
             {isOpen && (
-                <div className={`absolute top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 min-w-[200px] max-w-[280px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${align === 'right' ? 'right-0' : 'left-0'
-                    }`}>
+                <div className={`absolute top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 min-w-[200px] max-w-[280px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
+                    align === 'right' ? 'right-0' : 
+                    align === 'center' ? 'left-1/2 -translate-x-1/2' : 
+                    'left-0'
+                }`}>
                     {/* Search */}
                     {options.length > 6 && (
                         <div className="p-2 border-b border-gray-100">

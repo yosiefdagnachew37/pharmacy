@@ -370,6 +370,7 @@ const System = () => {
                     options={uniqueAccountStatuses}
                     selectedValues={columnFilters.status}
                     onFilterChange={(v) => updateFilter('status', v)}
+                    align="center"
                   />
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
