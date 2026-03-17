@@ -400,7 +400,12 @@ const SupplierDetail = () => {
                                 <div key={f.key}>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">{f.label}</label>
                                     <input type={f.type} value={(contractForm as any)[f.key] ?? ''}
-                                        onChange={e => setContractForm({ ...contractForm, [f.key]: e.target.value === '' ? undefined : Number(e.target.value) })}
+                                        onChange={e => setContractForm({ 
+                                            ...contractForm, 
+                                            [f.key]: f.type === 'number' 
+                                                ? (e.target.value === '' ? undefined : Number(e.target.value))
+                                                : e.target.value 
+                                        })}
                                         className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none text-sm focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
                                 </div>
                             ))}
