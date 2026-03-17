@@ -271,37 +271,52 @@ const CreditManagement = () => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredCustomers.map((c) => {
-                                    const isDept = Number(c.total_credit) > 0;
+                                    const hasDebt = Number(c.total_credit) > 0;
                                     return (
                                         <tr key={c.id} className="hover:bg-gray-50/50 transition-colors group">
+                                            {/* 1. Name */}
                                             <td className="px-6 py-4 font-bold text-gray-800">
                                                 <div className="flex items-center gap-2">
                                                     <Users className="w-4 h-4 text-gray-400" /> {c.name}
                                                 </div>
                                             </td>
+                                            
+                                            {/* 2. Phone */}
                                             <td className="px-6 py-4 text-gray-600 font-medium">{c.phone || '-'}</td>
+                                            
+                                            {/* 3. Activity */}
                                             <td className="px-6 py-4 text-gray-500 text-xs font-medium">
                                                 {new Date(c.updated_at).toLocaleDateString()}
                                             </td>
+                                            
+                                            {/* 4. Balance */}
                                             <td className="px-6 py-4">
-                                                {isDept ? (
+                                                {hasDebt ? (
                                                     <span className="font-bold text-rose-600">ETB {Number(c.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 ) : (
                                                     <span className="font-bold text-gray-400">0.00</span>
                                                 )}
                                             </td>
+                                            
+                                            {/* 5. Status */}
                                             <td className="px-6 py-4">
-                                                {isDept ? (
-                                                    <span className="px-2 py-1 bg-rose-50 text-rose-700 text-[10px] font-black rounded-md border border-rose-100 uppercase">DEBT</span>
+                                                {hasDebt ? (
+                                                    <span className="px-2.5 py-1 bg-rose-50 text-rose-700 text-[10px] font-black rounded-lg border border-rose-100 uppercase tracking-widest">
+                                                        Due Debt
+                                                    </span>
                                                 ) : (
-                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-100 uppercase">CLEARED</span>
+                                                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-lg border border-emerald-100 uppercase tracking-widest">
+                                                        Cleared
+                                                    </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right space-x-2">
-                                                {isDept && (role === 'ADMIN' || role === 'PHARMACIST' || role === 'CASHIER') && (
+                                            
+                                            {/* 6. Actions */}
+                                            <td className="px-6 py-4 text-right">
+                                                {hasDebt && (role === 'ADMIN' || role === 'PHARMACIST' || role === 'CASHIER') && (
                                                     <button
                                                         onClick={() => openPaymentModal(c)}
-                                                        className="px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-transparent"
+                                                        className="px-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100 shadow-sm whitespace-nowrap"
                                                     >
                                                         Process Repayment
                                                     </button>
