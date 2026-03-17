@@ -39,15 +39,12 @@ export class ReportingService {
 
     async getDashboardStats() {
         try {
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            const todayEnd = new Date();
-            todayEnd.setHours(23, 59, 59, 999);
+            // Using CURRENT_DATE in QueryBuilder for more robust "Today" filtering
 
             const salesStats = await this.salesRepository.createQueryBuilder('s')
-                .where('s.created_at BETWEEN :start AND :end', { start: todayStart, end: todayEnd })
+                .where('s.created_at::date = CURRENT_DATE')
                 .select('COUNT(s.id)', 'count')
-                .addSelect('SUM(s.total_amount - s.refund_amount)', 'total')
+                .addSelect('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
                 .getRawOne();
 
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
@@ -303,7 +300,7 @@ export class ReportingService {
             const day = dailyMap.get(dateStr);
             if (day) {
                 day.totalSales += 1;
-                day.totalRevenue += Number(s.total_amount);
+                day.totalRevenue += (Number(s.total_amount) - Number(s.refund_amount || 0));
             }
         });
 
