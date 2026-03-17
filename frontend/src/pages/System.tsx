@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import client from '../api/client';
 import { 
   Database, 
@@ -20,6 +20,7 @@ import {
 import ConfirmModal from '../components/ConfirmModal';
 import Modal from '../components/Modal';
 import { toastSuccess, toastError } from '../components/Toast';
+import ColumnFilter from '../components/ColumnFilter';
 
 interface Backup {
   filename: string;
@@ -62,6 +63,13 @@ const System = () => {
     manager_pin: ''
   });
 
+  // ─── Column Filters ──────────────────────────────────────────
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+    username: [],
+    role: [],
+    status: [],
+  });
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -76,12 +84,32 @@ const System = () => {
         const res = await client.get('/users');
         setUsers(res.data);
       }
-    } catch (err) {
-      console.error('Failed to fetch system data:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // ─── Unique Options & Filtering ──────────────────────────────
+  const uniqueUsernames = useMemo(() => [...new Set(users.map(u => u.username))].sort(), [users]);
+  const uniqueRoles = useMemo(() => [...new Set(users.map(u => u.role))].sort(), [users]);
+  const uniqueAccountStatuses = useMemo(() => ['Active', 'Inactive'], []);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const userStatus = user.is_active ? 'Active' : 'Inactive';
+      const matchesUsername = columnFilters.username.length === 0 || columnFilters.username.includes(user.username);
+      const matchesRole = columnFilters.role.length === 0 || columnFilters.role.includes(user.role);
+      const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(userStatus);
+
+      return matchesUsername && matchesRole && matchesStatus;
+    });
+  }, [users, columnFilters]);
+
+  const updateFilter = (column: string, values: string[]) => {
+    setColumnFilters(prev => ({ ...prev, [column]: values }));
+  };
+
+  const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
   useEffect(() => {
     fetchData();
@@ -305,21 +333,44 @@ const System = () => {
           </div>
         </>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
+          <div className="p-6 border-b border-gray-50 flex items-center justify-between gap-4">
             <div className="flex items-center">
               <Users className="w-5 h-5 text-indigo-600 mr-3" />
               <h2 className="font-bold text-gray-800">System Users</h2>
             </div>
+            {activeFilterCount > 0 && (
+              <button
+                onClick={() => setColumnFilters({ username: [], role: [], status: [] })}
+                className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              >
+                Clear All Filters ({activeFilterCount})
+              </button>
+            )}
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
+              <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest sticky top-0 z-30 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4">Username</th>
-                  <th className="px-6 py-4">Role</th>
+                  <ColumnFilter
+                    label="Username"
+                    options={uniqueUsernames}
+                    selectedValues={columnFilters.username}
+                    onFilterChange={(v) => updateFilter('username', v)}
+                  />
+                  <ColumnFilter
+                    label="Role"
+                    options={uniqueRoles}
+                    selectedValues={columnFilters.role}
+                    onFilterChange={(v) => updateFilter('role', v)}
+                  />
                   <th className="px-6 py-4">Manager PIN</th>
-                  <th className="px-6 py-4 text-center">Status</th>
+                  <ColumnFilter
+                    label="Status"
+                    options={uniqueAccountStatuses}
+                    selectedValues={columnFilters.status}
+                    onFilterChange={(v) => updateFilter('status', v)}
+                  />
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -327,7 +378,7 @@ const System = () => {
                 {loading ? (
                   <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400 italic">Loading users...</td></tr>
                 ) : (
-                  users.map((u) => (
+                  filteredUsers.map((u) => (
                     <tr key={u.id} className={`hover:bg-gray-50/50 transition-colors ${!u.is_active ? 'opacity-50' : ''}`}>
                       <td className="px-6 py-4 text-sm font-bold text-gray-800">{u.username}</td>
                       <td className="px-6 py-4">

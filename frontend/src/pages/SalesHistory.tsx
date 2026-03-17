@@ -34,9 +34,12 @@ const SalesHistory = () => {
 
     // ─── Column Filters ──────────────────────────────────────────
     const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        receipt: [],
+        date: [],
         patient: [],
         method: [],
         user: [],
+        status: [],
     });
 
     const fetchSales = async () => {
@@ -78,9 +81,12 @@ const SalesHistory = () => {
     };
 
     // ─── Unique Options ──────────────────────────────────────────
+    const uniqueReceipts = useMemo(() => [...new Set(sales.map(s => s.receipt_number))].sort(), [sales]);
+    const uniqueDates = useMemo(() => [...new Set(sales.map(s => new Date(s.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [sales]);
     const uniquePatients = useMemo(() => [...new Set(sales.map(s => s.patient?.name || 'Walk-in'))].sort(), [sales]);
     const uniqueMethods = useMemo(() => [...new Set(sales.map(s => s.payment_method).filter(Boolean))].sort(), [sales]);
     const uniqueUsers = useMemo(() => [...new Set(sales.map(s => s.user?.name || s.user?.username || 'System'))].sort(), [sales]);
+    const uniqueStatuses = useMemo(() => ['Completed', 'Refunded'], []);
 
     const filteredSales = useMemo(() => {
         return sales.filter(sale => {
@@ -90,11 +96,17 @@ const SalesHistory = () => {
 
             const patientName = sale.patient?.name || 'Walk-in';
             const userName = sale.user?.name || sale.user?.username || 'System';
+            const saleDate = new Date(sale.created_at).toLocaleDateString();
+            const saleStatus = sale.is_refunded ? 'Refunded' : 'Completed';
+
+            const matchesReceipt = columnFilters.receipt.length === 0 || columnFilters.receipt.includes(sale.receipt_number);
+            const matchesDate = columnFilters.date.length === 0 || columnFilters.date.includes(saleDate);
             const matchesPatient = columnFilters.patient.length === 0 || columnFilters.patient.includes(patientName);
             const matchesMethod = columnFilters.method.length === 0 || columnFilters.method.includes(sale.payment_method);
             const matchesUser = columnFilters.user.length === 0 || columnFilters.user.includes(userName);
+            const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(saleStatus);
 
-            return matchesSearch && matchesPatient && matchesMethod && matchesUser;
+            return matchesSearch && matchesReceipt && matchesDate && matchesPatient && matchesMethod && matchesUser && matchesStatus;
         });
     }, [sales, searchTerm, columnFilters]);
 
@@ -162,7 +174,7 @@ const SalesHistory = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
                 <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row items-center gap-4">
                     <div className="relative max-w-md w-full">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -176,7 +188,7 @@ const SalesHistory = () => {
                     </div>
                     {activeFilterCount > 0 && (
                         <button
-                            onClick={() => setColumnFilters({ patient: [], method: [], user: [] })}
+                            onClick={() => setColumnFilters({ receipt: [], date: [], patient: [], method: [], user: [], status: [] })}
                             className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                         >
                             Clear All Filters ({activeFilterCount})
@@ -184,12 +196,22 @@ const SalesHistory = () => {
                     )}
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold">
+                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
                             <tr>
-                                <th className="px-6 py-3">Receipt #</th>
-                                <th className="px-6 py-3">Date</th>
+                                <ColumnFilter
+                                    label="Receipt #"
+                                    options={uniqueReceipts}
+                                    selectedValues={columnFilters.receipt}
+                                    onFilterChange={(v) => updateFilter('receipt', v)}
+                                />
+                                <ColumnFilter
+                                    label="Date"
+                                    options={uniqueDates}
+                                    selectedValues={columnFilters.date}
+                                    onFilterChange={(v) => updateFilter('date', v)}
+                                />
                                 <ColumnFilter
                                     label="Customer"
                                     options={uniquePatients}
@@ -210,7 +232,12 @@ const SalesHistory = () => {
                                     selectedValues={columnFilters.user}
                                     onFilterChange={(v) => updateFilter('user', v)}
                                 />
-                                <th className="px-6 py-3">Status</th>
+                                <ColumnFilter
+                                    label="Status"
+                                    options={uniqueStatuses}
+                                    selectedValues={columnFilters.status}
+                                    onFilterChange={(v) => updateFilter('status', v)}
+                                />
                                 <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>

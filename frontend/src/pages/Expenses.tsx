@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Plus, Search, DollarSign, Wallet2, FileText, Pencil, Trash2, X, RefreshCw, Calendar, ArrowRight
 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
+import ColumnFilter from '../components/ColumnFilter';
 
 const frequencies = [
     { value: 'ONE_TIME', label: 'One Time' },
@@ -29,6 +30,14 @@ const Expenses = () => {
     const [editing, setEditing] = useState<any>(null);
     const [search, setSearch] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+    // ─── Column Filters ──────────────────────────────────────────
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        name: [],
+        category: [],
+        frequency: [],
+        date: [],
+    });
 
     // Form states
     const [form, setForm] = useState({
@@ -121,10 +130,31 @@ const Expenses = () => {
         });
     };
 
-    const filtered = expenses.filter(e =>
-        e.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.category.toLowerCase().includes(search.toLowerCase())
-    );
+    // ─── Unique Options & Filtering ──────────────────────────────
+    const uniqueNames = useMemo(() => [...new Set(expenses.map(e => e.name))].sort(), [expenses]);
+    const uniqueCategories = useMemo(() => [...new Set(expenses.map(e => e.category))].sort(), [expenses]);
+    const uniqueFrequencies = useMemo(() => [...new Set(expenses.map(e => e.frequency))].sort(), [expenses]);
+    const uniqueDates = useMemo(() => [...new Set(expenses.map(e => new Date(e.expense_date).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [expenses]);
+
+    const filteredExpenses = useMemo(() => {
+        return expenses.filter(e => {
+            const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase());
+            const eDate = new Date(e.expense_date).toLocaleDateString();
+
+            const matchesName = columnFilters.name.length === 0 || columnFilters.name.includes(e.name);
+            const matchesCategory = columnFilters.category.length === 0 || columnFilters.category.includes(e.category);
+            const matchesFrequency = columnFilters.frequency.length === 0 || columnFilters.frequency.includes(e.frequency);
+            const matchesDate = columnFilters.date.length === 0 || columnFilters.date.includes(eDate);
+
+            return matchesSearch && matchesName && matchesCategory && matchesFrequency && matchesDate;
+        });
+    }, [expenses, search, columnFilters]);
+
+    const updateFilter = (column: string, values: string[]) => {
+        setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     if (loading) {
         return (
@@ -185,34 +215,64 @@ const Expenses = () => {
                 </div>
             </div>
 
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Search expenses..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                />
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative max-w-md w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search expenses..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                    />
+                </div>
+                {activeFilterCount > 0 && (
+                    <button
+                        onClick={() => setColumnFilters({ name: [], category: [], frequency: [], date: [] })}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                        Clear All Filters ({activeFilterCount})
+                    </button>
+                )}
             </div>
 
             {/* EXPENSE LIST */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-visible">
+                <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest sticky top-0 z-30 shadow-sm">
                             <tr>
-                                <th className="px-6 py-4">Name</th>
-                                <th className="px-6 py-4">Category</th>
+                                <ColumnFilter
+                                    label="Name"
+                                    options={uniqueNames}
+                                    selectedValues={columnFilters.name}
+                                    onFilterChange={(v) => updateFilter('name', v)}
+                                />
+                                <ColumnFilter
+                                    label="Category"
+                                    options={uniqueCategories}
+                                    selectedValues={columnFilters.category}
+                                    onFilterChange={(v) => updateFilter('category', v)}
+                                />
                                 <th className="px-6 py-4">Amount</th>
-                                <th className="px-6 py-4">Frequency</th>
+                                <ColumnFilter
+                                    label="Frequency"
+                                    options={uniqueFrequencies}
+                                    selectedValues={columnFilters.frequency}
+                                    onFilterChange={(v) => updateFilter('frequency', v)}
+                                />
                                 <th className="px-6 py-4">Recurring</th>
-                                <th className="px-6 py-4">Date</th>
+                                <ColumnFilter
+                                    label="Date"
+                                    options={uniqueDates}
+                                    selectedValues={columnFilters.date}
+                                    onFilterChange={(v) => updateFilter('date', v)}
+                                />
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filtered.map((e) => (
+                            {filteredExpenses.map((e) => (
                                 <tr key={e.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-6 py-4 font-bold text-gray-800">{e.name}</td>
                                     <td className="px-6 py-4">
@@ -252,7 +312,7 @@ const Expenses = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filtered.length === 0 && (
+                            {filteredExpenses.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
                                         <FileText className="w-8 h-8 mx-auto mb-3 text-gray-300" />

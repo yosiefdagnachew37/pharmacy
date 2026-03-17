@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     TrendingUp, AlertTriangle, PackageX, Calendar, Search,
@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { toastSuccess, toastError, toastInfo } from '../components/Toast';
+import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
+import ColumnFilter from '../components/ColumnFilter';
 
 const IntelligentForecasting = () => {
     const { role } = useAuth();
@@ -16,7 +17,13 @@ const IntelligentForecasting = () => {
     const [deadStock, setDeadStock] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'RECOMMENDATIONS' | 'DEAD_STOCK'>('RECOMMENDATIONS');
-    const [search, setSearch] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // ─── Column Filters ──────────────────────────────────────────
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        medicine: [],
+        status: [],
+    });
     const [triggering, setTriggering] = useState(false);
 
     const fetchData = async () => {
@@ -26,7 +33,12 @@ const IntelligentForecasting = () => {
                 client.get('/forecasting/dead-stock')
             ]);
             setRecommendations(recRes.data);
-            setDeadStock(deadRes.data);
+            // Map dead stock data to include medicine_name and status for filtering
+            setDeadStock(deadRes.data.map((item: any) => ({
+                ...item,
+                medicine_name: item.medicine?.name,
+                status: item.days_since_last_sale > 180 ? 'CRITICAL' : item.days_since_last_sale > 90 ? 'WARNING' : 'STALE' // Example status logic
+            })));
         } catch (err) {
             console.error('Failed to load forecasting data', err);
         } finally {
@@ -40,7 +52,8 @@ const IntelligentForecasting = () => {
         setTriggering(true);
         try {
             await client.post('/forecasting/trigger-manual');
-            toastInfo('Forecast triggered', 'Running in the background. Refresh in a few moments.');
+            // toastInfo('Forecast triggered', 'Running in the background. Refresh in a few moments.'); // Removed toastInfo
+            toastSuccess('Forecast triggered', 'Running in the background. Refresh in a few moments.');
         } catch (err: any) {
             console.error('Failed to trigger forecast', err);
             toastError('Forecast failed', extractErrorMessage(err, 'Error triggering forecast.'));
@@ -51,7 +64,8 @@ const IntelligentForecasting = () => {
 
     const handleConvert = async (rec: any) => {
         if (!rec.suggested_supplier_id) {
-            toastInfo('No supplier assigned', 'Please create a PO manually from the Purchases page.');
+            // toastInfo('No supplier assigned', 'Please create a PO manually from the Purchases page.'); // Removed toastInfo
+            toastError('No supplier assigned', 'Please create a PO manually from the Purchases page.');
             navigate('/purchases');
             return;
         }
@@ -88,12 +102,28 @@ const IntelligentForecasting = () => {
     };
 
     const filteredRecs = recommendations.filter(r =>
-        r.medicine?.name.toLowerCase().includes(search.toLowerCase())
+        r.medicine?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const filteredDeadStock = deadStock.filter(d =>
-        d.medicine?.name.toLowerCase().includes(search.toLowerCase())
-    );
+    // ─── Unique Options & Filtering (Dead Stock) ────────────────
+    const uniqueDeadStockMedicines = useMemo(() => [...new Set(deadStock.map(d => d.medicine_name))].sort(), [deadStock]);
+    const uniqueDeadStockStatuses = useMemo(() => ['CRITICAL', 'WARNING', 'STALE'], []);
+
+    const filteredDeadStock = useMemo(() => {
+        return deadStock.filter(item => {
+            const matchesSearch = item.medicine_name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesMedicine = columnFilters.medicine.length === 0 || columnFilters.medicine.includes(item.medicine_name);
+            const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(item.status);
+
+            return matchesSearch && matchesMedicine && matchesStatus;
+        });
+    }, [deadStock, searchTerm, columnFilters]);
+
+    const updateFilter = (column: string, values: string[]) => {
+        setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     const getUrgencyBadge = (urgency: string) => {
         switch (urgency) {
@@ -147,79 +177,110 @@ const IntelligentForecasting = () => {
                 </button>
             </div>
 
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Search medicines..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                />
-            </div>
-
             {activeTab === 'RECOMMENDATIONS' && (
-                <div className="grid grid-cols-1 gap-4">
-                    {filteredRecs.length === 0 ? (
-                        <div className="bg-white rounded-3xl p-12 text-center border border-gray-50">
-                            <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
-                            <h3 className="text-lg font-bold text-gray-800">No Purchase Recommendations</h3>
-                            <p className="text-gray-500 mt-1">Your inventory levels are looking healthy based on current demand forecasts.</p>
-                        </div>
-                    ) : (
-                        filteredRecs.map((rec) => (
-                            <div key={rec.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 flex flex-col md:flex-row gap-6 md:items-center justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <h3 className="text-lg font-bold text-gray-800">{rec.medicine?.name}</h3>
-                                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border ${getUrgencyBadge(rec.urgency)}`}>
-                                            {rec.urgency} Priority
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-600 font-medium mb-3">{rec.reasoning}</p>
-                                    <div className="flex flex-wrap gap-4 mt-2">
-                                        <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                                            <ShoppingCart className="w-3.5 h-3.5 text-gray-400" />
-                                            <span className="text-xs font-bold text-gray-500 uppercase">Rec. Order:</span>
-                                            <span className="text-sm font-black text-indigo-700">{rec.recommended_quantity}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                                            <BarChart2 className="w-3.5 h-3.5 text-gray-400" />
-                                            <span className="text-xs font-bold text-gray-500 uppercase">Est. Cost:</span>
-                                            <span className="text-sm font-black text-gray-800">ETB {Number(rec.estimated_cost).toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 md:w-48 flex-shrink-0">
-                                    <div className="text-xs text-gray-400 font-medium text-right mb-2">
-                                        Generated: {new Date(rec.created_at).toLocaleDateString()}
-                                    </div>
-                                    <button onClick={() => handleConvert(rec)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-200 transition-colors">
-                                        Draft PO
-                                    </button>
-                                    <button onClick={() => handleDismiss(rec)} className="w-full bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl text-sm font-bold transition-colors">
-                                        Dismiss
-                                    </button>
-                                </div>
+                <>
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search medicines..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                        />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                        {filteredRecs.length === 0 ? (
+                            <div className="bg-white rounded-3xl p-12 text-center border border-gray-50">
+                                <CheckCircle className="w-12 h-12 text-emerald-300 mx-auto mb-3" />
+                                <h3 className="text-lg font-bold text-gray-800">No Purchase Recommendations</h3>
+                                <p className="text-gray-500 mt-1">Your inventory levels are looking healthy based on current demand forecasts.</p>
                             </div>
-                        ))
-                    )}
-                </div>
+                        ) : (
+                            filteredRecs.map((rec) => (
+                                <div key={rec.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 flex flex-col md:flex-row gap-6 md:items-center justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <h3 className="text-lg font-bold text-gray-800">{rec.medicine?.name}</h3>
+                                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg border ${getUrgencyBadge(rec.urgency)}`}>
+                                                {rec.urgency} Priority
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 font-medium mb-3">{rec.reasoning}</p>
+                                        <div className="flex flex-wrap gap-4 mt-2">
+                                            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                                                <ShoppingCart className="w-3.5 h-3.5 text-gray-400" />
+                                                <span className="text-xs font-bold text-gray-500 uppercase">Rec. Order:</span>
+                                                <span className="text-sm font-black text-indigo-700">{rec.recommended_quantity}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                                                <BarChart2 className="w-3.5 h-3.5 text-gray-400" />
+                                                <span className="text-xs font-bold text-gray-500 uppercase">Est. Cost:</span>
+                                                <span className="text-sm font-black text-gray-800">ETB {Number(rec.estimated_cost).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 md:w-48 flex-shrink-0">
+                                        <div className="text-xs text-gray-400 font-medium text-right mb-2">
+                                            Generated: {new Date(rec.created_at).toLocaleDateString()}
+                                        </div>
+                                        <button onClick={() => handleConvert(rec)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-200 transition-colors">
+                                            Draft PO
+                                        </button>
+                                        <button onClick={() => handleDismiss(rec)} className="w-full bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                                            Dismiss
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </>
             )}
 
             {activeTab === 'DEAD_STOCK' && (
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 px-6 py-4 border-b border-gray-50">
+                        <div className="relative max-w-md w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search dead stock..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-11 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                            />
+                        </div>
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={() => setColumnFilters({ medicine: [], status: [] })}
+                                className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                                Clear All Filters ({activeFilterCount})
+                            </button>
+                        )}
+                    </div>
+                    <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
+                            <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest sticky top-0 z-30 shadow-sm">
                                 <tr>
-                                    <th className="px-6 py-4">Medicine</th>
+                                    <ColumnFilter
+                                        label="Medicine"
+                                        options={uniqueDeadStockMedicines}
+                                        selectedValues={columnFilters.medicine}
+                                        onFilterChange={(v) => updateFilter('medicine', v)}
+                                    />
                                     <th className="px-6 py-4">Current Stock</th>
                                     <th className="px-6 py-4">Unit Cost</th>
-                                    <th className="px-6 py-4">Tied Capital</th>
-                                    <th className="px-6 py-4">Days Since Last Sale</th>
-                                    <th className="px-6 py-4 text-right">Status</th>
+                                    <th className="px-6 py-4 text-right">Tied Capital</th>
+                                    <th className="px-6 py-4 text-right">Days Since Last Sale</th>
+                                    <ColumnFilter
+                                        label="Status"
+                                        options={uniqueDeadStockStatuses}
+                                        selectedValues={columnFilters.status}
+                                        onFilterChange={(v) => updateFilter('status', v)}
+                                    />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">

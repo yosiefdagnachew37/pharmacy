@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Search, Users, TrendingDown, Clock, ShieldAlert, FileText, CheckCircle, Wallet, X
 } from 'lucide-react';
@@ -6,6 +6,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
+import ColumnFilter from '../components/ColumnFilter';
 
 const CreditManagement = () => {
     const { role } = useAuth();
@@ -22,6 +23,22 @@ const CreditManagement = () => {
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('CASH');
     const [referenceNumber, setReferenceNumber] = useState('');
+
+    // ─── Column Filters ──────────────────────────────────────────
+    const [customerFilters, setCustomerFilters] = useState<Record<string, string[]>>({
+        name: [],
+        phone: [],
+        lastActivity: [],
+        status: [],
+    });
+
+    const [recordFilters, setRecordFilters] = useState<Record<string, string[]>>({
+        date: [],
+        receipt: [],
+        customer: [],
+        dueDate: [],
+        status: [],
+    });
 
     const fetchData = async () => {
         try {
@@ -78,15 +95,62 @@ const CreditManagement = () => {
         setReferenceNumber('');
     };
 
-    const filtered = customers.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        (c.phone && c.phone.includes(search))
-    );
+    // ─── Unique Options & Filtering ──────────────────────────────
+    const uniqueCustomerNames = useMemo(() => [...new Set(customers.map(c => c.name))].sort(), [customers]);
+    const uniqueCustomerPhones = useMemo(() => [...new Set(customers.map(c => c.phone || 'N/A'))].sort(), [customers]);
+    const uniqueCustomerLastActivities = useMemo(() => [...new Set(customers.map(c => new Date(c.updated_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [customers]);
+    const uniqueCustomerStatuses = useMemo(() => ['DEBT', 'CLEARED'], []);
 
-    const filteredRecords = creditRecords.filter(r =>
-        r.customer?.name.toLowerCase().includes(search.toLowerCase()) ||
-        (r.sale?.receipt_number && r.sale.receipt_number.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filteredCustomers = useMemo(() => {
+        return customers.filter(c => {
+            const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
+            const cStatus = Number(c.total_credit) > 0 ? 'DEBT' : 'CLEARED';
+            const cPhone = c.phone || 'N/A';
+            const cDate = new Date(c.updated_at).toLocaleDateString();
+
+            const matchesName = customerFilters.name.length === 0 || customerFilters.name.includes(c.name);
+            const matchesPhone = customerFilters.phone.length === 0 || customerFilters.phone.includes(cPhone);
+            const matchesLastActivity = customerFilters.lastActivity.length === 0 || customerFilters.lastActivity.includes(cDate);
+            const matchesStatus = customerFilters.status.length === 0 || customerFilters.status.includes(cStatus);
+
+            return matchesSearch && matchesName && matchesPhone && matchesLastActivity && matchesStatus;
+        });
+    }, [customers, search, customerFilters]);
+
+    const uniqueRecordDates = useMemo(() => [...new Set(creditRecords.map(r => new Date(r.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
+    const uniqueRecordReceipts = useMemo(() => [...new Set(creditRecords.map(r => r.sale?.receipt_number || 'N/A'))].sort(), [creditRecords]);
+    const uniqueRecordCustomers = useMemo(() => [...new Set(creditRecords.map(r => r.customer?.name))].sort(), [creditRecords]);
+    const uniqueRecordDueDates = useMemo(() => [...new Set(creditRecords.map(r => new Date(r.due_date).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
+    const uniqueRecordStatuses = useMemo(() => [...new Set(creditRecords.map(r => r.status))].sort(), [creditRecords]);
+
+    const filteredRecordsMemo = useMemo(() => {
+        return creditRecords.filter(r => {
+            const matchesSearch = r.customer?.name.toLowerCase().includes(search.toLowerCase()) || (r.sale?.receipt_number && r.sale.receipt_number.toLowerCase().includes(search.toLowerCase()));
+            const rDate = new Date(r.created_at).toLocaleDateString();
+            const rReceipt = r.sale?.receipt_number || 'N/A';
+            const rCustomer = r.customer?.name;
+            const rDueDate = new Date(r.due_date).toLocaleDateString();
+
+            const matchesDate = recordFilters.date.length === 0 || recordFilters.date.includes(rDate);
+            const matchesReceipt = recordFilters.receipt.length === 0 || recordFilters.receipt.includes(rReceipt);
+            const matchesCustomer = recordFilters.customer.length === 0 || recordFilters.customer.includes(rCustomer);
+            const matchesDueDate = recordFilters.dueDate.length === 0 || recordFilters.dueDate.includes(rDueDate);
+            const matchesStatus = recordFilters.status.length === 0 || recordFilters.status.includes(r.status);
+
+            return matchesSearch && matchesDate && matchesReceipt && matchesCustomer && matchesDueDate && matchesStatus;
+        });
+    }, [creditRecords, search, recordFilters]);
+
+    const updateCustomerFilter = (column: string, values: string[]) => {
+        setCustomerFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const updateRecordFilter = (column: string, values: string[]) => {
+        setRecordFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeCustomerFilterCount = Object.values(customerFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
+    const activeRecordFilterCount = Object.values(recordFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     if (loading) {
         return (
@@ -142,32 +206,71 @@ const CreditManagement = () => {
                 </button>
             </div>
 
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : 'receipts or customers'}...`}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                />
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative max-w-md w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder={`Search ${activeTab === 'CUSTOMERS' ? 'customers' : 'receipts or customers'}...`}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                    />
+                </div>
+                {activeTab === 'CUSTOMERS' && activeCustomerFilterCount > 0 && (
+                    <button
+                        onClick={() => setCustomerFilters({ name: [], phone: [], lastActivity: [], status: [] })}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                        Clear All Filters ({activeCustomerFilterCount})
+                    </button>
+                )}
+                {activeTab === 'RECORDS' && activeRecordFilterCount > 0 && (
+                    <button
+                        onClick={() => setRecordFilters({ date: [], receipt: [], customer: [], dueDate: [], status: [] })}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                    >
+                        Clear All Filters ({activeRecordFilterCount})
+                    </button>
+                )}
             </div>
 
             {activeTab === 'CUSTOMERS' && (
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
+                    <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
+                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider sticky top-0 z-30 shadow-sm">
                                 <tr>
-                                    <th className="px-6 py-4">Customer Name</th>
-                                    <th className="px-6 py-4">Phone</th>
-                                    <th className="px-6 py-4">Last Activity</th>
+                                    <ColumnFilter
+                                        label="Customer Name"
+                                        options={uniqueCustomerNames}
+                                        selectedValues={customerFilters.name}
+                                        onFilterChange={(v) => updateCustomerFilter('name', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Phone"
+                                        options={uniqueCustomerPhones}
+                                        selectedValues={customerFilters.phone}
+                                        onFilterChange={(v) => updateCustomerFilter('phone', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Last Activity"
+                                        options={uniqueCustomerLastActivities}
+                                        selectedValues={customerFilters.lastActivity}
+                                        onFilterChange={(v) => updateCustomerFilter('lastActivity', v)}
+                                    />
                                     <th className="px-6 py-4">Total Outstanding Balance</th>
+                                    <ColumnFilter
+                                        label="Status"
+                                        options={uniqueCustomerStatuses}
+                                        selectedValues={customerFilters.status}
+                                        onFilterChange={(v) => updateCustomerFilter('status', v)}
+                                    />
                                     <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filtered.map((c) => {
+                                {filteredCustomers.map((c) => {
                                     const isDept = Number(c.total_credit) > 0;
                                     return (
                                         <tr key={c.id} className="hover:bg-gray-50/50 transition-colors group">
@@ -200,9 +303,9 @@ const CreditManagement = () => {
                                         </tr>
                                     );
                                 })}
-                                {filtered.length === 0 && (
+                                {filteredCustomers.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">
+                                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">
                                             <Users className="w-8 h-8 mx-auto mb-3 text-gray-300" />
                                             No customers found.
                                         </td>
@@ -215,22 +318,47 @@ const CreditManagement = () => {
             )}
 
             {activeTab === 'RECORDS' && (
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                    <div className="overflow-x-auto">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
+                    <div className="overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
+                            <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider sticky top-0 z-30 shadow-sm">
                                 <tr>
-                                    <th className="px-6 py-4">Date</th>
-                                    <th className="px-6 py-4">Receipt #</th>
-                                    <th className="px-6 py-4">Customer</th>
+                                    <ColumnFilter
+                                        label="Date"
+                                        options={uniqueRecordDates}
+                                        selectedValues={recordFilters.date}
+                                        onFilterChange={(v) => updateRecordFilter('date', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Receipt #"
+                                        options={uniqueRecordReceipts}
+                                        selectedValues={recordFilters.receipt}
+                                        onFilterChange={(v) => updateRecordFilter('receipt', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Customer"
+                                        options={uniqueRecordCustomers}
+                                        selectedValues={recordFilters.customer}
+                                        onFilterChange={(v) => updateRecordFilter('customer', v)}
+                                    />
                                     <th className="px-6 py-4">Original Amount</th>
                                     <th className="px-6 py-4">Balance Due</th>
-                                    <th className="px-6 py-4">Due Date</th>
-                                    <th className="px-6 py-4 text-right">Status</th>
+                                    <ColumnFilter
+                                        label="Due Date"
+                                        options={uniqueRecordDueDates}
+                                        selectedValues={recordFilters.dueDate}
+                                        onFilterChange={(v) => updateRecordFilter('dueDate', v)}
+                                    />
+                                    <ColumnFilter
+                                        label="Status"
+                                        options={uniqueRecordStatuses}
+                                        selectedValues={recordFilters.status}
+                                        onFilterChange={(v) => updateRecordFilter('status', v)}
+                                    />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredRecords.map((r) => (
+                                {filteredRecordsMemo.map((r) => (
                                     <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 text-gray-500 text-xs font-medium">
                                             {new Date(r.created_at).toLocaleDateString()}
@@ -260,7 +388,7 @@ const CreditManagement = () => {
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredRecords.length === 0 && (
+                                {filteredRecordsMemo.length === 0 && (
                                     <tr>
                                         <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
                                             <Clock className="w-8 h-8 mx-auto mb-3 text-gray-300" />

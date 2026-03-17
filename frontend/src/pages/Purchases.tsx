@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Plus, Search, ShoppingBag, Eye, PackageCheck,
     Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign
@@ -7,6 +7,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { toastSuccess, toastError, toastWarning } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
+import ColumnFilter from '../components/ColumnFilter';
 
 const Purchases = () => {
     const { role } = useAuth();
@@ -18,7 +19,16 @@ const Purchases = () => {
     const [showReceiveModal, setShowReceiveModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPO, setSelectedPO] = useState<any>(null);
-    const [search, setSearch] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // ─── Column Filters ──────────────────────────────────────────
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        poNumber: [],
+        supplier: [],
+        status: [],
+        paymentStatus: [],
+        date: [],
+    });
     const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED'>('ALL');
 
     // Form states
@@ -193,14 +203,36 @@ const Purchases = () => {
         }
     };
 
-    const filtered = purchases.filter(p => {
-        const matchesSearch = p.po_number.toLowerCase().includes(search.toLowerCase()) ||
-                              p.supplier?.name.toLowerCase().includes(search.toLowerCase());
-        if (activeTab === 'PLANNED') {
-            return matchesSearch && (p.status === 'DRAFT' || p.status === 'APPROVED');
-        }
-        return matchesSearch && p.status !== 'DRAFT'; // Hide drafts from "All Orders" to avoid clutter
-    });
+    const purchaseOrders = purchases; // Assuming 'purchases' is the source data for filtering
+
+    // ─── Unique Options & Filtering ──────────────────────────────
+    const uniquePONumbers = useMemo(() => [...new Set(purchaseOrders.map(po => po.po_number))].sort(), [purchaseOrders]);
+    const uniqueSuppliers = useMemo(() => [...new Set(purchaseOrders.map(po => po.supplier?.name))].sort(), [purchaseOrders]);
+    const uniqueStatuses = useMemo(() => [...new Set(purchaseOrders.map(po => po.status))].sort(), [purchaseOrders]);
+    const uniquePaymentStatuses = useMemo(() => [...new Set(purchaseOrders.map(po => po.payment_status))].sort(), [purchaseOrders]);
+    const uniqueDates = useMemo(() => [...new Set(purchaseOrders.map(po => new Date(po.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [purchaseOrders]);
+
+    const filteredPO = useMemo(() => {
+        return purchaseOrders.filter(po => {
+            const matchesTab = activeTab === 'ALL' ? po.status !== 'DRAFT' : (po.status === 'DRAFT' || po.status === 'APPROVED');
+            const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || po.supplier?.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const poDate = new Date(po.created_at).toLocaleDateString();
+
+            const matchesPONumber = columnFilters.poNumber.length === 0 || columnFilters.poNumber.includes(po.po_number);
+            const matchesSupplier = columnFilters.supplier.length === 0 || columnFilters.supplier.includes(po.supplier?.name);
+            const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(po.status);
+            const matchesPaymentStatus = columnFilters.paymentStatus.length === 0 || columnFilters.paymentStatus.includes(po.payment_status);
+            const matchesDate = columnFilters.date.length === 0 || columnFilters.date.includes(poDate);
+
+            return matchesTab && matchesSearch && matchesPONumber && matchesSupplier && matchesStatus && matchesPaymentStatus && matchesDate;
+        });
+    }, [purchaseOrders, activeTab, searchTerm, columnFilters]);
+
+    const updateFilter = (column: string, values: string[]) => {
+        setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     if (loading) {
         return (
@@ -243,36 +275,70 @@ const Purchases = () => {
                     </button>
                 </div>
 
-                <div className="relative w-full sm:w-auto sm:min-w-[300px]">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search by PO number or supplier..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
-                    />
-                </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <div className="relative max-w-md w-full">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search PO number or supplier..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                            />
+                        </div>
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={() => setColumnFilters({ poNumber: [], supplier: [], status: [], paymentStatus: [], date: [] })}
+                                className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                                Clear All Filters ({activeFilterCount})
+                            </button>
+                        )}
+                    </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
+                <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider">
-                            <tr>
-                                <th className="px-6 py-4">PO Number</th>
-                                <th className="px-6 py-4">Supplier</th>
-                                <th className="px-6 py-4">Total Amount</th>
-                                <th className="px-6 py-4">Paid</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Payment</th>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filtered.map((po) => (
-                                <tr key={po.id} className="hover:bg-gray-50/50 transition-colors group">
+                                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest sticky top-0 z-30 shadow-sm">
+                                    <tr>
+                                        <ColumnFilter
+                                            label="PO Number"
+                                            options={uniquePONumbers}
+                                            selectedValues={columnFilters.poNumber}
+                                            onFilterChange={(v) => updateFilter('poNumber', v)}
+                                        />
+                                        <ColumnFilter
+                                            label="Supplier"
+                                            options={uniqueSuppliers}
+                                            selectedValues={columnFilters.supplier}
+                                            onFilterChange={(v) => updateFilter('supplier', v)}
+                                        />
+                                        <th className="px-6 py-4">Amount</th>
+                                        <ColumnFilter
+                                            label="PO Status"
+                                            options={uniqueStatuses}
+                                            selectedValues={columnFilters.status}
+                                            onFilterChange={(v) => updateFilter('status', v)}
+                                        />
+                                        <ColumnFilter
+                                            label="Payment"
+                                            options={uniquePaymentStatuses}
+                                            selectedValues={columnFilters.paymentStatus}
+                                            onFilterChange={(v) => updateFilter('paymentStatus', v)}
+                                        />
+                                        <ColumnFilter
+                                            label="Date"
+                                            options={uniqueDates}
+                                            selectedValues={columnFilters.date}
+                                            onFilterChange={(v) => updateFilter('date', v)}
+                                        />
+                                        <th className="px-6 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {filteredPO.map((po) => (
+                                        <tr key={po.id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-4 font-bold text-gray-800 font-mono tracking-tight text-xs">
                                         {po.po_number}
                                     </td>
@@ -336,12 +402,9 @@ const Purchases = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {filtered.length === 0 && (
+                            {filteredPO.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
-                                        <ShoppingBag className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-                                        No purchase orders found.
-                                    </td>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">No purchase orders found.</td>
                                 </tr>
                             )}
                         </tbody>
