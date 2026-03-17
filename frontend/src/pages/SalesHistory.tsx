@@ -198,47 +198,53 @@ const SalesHistory = () => {
 
                 <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
+                        <thead className="bg-gray-50 text-gray-600 uppercase text-[10px] font-bold sticky top-0 z-30 shadow-sm">
                             <tr>
                                 <ColumnFilter
                                     label="Receipt #"
                                     options={uniqueReceipts}
                                     selectedValues={columnFilters.receipt}
                                     onFilterChange={(v) => updateFilter('receipt', v)}
+                                    className="px-3 py-3"
                                 />
                                 <ColumnFilter
                                     label="Date"
                                     options={uniqueDates}
                                     selectedValues={columnFilters.date}
                                     onFilterChange={(v) => updateFilter('date', v)}
+                                    className="px-3 py-3"
                                 />
                                 <ColumnFilter
                                     label="Customer"
                                     options={uniquePatients}
                                     selectedValues={columnFilters.patient}
                                     onFilterChange={(v) => updateFilter('patient', v)}
+                                    className="px-3 py-3"
                                 />
-                                <th className="px-6 py-3">Compliance</th>
-                                <th className="px-6 py-3">Amount</th>
+                                <th className="px-3 py-3">Type</th>
+                                <th className="px-3 py-3">Amount</th>
                                 <ColumnFilter
                                     label="Method"
                                     options={uniqueMethods}
                                     selectedValues={columnFilters.method}
                                     onFilterChange={(v) => updateFilter('method', v)}
+                                    className="px-3 py-3"
                                 />
                                 <ColumnFilter
                                     label="Cashier"
                                     options={uniqueUsers}
                                     selectedValues={columnFilters.user}
                                     onFilterChange={(v) => updateFilter('user', v)}
+                                    className="px-3 py-3"
                                 />
                                 <ColumnFilter
                                     label="Status"
                                     options={uniqueStatuses}
                                     selectedValues={columnFilters.status}
                                     onFilterChange={(v) => updateFilter('status', v)}
+                                    className="px-3 py-3"
                                 />
-                                <th className="px-6 py-3 text-right">Actions</th>
+                                <th className="px-3 py-3 text-right sticky right-0 bg-gray-50 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -248,45 +254,45 @@ const SalesHistory = () => {
                                 <tr><td colSpan={9} className="px-6 py-8 text-center text-gray-500">No records found.</td></tr>
                             ) : (
                                 filteredSales.map((sale) => (
-                                    <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-mono text-xs">{sale.receipt_number}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                    <tr key={sale.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
+                                        <td className="px-3 py-3 font-mono text-[10px] text-gray-500 whitespace-nowrap">{sale.receipt_number}</td>
+                                        <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">
                                             {new Date(sale.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-medium">
+                                        <td className="px-3 py-3 text-xs font-medium truncate max-w-[120px]" title={sale.patient?.name || 'Walk-in'}>
                                             {sale.patient?.name || 'Walk-in'}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-3">
                                             {sale.is_controlled_transaction ? (
-                                                <span className="flex items-center gap-1.5 text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg text-[10px] font-black uppercase border border-indigo-100 shadow-sm">
-                                                    <Lock className="w-3 h-3" /> Controlled
+                                                <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded text-[9px] font-black uppercase border border-indigo-100">
+                                                    <Lock className="w-2.5 h-2.5" /> Ctrl
                                                 </span>
                                             ) : (
-                                                <span className="text-[10px] font-bold text-gray-400">Regular</span>
+                                                <span className="text-[9px] font-bold text-gray-300">Reg</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                                        <td className="px-3 py-3 text-xs font-bold text-gray-900 whitespace-nowrap">
                                             ETB {Number(sale.total_amount).toFixed(2)}
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                                            <span className="bg-gray-100 px-2 py-1 rounded-md border border-gray-200 uppercase">{sale.payment_method}</span>
+                                        <td className="px-3 py-3">
+                                            <span className="bg-gray-50 px-1.5 py-0.5 rounded text-[10px] font-bold text-gray-500 border border-gray-100 uppercase">{sale.payment_method}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                                        <td className="px-3 py-3 text-[10px] text-gray-500 truncate max-w-[80px]" title={sale.user?.name || sale.user?.username || 'System'}>
                                             {sale.user?.name || sale.user?.username || 'System'}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-3">
                                             {sale.is_refunded ? (
-                                                <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">Refunded (ETB {Number(sale.refund_amount).toFixed(2)})</span>
+                                                <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[9px] font-bold border border-amber-100">Refunded</span>
                                             ) : (
-                                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold">Completed</span>
+                                                <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded-md text-[9px] font-bold border border-green-100">Paid</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-3 py-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50">
                                             <button
                                                 onClick={() => handleOpenDetail(sale)}
-                                                className="p-1 hover:bg-gray-100 rounded text-indigo-600"
+                                                className="p-1 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
                                             >
-                                                <ChevronRight className="w-5 h-5" />
+                                                <ChevronRight className="w-4 h-4" />
                                             </button>
                                         </td>
                                     </tr>

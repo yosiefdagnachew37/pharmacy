@@ -39,28 +39,27 @@ export class ReportingService {
 
     async getDashboardStats() {
         try {
-            // Using CURRENT_DATE in QueryBuilder for more robust "Today" filtering
-
+            // Using Timezone-aware CURRENT_DATE for more robust "Today" filtering (+03:00)
             const salesStats = await this.salesRepository.createQueryBuilder('s')
-                .where('s.created_at::date = CURRENT_DATE')
+                .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .select('COUNT(s.id)', 'count')
                 .addSelect('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
                 .getRawOne();
 
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
+                .leftJoin('m.batches', 'b', "b.expiry_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .select('m.id')
                 .groupBy('m.id')
                 .having('COALESCE(SUM(b.quantity_remaining), 0) <= m.minimum_stock_level')
                 .getRawMany();
 
             const expiringSoon = await this.batchesRepository.createQueryBuilder('b')
-                .where('b.expiry_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + interval \'30 days\')')
+                .where("b.expiry_date BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date AND ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '30 days')")
                 .andWhere('b.quantity_remaining > 0')
                 .getCount();
 
             const expiredBatches = await this.batchesRepository.createQueryBuilder('b')
-                .where('b.expiry_date < CURRENT_DATE')
+                .where("b.expiry_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .andWhere('b.quantity_remaining > 0')
                 .getCount();
 
@@ -75,7 +74,7 @@ export class ReportingService {
             });
 
             const inventorySummaryRaw = await this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
+                .leftJoin('m.batches', 'b', "b.expiry_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .select([
                     'm.id AS id',
                     'm.name AS name',
@@ -277,13 +276,10 @@ export class ReportingService {
     }
 
     async getSalesTrend(days: number = 30) {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-
-        const sales = await this.salesRepository.find({
-            where: { created_at: MoreThan(startDate) },
-            order: { created_at: 'ASC' }
-        });
+        const sales = await this.salesRepository.createQueryBuilder('s')
+            .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date > (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date - INTERVAL '1 day' * :days", { days })
+            .orderBy('s.created_at', 'ASC')
+            .getMany();
 
         const dailyMap = new Map<string, { date: string; totalSales: number; totalRevenue: number }>();
 
@@ -308,38 +304,38 @@ export class ReportingService {
     }
 
     async getRevenueComparison() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        const thisWeek = new Date(today);
-        thisWeek.setDate(thisWeek.getDate() - 7);
+        const query = (where: string) => this.salesRepository.createQueryBuilder('s')
+            .where(where)
+            .select('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
+            .getRawOne();
 
         const [tSales, ySales, wSales] = await Promise.all([
-            this.salesRepository.find({ where: { created_at: MoreThan(today) } }),
-            this.salesRepository.find({ where: { created_at: Between(yesterday, today) } }),
-            this.salesRepository.find({ where: { created_at: MoreThan(thisWeek) } }),
+            query("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date"),
+            query("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date - 1"),
+            query("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date > (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date - 7"),
         ]);
 
-        const getRevenue = (sales: Sale[]) => sales.reduce((sum, s) => sum + (Number(s.total_amount) - Number(s.refund_amount || 0)), 0);
-
         return {
-            today: getRevenue(tSales),
-            yesterday: getRevenue(ySales),
-            thisWeek: getRevenue(wSales)
+            today: parseFloat(tSales?.total) || 0,
+            yesterday: parseFloat(ySales?.total) || 0,
+            thisWeek: parseFloat(wSales?.total) || 0
         };
     }
 
     // ─── EXPORT LOGIC (EXCEL, PDF, WORD) ──────────────────────────
 
     async getSalesReport(startDate: Date, endDate: Date) {
-        return await this.salesRepository.find({
-            where: { created_at: Between(startDate, endDate) },
-            relations: ['items', 'items.medicine', 'patient', 'user'],
-            order: { created_at: 'DESC' },
-        });
+        return await this.salesRepository.createQueryBuilder('s')
+            .leftJoinAndSelect('s.items', 'items')
+            .leftJoinAndSelect('items.medicine', 'medicine')
+            .leftJoinAndSelect('s.patient', 'patient')
+            .leftJoinAndSelect('s.user', 'user')
+            .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
+                start: startDate.toISOString().split('T')[0],
+                end: endDate.toISOString().split('T')[0]
+            })
+            .orderBy('s.created_at', 'DESC')
+            .getMany();
     }
 
     // ... existing generateSalesExcel ...

@@ -7,9 +7,10 @@ interface ColumnFilterProps {
     selectedValues: string[];
     onFilterChange: (values: string[]) => void;
     align?: 'left' | 'right' | 'center';
+    className?: string;
 }
 
-const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 'left' }: ColumnFilterProps) => {
+const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 'left', className = '' }: ColumnFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const ref = useRef<HTMLTableHeaderCellElement>(null);
@@ -45,7 +46,7 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 
     const isActive = selectedValues.length > 0;
 
     return (
-        <th className={`px-6 py-3 relative ${isOpen ? 'z-[100]' : 'z-10'}`} ref={ref}>
+        <th className={`relative ${isOpen ? 'z-[100]' : 'z-10'} ${className || 'px-6 py-3'}`} ref={ref}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full ${
