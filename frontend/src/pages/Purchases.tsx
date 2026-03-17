@@ -161,6 +161,7 @@ const Purchases = () => {
                 amount: paymentAmount,
                 payment_method: payMethod,
                 transaction_reference: transRef,
+                payment_date: new Date().toISOString(),
                 notes: `Payment for PO ${selectedPO.po_number}`
             });
             setShowPaymentModal(false);

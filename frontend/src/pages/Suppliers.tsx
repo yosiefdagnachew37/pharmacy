@@ -200,8 +200,8 @@ const Suppliers = () => {
                                     <p className="text-xs text-gray-400">{s.contact_person || 'No contact assigned'}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => openEdit(s)} className="p-2 bg-gray-50 rounded-xl hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
+                            <div className="flex gap-1.5 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); openEdit(s); }} className="p-2 bg-gray-50 rounded-xl hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
                                     <Pencil className="w-4 h-4" />
                                 </button>
                                 <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(s.id); }} className="p-2 bg-gray-50 rounded-xl hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors">

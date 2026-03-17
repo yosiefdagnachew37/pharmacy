@@ -47,7 +47,7 @@ export class ReportingService {
             const salesStats = await this.salesRepository.createQueryBuilder('s')
                 .where('s.created_at BETWEEN :start AND :end', { start: todayStart, end: todayEnd })
                 .select('COUNT(s.id)', 'count')
-                .addSelect('SUM(s.total_amount)', 'total')
+                .addSelect('SUM(s.total_amount - s.refund_amount)', 'total')
                 .getRawOne();
 
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
@@ -326,7 +326,7 @@ export class ReportingService {
             this.salesRepository.find({ where: { created_at: MoreThan(thisWeek) } }),
         ]);
 
-        const getRevenue = (sales: Sale[]) => sales.reduce((sum, s) => sum + Number(s.total_amount), 0);
+        const getRevenue = (sales: Sale[]) => sales.reduce((sum, s) => sum + (Number(s.total_amount) - Number(s.refund_amount || 0)), 0);
 
         return {
             today: getRevenue(tSales),

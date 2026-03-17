@@ -355,7 +355,7 @@ const Batches = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleEdit(batch)}
-                          className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Edit Batch"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -363,7 +363,7 @@ const Batches = () => {
                         {canDelete('batches') && (
                           <button
                             onClick={() => setDeleteConfirm(batch.id)}
-                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                             title="Delete Batch"
                           >
                             <Trash2 className="w-4 h-4" />
