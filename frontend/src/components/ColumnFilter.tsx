@@ -6,9 +6,10 @@ interface ColumnFilterProps {
     options: string[];
     selectedValues: string[];
     onFilterChange: (values: string[]) => void;
+    align?: 'left' | 'right';
 }
 
-const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: ColumnFilterProps) => {
+const ColumnFilter = ({ label, options, selectedValues, onFilterChange, align = 'left' }: ColumnFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const ref = useRef<HTMLTableHeaderCellElement>(null);
@@ -47,16 +48,17 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: Column
         <th className={`px-6 py-3 relative ${isOpen ? 'z-[100]' : 'z-10'}`} ref={ref}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full text-left ${isActive ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
+                className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-colors w-full ${align === 'right' ? 'justify-end text-right' : 'text-left'
+                    } ${isActive ? 'text-indigo-600' : 'text-gray-600 hover:text-indigo-600'
                     }`}
             >
-                <span className="truncate">{label}</span>
+                <span className={`truncate ${align === 'right' ? 'order-2' : ''}`}>{label}</span>
                 {isActive && (
-                    <span className="flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
+                    <span className={`flex-shrink-0 w-4 h-4 bg-indigo-600 text-white rounded-full text-[9px] flex items-center justify-center font-bold ${align === 'right' ? 'order-1' : ''}`}>
                         {selectedValues.length}
                     </span>
                 )}
-                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${align === 'right' ? 'order-0' : ''}`} />
                 {isActive && (
                     <button
                         onClick={clearFilter}
@@ -68,7 +70,8 @@ const ColumnFilter = ({ label, options, selectedValues, onFilterChange }: Column
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 min-w-[200px] max-w-[280px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className={`absolute top-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 min-w-[200px] max-w-[280px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${align === 'right' ? 'right-0' : 'left-0'
+                    }`}>
                     {/* Search */}
                     {options.length > 6 && (
                         <div className="p-2 border-b border-gray-100">

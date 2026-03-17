@@ -280,6 +280,7 @@ const IntelligentForecasting = () => {
                                         options={uniqueDeadStockStatuses}
                                         selectedValues={columnFilters.status}
                                         onFilterChange={(v) => updateFilter('status', v)}
+                                        align="right"
                                     />
                                 </tr>
                             </thead>
@@ -294,9 +295,9 @@ const IntelligentForecasting = () => {
                                             </td>
                                             <td className="px-6 py-4 font-bold text-gray-600">{d.medicine.total_stock}</td>
                                             <td className="px-6 py-4 text-gray-500">ETB {Number(d.medicine.unit_price || 0).toFixed(2)}</td>
-                                            <td className="px-6 py-4 font-bold text-rose-600">ETB {tiedCapital.toFixed(2)}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
+                                            <td className="px-6 py-4 font-bold text-rose-600 text-right">ETB {tiedCapital.toFixed(2)}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <Calendar className="w-4 h-4 text-amber-500" />
                                                     <span className="font-bold text-gray-700">{d.days_since_last_sale} Days</span>
                                                 </div>
