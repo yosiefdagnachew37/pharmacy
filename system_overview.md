@@ -1,4 +1,4 @@
-# Pharmacy Management System — System Scope & Function Documentation
+# Pharmacy Management System — System Scope & Function Documentation of currently developed system.
 
 ## 1. Introduction
 
