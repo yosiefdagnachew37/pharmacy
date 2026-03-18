@@ -221,14 +221,15 @@ const SalesHistory = () => {
                                     onFilterChange={(v) => updateFilter('patient', v)}
                                     className="px-3 py-3"
                                 />
-                                <th className="px-3 py-3">Type</th>
+                                <th className="px-3 py-3 text-center">Type</th>
                                 <th className="px-3 py-3 text-right">Amount</th>
                                 <ColumnFilter
                                     label="Method"
                                     options={uniqueMethods}
                                     selectedValues={columnFilters.method}
                                     onFilterChange={(v) => updateFilter('method', v)}
-                                    className="px-3 py-3 text-right"
+                                    className="px-3 py-3 text-center"
+                                    align="center"
                                 />
                                 <ColumnFilter
                                     label="Cashier"
@@ -262,7 +263,7 @@ const SalesHistory = () => {
                                         <td className="px-3 py-3 text-xs font-semibold text-gray-800 truncate max-w-[140px]" title={sale.patient?.name || 'Walk-in'}>
                                             {sale.patient?.name || 'Walk-in'}
                                         </td>
-                                        <td className="px-3 py-3">
+                                        <td className="px-3 py-3 text-center">
                                             {sale.is_controlled_transaction ? (
                                                 <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-indigo-100 shadow-sm">
                                                     <Lock className="w-3 h-3" /> Ctrl
@@ -274,7 +275,7 @@ const SalesHistory = () => {
                                         <td className="px-3 py-3 text-xs font-bold text-gray-900 whitespace-nowrap text-right">
                                             ETB {Number(sale.total_amount).toFixed(2)}
                                         </td>
-                                        <td className="px-3 py-3 text-right">
+                                        <td className="px-3 py-3 text-center">
                                             <span className="bg-white px-2 py-0.5 rounded text-[10px] font-bold text-gray-700 border border-gray-300 uppercase shadow-sm">{sale.payment_method}</span>
                                         </td>
                                         <td className="px-3 py-3 text-xs text-gray-700 truncate max-w-[100px]" title={sale.user?.name || sale.user?.username || 'System'}>
