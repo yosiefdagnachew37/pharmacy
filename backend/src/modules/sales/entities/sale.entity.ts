@@ -77,6 +77,6 @@ export class Sale {
     items: SaleItem[];
 
     @Index()
-    @CreateDateColumn()
+    @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;
 }

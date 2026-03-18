@@ -49,12 +49,12 @@ export class Medicine {
     @Column({ nullable: true })
     branch_id: string; // Multi-branch support
 
-    @CreateDateColumn()
+    @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ type: 'timestamp with time zone' })
     updated_at: Date;
 
-    @DeleteDateColumn()
+    @DeleteDateColumn({ type: 'timestamp with time zone' })
     deleted_at: Date;
 }

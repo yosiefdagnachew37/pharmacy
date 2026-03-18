@@ -292,7 +292,8 @@ export class ReportingService {
         }
 
         sales.forEach(s => {
-            const dateStr = s.created_at.toISOString().split('T')[0];
+            // Use local date string for the target timezone (+03:00)
+            const dateStr = s.created_at.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' });
             const day = dailyMap.get(dateStr);
             if (day) {
                 day.totalSales += 1;

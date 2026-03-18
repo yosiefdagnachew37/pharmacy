@@ -48,9 +48,9 @@ export class Batch {
     @Column({ nullable: true })
     branch_id: string;
 
-    @CreateDateColumn()
+    @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;
 
-    @DeleteDateColumn()
+    @DeleteDateColumn({ type: 'timestamp with time zone' })
     deleted_at: Date;
 }
