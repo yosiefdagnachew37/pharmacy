@@ -396,7 +396,11 @@ const Dashboard = () => {
               stats.recentSales.map((sale: any) => (
                 <div key={sale.id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-transparent hover:border-gray-100 hover:bg-white transition-all group">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-400 group-hover:text-emerald-500 transition-colors">
+                    <div className={`w-10 h-10 rounded-full shadow-sm border flex items-center justify-center transition-colors ${
+                      sale.is_refunded 
+                        ? 'bg-red-50 border-red-100 text-red-500' 
+                        : 'bg-white border-gray-100 text-gray-400 group-hover:text-emerald-500'
+                    }`}>
                       <User className="w-5 h-5" />
                     </div>
                     <div>
@@ -406,9 +410,18 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-md font-bold text-gray-900">ETB {Number(sale.total_amount).toFixed(2)}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Receipt: {sale.receipt_number || 'N/A'}</p>
+                  <div className="text-right flex flex-col items-end">
+                    <p className={`text-md font-bold transition-all ${
+                      sale.is_refunded ? 'text-gray-400 line-through' : 'text-gray-900'
+                    }`}>
+                      ETB {Number(sale.total_amount).toFixed(2)}
+                    </p>
+                    {sale.is_refunded && (
+                      <span className="mt-1 px-2 py-0.5 bg-red-50 text-red-700 rounded text-[9px] font-bold border border-red-100 uppercase tracking-tighter">
+                        Refunded
+                      </span>
+                    )}
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mt-1">Receipt: {sale.receipt_number || 'N/A'}</p>
                   </div>
                 </div>
               ))
