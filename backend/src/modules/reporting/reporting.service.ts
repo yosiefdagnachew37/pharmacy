@@ -13,6 +13,7 @@ import * as PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, AlignmentType, WidthType } from 'docx';
 import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { CreditRecord } from '../credit/entities/credit-record.entity';
+import { Refund } from '../sales/entities/refund.entity';
 
 @Injectable()
 export class ReportingService {
@@ -35,6 +36,8 @@ export class ReportingService {
         private readonly poRepository: Repository<PurchaseOrder>,
         @InjectRepository(CreditRecord)
         private readonly creditRecordRepository: Repository<CreditRecord>,
+        @InjectRepository(Refund)
+        private readonly refundRepository: Repository<Refund>,
     ) { }
 
     async getDashboardStats() {
@@ -115,19 +118,50 @@ export class ReportingService {
     // ─── PROFIT & LOSS ───────────────────────────────────────────
 
     async getProfitLossReport(startDate: Date, endDate: Date) {
-        const saleItems = await this.saleItemsRepository.find({
-            where: {
-                sale: { created_at: Between(startDate, endDate) }
-            },
-            relations: ['sale', 'batch', 'medicine'],
-            order: { sale: { created_at: 'ASC' } }
-        });
+        try {
+            // Normalize dates to start and end of day in Addis Ababa (+03:00)
+            const startDay = new Date(startDate);
+            startDay.setHours(0, 0, 0, 0);
+            const endDay = new Date(endDate);
+            endDay.setHours(23, 59, 59, 999);
+
+            // 1. Get all sale items for revenue and COGS
+            const saleItems = await this.saleItemsRepository.find({
+                where: {
+                    sale: { created_at: Between(startDay, endDay) }
+                },
+                relations: ['sale', 'batch', 'medicine'],
+                order: { sale: { created_at: 'ASC' } }
+            });
+
+            // 2. Get all refunds for the same period to subtract them
+            const refunds = await this.refundRepository.find({
+                where: {
+                    created_at: Between(startDay, endDay)
+                },
+                relations: ['sale', 'medicine']
+            });
 
         let totalRevenue = 0;
         let totalCost = 0;
         const medicineStats = new Map<string, { name: string; revenue: number; cost: number; profit: number; quantity: number }>();
-        const dailyStats = new Map<string, { date: string; revenue: number; cost: number; profit: number }>();
+        const dailyStats = new Map<string, { date: string; revenue: number; cost: number; profit: number; expenses: number; netProfit: number }>();
+        const timezone = 'Africa/Addis_Ababa';
+        const dateOptions: Intl.DateTimeFormatOptions = { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' };
+        const dateFormatter = new Intl.DateTimeFormat('en-CA', dateOptions);
 
+        const safeFormat = (date: any) => {
+            if (!date) return 'invalid';
+            try {
+                const d = date instanceof Date ? date : new Date(date);
+                if (isNaN(d.getTime())) return 'invalid';
+                return dateFormatter.format(d);
+            } catch (e) {
+                return 'invalid';
+            }
+        };
+
+        // Process Sale Items (Initial Revenue & COGS)
         saleItems.forEach(item => {
             const revenue = Number(item.subtotal);
             const cost = Number(item.batch?.purchase_price || 0) * item.quantity;
@@ -145,78 +179,141 @@ export class ReportingService {
             existingMed.quantity += item.quantity;
             medicineStats.set(medId, existingMed);
 
-            // Daily grouping
-            const dateStr = item.sale.created_at.toISOString().split('T')[0];
-            const existingDay = dailyStats.get(dateStr) || { date: dateStr, revenue: 0, cost: 0, profit: 0 };
+            // Daily grouping (Timezone-aware)
+            const dateStr = safeFormat(item.sale?.created_at);
+            if (dateStr === 'invalid') return;
+            const existingDay = dailyStats.get(dateStr) || { date: dateStr, revenue: 0, cost: 0, profit: 0, expenses: 0, netProfit: 0 };
             existingDay.revenue += revenue;
             existingDay.cost += cost;
             existingDay.profit += profit;
             dailyStats.set(dateStr, existingDay);
         });
 
+        // Subtract Refunds (Reverse Revenue & COGS)
+        for (const refund of refunds) {
+            const refundedRevenue = Number(refund.amount);
+            
+            // To find the refunded COGS, we need the original batch's purchase price
+            // Check if it's already in our saleItems list
+            let originalSaleItem: any = saleItems.find(si => si.sale_id === refund.sale_id && si.medicine_id === refund.medicine_id);
+            
+            // If not found in the current period, fetch it from DB to get the correct purchase price
+            if (!originalSaleItem) {
+                originalSaleItem = await this.saleItemsRepository.findOne({
+                    where: { sale_id: refund.sale_id, medicine_id: refund.medicine_id },
+                    relations: ['batch']
+                });
+            }
+
+            const purchasePrice = originalSaleItem?.batch?.purchase_price || 0;
+            const refundedCost = Number(purchasePrice) * refund.quantity;
+            const profitAdjustment = refundedRevenue - refundedCost;
+
+            totalRevenue -= refundedRevenue;
+            totalCost -= refundedCost;
+
+            // Medicine grouping adjustment
+            const medId = refund.medicine_id;
+            const existingMed = medicineStats.get(medId);
+            if (existingMed) {
+                existingMed.revenue -= refundedRevenue;
+                existingMed.cost -= refundedCost;
+                existingMed.profit -= profitAdjustment;
+                existingMed.quantity -= refund.quantity;
+            }
+
+            // Daily grouping adjustment (Timezone-aware)
+            const dateStr = safeFormat(refund.created_at);
+            if (dateStr === 'invalid') continue;
+            const existingDay = dailyStats.get(dateStr) || { date: dateStr, revenue: 0, cost: 0, profit: 0, expenses: 0, netProfit: 0 };
+            existingDay.revenue -= refundedRevenue;
+            existingDay.cost -= refundedCost;
+            existingDay.profit -= profitAdjustment;
+            dailyStats.set(dateStr, existingDay);
+        }
+
+        // 3. Add Expenses (One-time and Amortized Recurring)
+        const daysCount = Math.round((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24));
+        const recurringExpenses = await this.expensesRepository.find({ where: { is_recurring: true } });
+        const oneTimeExpenses = await this.expensesRepository.find({
+            where: { expense_date: Between(startDay, endDay), is_recurring: false }
+        });
+
+        let totalExpenses = 0;
+
+        // Calculate daily amortized cost
+        let dailyAmortizedCost = 0;
+        recurringExpenses.forEach(exp => {
+            const amt = Number(exp.amount) || 0;
+            if (exp.frequency === ExpenseFrequency.MONTHLY) dailyAmortizedCost += amt / 30;
+            else if (exp.frequency === ExpenseFrequency.WEEKLY) dailyAmortizedCost += amt / 7;
+            else if (exp.frequency === ExpenseFrequency.DAILY) dailyAmortizedCost += amt;
+        });
+
+        // Apply amortized expenses to each day in the breakdown
+        for (let i = 0; i < daysCount; i++) {
+            const current = new Date(startDay);
+            current.setDate(current.getDate() + i);
+            const dateStr = safeFormat(current);
+            if (dateStr === 'invalid') continue;
+
+            const dayStats = dailyStats.get(dateStr) || { date: dateStr, revenue: 0, cost: 0, profit: 0, expenses: 0, netProfit: 0 };
+            
+            // Add daily amortized share
+            dayStats.expenses += dailyAmortizedCost;
+            totalExpenses += dailyAmortizedCost;
+
+            // Add one-time expenses for this specific day (Timezone-aware)
+            const dayOneTime = oneTimeExpenses.filter(e => safeFormat(e.expense_date) === dateStr);
+            dayOneTime.forEach(e => {
+                const amt = Number(e.amount);
+                dayStats.expenses += amt;
+                totalExpenses += amt;
+            });
+
+            dayStats.netProfit = dayStats.profit - dayStats.expenses;
+            dailyStats.set(dateStr, dayStats);
+        }
+
+        const grossProfit = totalRevenue - totalCost;
+
         return {
             summary: {
                 totalRevenue,
                 totalCost,
-                grossProfit: totalRevenue - totalCost,
-                profitMargin: totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0
+                grossProfit,
+                totalExpenses,
+                netProfit: grossProfit - totalExpenses,
+                profitMargin: totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0,
+                netMargin: totalRevenue > 0 ? ((grossProfit - totalExpenses) / totalRevenue) * 100 : 0
             },
             medicineBreakdown: Array.from(medicineStats.values()).sort((a, b) => b.profit - a.profit),
             dailyBreakdown: Array.from(dailyStats.values())
         };
+        } catch (error) {
+            console.error('Error generating Profit & Loss report:', error);
+            throw error;
+        }
     }
 
     async getDailyProfitAnalytics(startDate: Date, endDate: Date) {
-        // 1. Get gross profit from sales
-        const plData = await this.getProfitLossReport(startDate, endDate);
-
-        // 2. Get all expenses
-        const expenses = await this.expensesRepository.find({
-            where: { expense_date: Between(startDate, endDate) }
-        });
-
-        const recurringExpenses = await this.expensesRepository.find({
-            where: { is_recurring: true }
-        });
-
-        const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        const resultDaily: any[] = [];
-
-        for (let i = 0; i < days; i++) {
-            const current = new Date(startDate);
-            current.setDate(current.getDate() + i);
-            const dateStr = current.toISOString().split('T')[0];
-
-            const daySales = plData.dailyBreakdown.find(d => d.date === dateStr) || { revenue: 0, cost: 0, profit: 0 };
-
-            // Calculate amortized recurring expenses for this day
-            let amortizedExp = 0;
-            recurringExpenses.forEach(exp => {
-                if (exp.frequency === ExpenseFrequency.MONTHLY) amortizedExp += Number(exp.amount) / 30;
-                else if (exp.frequency === ExpenseFrequency.WEEKLY) amortizedExp += Number(exp.amount) / 7;
-                else if (exp.frequency === ExpenseFrequency.DAILY) amortizedExp += Number(exp.amount);
-            });
-
-            // One-time expenses for this specific day
-            const dayOneTimeExp = expenses
-                .filter(e => !e.is_recurring && e.expense_date.toString() === dateStr)
-                .reduce((sum, e) => sum + Number(e.amount), 0);
-
-            const totalExpenses = amortizedExp + dayOneTimeExp;
-            const netProfit = daySales.profit - totalExpenses;
-
-            resultDaily.push({
-                date: dateStr,
-                revenue: daySales.revenue,
-                cogs: daySales.cost,
-                grossProfit: daySales.profit,
-                expenses: totalExpenses,
-                netProfit: netProfit,
-                margin: daySales.revenue > 0 ? (netProfit / daySales.revenue) * 100 : 0
-            });
+        try {
+            // Re-use the data from getProfitLossReport which already includes expenses and net profit
+            const plData = await this.getProfitLossReport(startDate, endDate);
+            
+            return plData.dailyBreakdown.map(day => ({
+                date: day.date,
+                revenue: day.revenue,
+                cogs: day.cost,
+                grossProfit: day.profit,
+                expenses: day.expenses,
+                netProfit: day.netProfit,
+                margin: day.revenue > 0 ? (day.netProfit / day.revenue) * 100 : 0
+            }));
+        } catch (error) {
+            console.error('Error in getDailyProfitAnalytics:', error);
+            throw error;
         }
-
-        return resultDaily;
     }
 
     // ─── MEDICINE & BATCH REPORTS ───────────────────────────────

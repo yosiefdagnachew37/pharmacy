@@ -102,23 +102,30 @@ export class ExpensesService {
         const expenses = await this.getExpensesByRange(startDate, endDate);
 
         const byCategory: Record<string, number> = {};
-        let total = 0;
+        let totalOneTimeActual = 0;
+        let totalRecurringActual = 0;
 
         for (const exp of expenses) {
             const amount = Number(exp.amount);
             byCategory[exp.category] = (byCategory[exp.category] || 0) + amount;
-            total += amount;
+            
+            if (exp.is_recurring) {
+                totalRecurringActual += amount;
+            } else {
+                totalOneTimeActual += amount;
+            }
         }
 
-        // Add amortized recurring expenses
+        // Add amortized recurring expenses (Expected)
         const dailyExpense = await this.getDailyExpectedExpense();
         const daysInMonth = endDate.getDate();
-        const recurringTotal = dailyExpense.total_daily_expense * daysInMonth;
+        const recurringTotalAmortized = dailyExpense.total_daily_expense * daysInMonth;
 
         return {
-            total_one_time: total,
-            total_recurring_estimated: Math.round(recurringTotal * 100) / 100,
-            grand_total: Math.round((total + recurringTotal) * 100) / 100,
+            total_one_time: totalOneTimeActual,
+            total_recurring_actual: totalRecurringActual,
+            total_recurring_estimated: Math.round(recurringTotalAmortized * 100) / 100,
+            grand_total: Math.round((totalOneTimeActual + recurringTotalAmortized) * 100) / 100,
             by_category: byCategory,
             daily_expected: dailyExpense,
         };

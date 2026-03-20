@@ -12,6 +12,7 @@ import { Expense } from '../expenses/entities/expense.entity';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 import { Customer } from '../credit/entities/customer.entity';
 import { CreditRecord } from '../credit/entities/credit-record.entity';
+import { Refund } from '../sales/entities/refund.entity';
 
 @Module({
     imports: [
@@ -26,6 +27,7 @@ import { CreditRecord } from '../credit/entities/credit-record.entity';
             PurchaseOrder,
             Customer,
             CreditRecord,
+            Refund,
         ]),
     ],
     providers: [ReportingService],

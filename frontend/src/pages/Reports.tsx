@@ -233,11 +233,13 @@ const Reports = () => {
                                     </div>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <StatCard title="Total Revenue" value={`ETB ${profitLoss.summary.totalRevenue.toLocaleString()}`} color="bg-indigo-500" icon={DollarSign} />
-                                <StatCard title="Total Cost" value={`ETB ${profitLoss.summary.totalCost.toLocaleString()}`} color="bg-orange-500" icon={ShoppingCart} />
-                                <StatCard title="Gross Profit" value={`ETB ${profitLoss.summary.grossProfit.toLocaleString()}`} color="bg-emerald-500" icon={TrendingUp} />
-                                <StatCard title="Profit Margin" value={`${profitLoss.summary.profitMargin.toFixed(2)}%`} color="bg-purple-500" icon={Percent} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                                <StatCard title="Total Revenue" value={`ETB ${(profitLoss.summary?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-indigo-500" icon={DollarSign} />
+                                <StatCard title="Total Cost" value={`ETB ${(profitLoss.summary?.totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-orange-500" icon={ShoppingCart} />
+                                <StatCard title="Gross Profit" value={`ETB ${(profitLoss.summary?.grossProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-blue-500" icon={TrendingUp} />
+                                <StatCard title="Total Expenses" value={`ETB ${(profitLoss.summary?.totalExpenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-rose-500" icon={FileText} subValue="Amortized + One-time" />
+                                <StatCard title="Net Profit" value={`ETB ${(profitLoss.summary?.netProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-emerald-500" icon={DollarSign} />
+                                <StatCard title="Net Margin" value={`${(profitLoss.summary?.netMargin || 0).toFixed(2)}%`} color="bg-purple-500" icon={Percent} />
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
