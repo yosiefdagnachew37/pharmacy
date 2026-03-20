@@ -364,7 +364,7 @@ const Patients = () => {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
               <input
@@ -610,7 +610,7 @@ const Patients = () => {
                     <option value="">Select Medicine...</option>
                     {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input
                       required
                       placeholder="Dosage (e.g. 1x3)"

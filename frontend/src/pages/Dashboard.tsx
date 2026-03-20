@@ -162,7 +162,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6">
         {statCards.map((card) => (
           <div
             key={card.label}
@@ -201,7 +201,7 @@ const Dashboard = () => {
             </div>
             <button onClick={() => navigate('/reports')} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-200">Full Analysis</button>
           </div>
-          <div className="h-[300px]">
+          <div className="h-[250px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trending}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />

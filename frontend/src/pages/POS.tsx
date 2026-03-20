@@ -17,7 +17,8 @@ import {
   Lock,
   Percent,
   Banknote,
-  Barcode
+  Barcode,
+  Package
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import PrescriptionAttachment from '../components/PrescriptionAttachment';
@@ -67,6 +68,7 @@ const POS = () => {
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [newPatient, setNewPatient] = useState({ name: '', phone: '', address: '' });
   const [addPatientLoading, setAddPatientLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products');
 
   const fetchData = async () => {
     try {
@@ -458,9 +460,38 @@ const POS = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-0 gap-6">
+    <div className="flex flex-col lg:flex-row h-full min-h-0 gap-6 relative">
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden flex mb-4 bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex-none">
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'products' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          Products
+        </button>
+        <button
+          onClick={() => setActiveTab('cart')}
+          className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 relative ${
+            activeTab === 'cart' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+          }`}
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Cart
+          {cart.length > 0 && (
+            <span className={`absolute top-2 right-4 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 ${
+              activeTab === 'cart' ? 'bg-white text-indigo-600 border-indigo-600' : 'bg-rose-500 text-white border-white'
+            }`}>
+              {cart.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Product Selection */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className={`flex-1 flex flex-col min-h-0 ${activeTab !== 'products' && 'hidden lg:flex'}`}>
         <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -504,7 +535,7 @@ const POS = () => {
       </div>
 
       {/* Cart / Checkout */}
-      <div className="w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 lg:max-h-full">
+      <div className={`w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 lg:max-h-full ${activeTab !== 'cart' && 'hidden lg:flex'}`}>
         <div className="p-4 border-b border-gray-50 flex items-center justify-between flex-none">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">

@@ -265,6 +265,7 @@ const Medicines = () => {
                   options={uniqueCategories}
                   selectedValues={columnFilters.category}
                   onFilterChange={(v) => updateFilter('category', v)}
+                  className="hidden sm:table-cell"
                 />
                 <ColumnFilter
                   label="Stock Level"
@@ -277,6 +278,7 @@ const Medicines = () => {
                   options={uniqueMinLevels}
                   selectedValues={columnFilters.minLevel}
                   onFilterChange={(v) => updateFilter('minLevel', v)}
+                  className="hidden md:table-cell"
                 />
                 <ColumnFilter
                   label="Status"
@@ -291,11 +293,11 @@ const Medicines = () => {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">Loading inventory...</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">Loading inventory...</td>
                 </tr>
               ) : filteredMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">No medicines found.</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">No medicines found.</td>
                 </tr>
               ) : (
                 filteredMedicines.map((med) => (
@@ -304,13 +306,13 @@ const Medicines = () => {
                       <div className="font-medium text-gray-900">{med.name}</div>
                       <div className="text-xs text-gray-500">{med.generic_name}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{med.category}</td>
+                    <td className="px-6 py-4 hidden sm:table-cell text-sm text-gray-600">{med.category}</td>
                     <td className="px-6 py-4">
                       <span className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
                         {med.total_stock} {med.unit}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{med.minimum_stock_level}</td>
+                    <td className="px-6 py-4 hidden md:table-cell text-sm text-gray-600">{med.minimum_stock_level}</td>
                     <td className="px-6 py-4">
                       {med.total_stock <= med.minimum_stock_level ? (
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Low Stock</span>
@@ -385,7 +387,7 @@ const Medicines = () => {
                 onChange={(e) => setFormData({ ...formData, generic_name: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <input
@@ -407,7 +409,7 @@ const Medicines = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Min. Stock Level</label>
                 <input

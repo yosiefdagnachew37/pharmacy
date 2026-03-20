@@ -124,7 +124,7 @@ const DashboardLayout = () => {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-indigo-950/40 backdrop-blur-sm z-40 lg:hidden transition-all duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -261,29 +261,40 @@ const DashboardLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 lg:px-8 border-b border-gray-100">
-          <div className="flex items-center">
+        <header className="h-20 lg:h-24 bg-white/80 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 lg:px-12 border-b border-gray-100/50">
+          <div className="flex items-center gap-4">
             <button
-              className="lg:hidden p-2 mr-3 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              className="lg:hidden p-3 -ml-2 text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-95"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-lg lg:text-xl font-bold text-gray-800 truncate">
-              Pharmacy System
-            </h2>
-          </div>
-          {role && (
-            <div className="flex items-center">
-              <span className="hidden md:block text-xs text-gray-400 font-bold uppercase tracking-tight mr-4">
-                Session: <span className="text-indigo-600">{role}</span>
-              </span>
-              <NotificationBell />
-              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 ring-1 ring-indigo-100 ml-2">
-                <Users className="w-4 h-4" />
-              </div>
+            <div>
+              <h2 className="text-xl lg:text-2xl font-black text-gray-900 tracking-tight">
+                {visibleMenuItems.find(i => i.path === location.pathname || (i.path !== '/' && location.pathname.startsWith(i.path)))?.label || 'Pharmacy ERP'}
+              </h2>
+              <p className="hidden md:block text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management Portal</p>
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            {role && (
+              <>
+                <div className="hidden sm:flex items-center bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl mr-2">
+                  <div className={`w-2 h-2 rounded-full ${roleBadgeColors[role] || 'bg-gray-400'} mr-2 animate-pulse`} />
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                    {role} Mode
+                  </span>
+                </div>
+                
+                <NotificationBell />
+                
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white">
+                  <span className="text-sm lg:text-base font-black uppercase">{user?.username.charAt(0)}</span>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-8">

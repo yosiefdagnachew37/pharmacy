@@ -219,16 +219,16 @@ const SalesHistory = () => {
                                     options={uniquePatients}
                                     selectedValues={columnFilters.patient}
                                     onFilterChange={(v) => updateFilter('patient', v)}
-                                    className="px-3 py-3"
+                                    className="px-3 py-3 hidden md:table-cell"
                                 />
-                                <th className="px-3 py-3 text-center">Type</th>
+                                <th className="px-3 py-3 text-center hidden sm:table-cell">Type</th>
                                 <th className="px-3 py-3 text-right">Amount</th>
                                 <ColumnFilter
                                     label="Method"
                                     options={uniqueMethods}
                                     selectedValues={columnFilters.method}
                                     onFilterChange={(v) => updateFilter('method', v)}
-                                    className="px-3 py-3 text-center"
+                                    className="px-3 py-3 text-center hidden lg:table-cell"
                                     align="center"
                                 />
                                 <ColumnFilter
@@ -236,14 +236,14 @@ const SalesHistory = () => {
                                     options={uniqueUsers}
                                     selectedValues={columnFilters.user}
                                     onFilterChange={(v) => updateFilter('user', v)}
-                                    className="px-3 py-3"
+                                    className="px-3 py-3 hidden xl:table-cell"
                                 />
                                 <ColumnFilter
                                     label="Status"
                                     options={uniqueStatuses}
                                     selectedValues={columnFilters.status}
                                     onFilterChange={(v) => updateFilter('status', v)}
-                                    className="px-3 py-3 text-center"
+                                    className="px-3 py-3 text-center hidden sm:table-cell"
                                 />
                                 <th className="px-3 py-3 text-right sticky right-0 bg-gray-50 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
                             </tr>
@@ -260,10 +260,10 @@ const SalesHistory = () => {
                                         <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
                                             {new Date(sale.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-3 py-3 text-xs font-semibold text-gray-800 truncate max-w-[140px]" title={sale.patient?.name || 'Walk-in'}>
+                                        <td className="px-3 py-3 text-xs font-semibold text-gray-800 truncate max-w-[140px] hidden md:table-cell" title={sale.patient?.name || 'Walk-in'}>
                                             {sale.patient?.name || 'Walk-in'}
                                         </td>
-                                        <td className="px-3 py-3 text-center">
+                                        <td className="px-3 py-3 text-center hidden sm:table-cell">
                                             {sale.is_controlled_transaction ? (
                                                 <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-indigo-100 shadow-sm">
                                                     <Lock className="w-3 h-3" /> Ctrl
@@ -273,15 +273,20 @@ const SalesHistory = () => {
                                             )}
                                         </td>
                                         <td className="px-3 py-3 text-xs font-bold text-gray-900 whitespace-nowrap text-right">
-                                            ETB {Number(sale.total_amount).toFixed(2)}
+                                            <div className="flex flex-col items-end">
+                                                <span>ETB {Number(sale.total_amount).toFixed(2)}</span>
+                                                <span className={`sm:hidden text-[9px] font-bold uppercase ${sale.is_refunded ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                    {sale.is_refunded ? 'Refunded' : 'Paid'}
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td className="px-3 py-3 text-center">
+                                        <td className="px-3 py-3 text-center hidden lg:table-cell">
                                             <span className="bg-white px-2 py-0.5 rounded text-[10px] font-bold text-gray-700 border border-gray-300 uppercase shadow-sm">{sale.payment_method}</span>
                                         </td>
-                                        <td className="px-3 py-3 text-xs text-gray-700 truncate max-w-[100px]" title={sale.user?.name || sale.user?.username || 'System'}>
+                                        <td className="px-3 py-3 text-xs text-gray-700 truncate max-w-[100px] hidden xl:table-cell" title={sale.user?.name || sale.user?.username || 'System'}>
                                             {sale.user?.name || sale.user?.username || 'System'}
                                         </td>
-                                        <td className="px-3 py-3 text-center">
+                                        <td className="px-3 py-3 text-center hidden sm:table-cell">
                                             {sale.is_refunded ? (
                                                 <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold border border-red-100">Refunded</span>
                                             ) : (

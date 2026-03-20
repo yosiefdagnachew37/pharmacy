@@ -276,7 +276,7 @@ const Batches = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-30 shadow-sm">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Details</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest hidden sm:table-cell">Details</th>
                 <ColumnFilter
                   label="Medicine"
                   options={uniqueMedicineNames}
@@ -284,7 +284,7 @@ const Batches = () => {
                   onFilterChange={setFilterMedicine}
                 />
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Quantity</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Prices</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest hidden lg:table-cell">Prices</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest">Expiry</th>
                 <ColumnFilter
                   label="Status"
@@ -307,7 +307,7 @@ const Batches = () => {
               ) : (
                 filteredBatches.map((batch) => (
                   <tr key={batch.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 hidden sm:table-cell">
                       <div className="flex items-center">
                         <div className={`p-2 rounded-lg mr-3 ${isExpired(batch.expiry_date) ? 'bg-red-50 text-red-500' : isExpiringSoon(batch.expiry_date) ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-500'}`}>
                           <Package className="w-4 h-4" />
@@ -324,7 +324,7 @@ const Batches = () => {
                     <td className="px-6 py-4">
                       <span className="text-sm font-bold text-gray-900">{batch.quantity_remaining}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 hidden lg:table-cell">
                       <div className="flex flex-col">
                         <span className="text-[10px] text-gray-400 font-bold uppercase">Buy: ETB {Number(batch.purchase_price).toFixed(2)}</span>
                         <span className="text-sm font-bold text-indigo-600">Sell: ETB {Number(batch.selling_price).toFixed(2)}</span>
@@ -411,7 +411,7 @@ const Batches = () => {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Batch Number</label>
               <input
@@ -434,7 +434,7 @@ const Batches = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quantity</label>
               <input
