@@ -366,7 +366,7 @@ const SalesHistory = () => {
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <p className="font-bold text-gray-900">ETB {Number(item.subtotal).toFixed(2)}</p>
-                                            {!selectedSale.is_refunded && (
+                                            {!item.is_refunded && (
                                                 <button
                                                     onClick={() => handleOpenRefund(selectedSale, item)}
                                                     className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
@@ -374,6 +374,11 @@ const SalesHistory = () => {
                                                 >
                                                     <RotateCcw className="w-4 h-4" />
                                                 </button>
+                                            )}
+                                            {item.is_refunded && (
+                                                <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold border border-red-100">
+                                                    Refunded
+                                                </span>
                                             )}
                                         </div>
                                     </div>

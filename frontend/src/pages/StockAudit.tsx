@@ -54,6 +54,7 @@ const StockAudit = () => {
     const [newNotes, setNewNotes] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [medicines, setMedicines] = useState<Medicine[]>([]);
+    const [showSummary, setShowSummary] = useState(false);
 
     const fetchSessions = async () => {
         setLoading(true);
@@ -171,6 +172,9 @@ const StockAudit = () => {
         try {
             const res = await client.get(`/stock-audit/sessions/${id}`);
             setActiveSession(res.data);
+            if (res.data.status === 'COMPLETED') {
+                setShowSummary(true);
+            }
         } catch (err) {
             alert('Failed to fetch session details');
         }
@@ -181,27 +185,39 @@ const StockAudit = () => {
         item.batch.batch_number.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
 
-    if (activeSession && activeSession.status === 'IN_PROGRESS') {
+    if (activeSession && (activeSession.status === 'IN_PROGRESS' || showSummary)) {
+        const isSummary = activeSession.status === 'COMPLETED' || showSummary;
+
         return (
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <button onClick={() => setActiveSession(null)} className="text-indigo-600 font-bold hover:underline">Audits</button>
+                            <button onClick={() => { setActiveSession(null); setShowSummary(false); }} className="text-indigo-600 font-bold hover:underline">Audits</button>
                             <span className="text-gray-400">/</span>
-                            <h1 className="text-2xl font-bold text-gray-900 line-clamp-1">Active Session: {activeSession.id.slice(0, 8)}</h1>
+                            <h1 className="text-2xl font-bold text-gray-900 line-clamp-1">
+                                {isSummary ? 'Audit Summary' : 'Active Session'}: {activeSession.id.slice(0, 8)}
+                            </h1>
                         </div>
                         <p className="text-sm text-gray-500">{activeSession.notes || 'No notes provided'}</p>
+                        {isSummary && activeSession.completed_at && (
+                            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3 text-emerald-500" /> 
+                                Completed on {new Date(activeSession.completed_at).toLocaleString()}
+                            </p>
+                        )}
                     </div>
-                    <button
-                        onClick={handleFinalize}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all"
-                    >
-                        <CheckCircle className="w-5 h-5" /> Finalize & Reconcile
-                    </button>
+                    {!isSummary && (
+                        <button
+                            onClick={handleFinalize}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all"
+                        >
+                            <CheckCircle className="w-5 h-5" /> Finalize & Reconcile
+                        </button>
+                    )}
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-6">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -212,74 +228,88 @@ const StockAudit = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-6 px-4 py-2 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <div className="flex items-center justify-around sm:justify-center gap-4 sm:gap-6 px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100">
                         <div className="text-center">
                             <span className="text-[10px] font-bold text-gray-400 uppercase block">Total Items</span>
                             <span className="text-lg font-black text-indigo-700">{activeSession.items.length}</span>
                         </div>
                         <div className="w-px h-8 bg-indigo-200"></div>
                         <div className="text-center">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase block">Scanned</span>
-                            <span className="text-lg font-black text-emerald-600">{activeSession.items.filter(i => i.scanned_quantity > 0).length}</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase block">
+                                {isSummary ? 'Discrepancies' : 'Scanned'}
+                            </span>
+                            <span className={`text-lg font-black ${isSummary ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {isSummary 
+                                    ? activeSession.items.filter(i => i.variance !== 0).length 
+                                    : activeSession.items.filter(i => i.scanned_quantity > 0).length}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            <tr>
-                                <th className="px-6 py-4">Medicine</th>
-                                <th className="px-6 py-4">Batch #</th>
-                                <th className="px-6 py-4">System Qty</th>
-                                <th className="px-6 py-4">Physical Qty</th>
-                                <th className="px-6 py-4">Variance</th>
-                                <th className="px-6 py-4">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {filteredItems.map(item => (
-                                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-bold text-gray-800">{item.medicine.name}</p>
-                                        <p className="text-[10px] text-gray-500">{item.medicine.generic_name}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded">
-                                            {item.batch.batch_number}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-500">{item.system_quantity}</td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
-                                                className="w-20 px-2 py-1 border rounded font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-500"
-                                                value={item.scanned_quantity}
-                                                onChange={(e) => handleUpdateQuantity(item.batch_id, parseInt(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-sm font-bold ${item.variance === 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                            {item.variance > 0 ? `+${item.variance}` : item.variance}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {item.scanned_quantity > 0 ? (
-                                            <span className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold uppercase">
-                                                <CheckCircle className="w-3.5 h-3.5" /> Checked
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1.5 text-gray-300 text-[10px] font-bold uppercase">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" /> Pending
-                                            </span>
-                                        )}
-                                    </td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                                <tr>
+                                    <th className="px-6 py-4">Medicine</th>
+                                    <th className="px-6 py-4">Batch #</th>
+                                    <th className="px-6 py-4">System Qty</th>
+                                    <th className="px-6 py-4">Physical Qty</th>
+                                    <th className="px-6 py-4 text-right">Variance</th>
+                                    {!isSummary && <th className="px-6 py-4">Status</th>}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filteredItems.map(item => (
+                                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 min-w-[200px]">
+                                            <p className="text-sm font-bold text-gray-800">{item.medicine.name}</p>
+                                            <p className="text-[10px] text-gray-500 line-clamp-1">{item.medicine.generic_name}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded whitespace-nowrap">
+                                                {item.batch.batch_number}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-500">{item.system_quantity}</td>
+                                        <td className="px-6 py-4">
+                                            {isSummary ? (
+                                                <span className="text-sm font-bold text-gray-800">{item.scanned_quantity}</span>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        className="w-16 sm:w-20 px-2 py-1 border border-gray-200 rounded font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-500"
+                                                        value={item.scanned_quantity}
+                                                        onChange={(e) => handleUpdateQuantity(item.batch_id, parseInt(e.target.value) || 0)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`text-sm font-bold px-2 py-1 rounded-lg ${item.variance === 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-rose-600 bg-rose-50/50'}`}>
+                                                {item.variance > 0 ? `+${item.variance}` : item.variance}
+                                            </span>
+                                        </td>
+                                        {!isSummary && (
+                                            <td className="px-6 py-4">
+                                                {item.scanned_quantity > 0 ? (
+                                                    <span className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold uppercase">
+                                                        <CheckCircle className="w-3.5 h-3.5" /> Checked
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1.5 text-gray-300 text-[10px] font-bold uppercase">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300" /> Pending
+                                                    </span>
+                                                )}
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         );

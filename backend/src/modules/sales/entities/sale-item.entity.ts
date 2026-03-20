@@ -38,6 +38,9 @@ export class SaleItem {
     @Column('decimal', { precision: 10, scale: 2 })
     subtotal: number;
 
+    @Column({ default: false })
+    is_refunded: boolean;
+
     @Index()
     @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;

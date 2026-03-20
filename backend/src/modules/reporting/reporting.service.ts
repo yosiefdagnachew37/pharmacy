@@ -980,15 +980,21 @@ export class ReportingService {
     async getProfitMarginAnalysis() {
         const medicines = await this.medicinesRepository.find({ relations: ['batches'] });
         return medicines.map(m => {
+            const activeBatches = (m.batches || []).filter(b => b.quantity_remaining > 0);
             const avgPurchasePrice = m.batches?.length ?
                 m.batches.reduce((sum, b) => sum + Number(b.purchase_price), 0) / m.batches.length : 0;
-            const margin = m.current_selling_price ?
-                ((Number(m.current_selling_price) - avgPurchasePrice) / Number(m.current_selling_price)) * 100 : 0;
+            
+            // Use maximum selling price from active batches as representative price
+            const currentSellingPrice = activeBatches.length > 0 ? 
+                Math.max(...activeBatches.map(b => Number(b.selling_price))) : 0;
+
+            const margin = currentSellingPrice > 0 ?
+                ((currentSellingPrice - avgPurchasePrice) / currentSellingPrice) * 100 : 0;
 
             return {
                 medicine: m.name,
                 avg_purchase_price: avgPurchasePrice,
-                selling_price: m.current_selling_price,
+                selling_price: currentSellingPrice,
                 margin_percentage: parseFloat(margin.toFixed(2))
             };
         }).sort((a, b) => b.margin_percentage - a.margin_percentage);

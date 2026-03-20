@@ -170,9 +170,12 @@ export class SalesService {
             });
             if (!sale) throw new NotFoundException('Sale not found');
 
-            const item = sale.items.find(i => i.medicine_id === medicine_id);
-            if (!item) throw new BadRequestException('Item not found in this sale');
-            if (item.quantity < quantity) throw new BadRequestException('Refund quantity exceeds original sale quantity');
+            // Find an item that hasn't been refunded yet for this medicine
+            const item = sale.items.find(i => i.medicine_id === medicine_id && !i.is_refunded);
+            if (!item) throw new BadRequestException('No unrefunded item found for this medicine in this sale');
+            
+            // For now, we assume full item refund as per current UI logic
+            if (item.quantity < quantity) throw new BadRequestException('Refund quantity exceeds original sale item quantity');
 
             // 1. Create Refund Record
             const refund = manager.create(Refund, {
@@ -185,18 +188,24 @@ export class SalesService {
             });
             const savedRefund = await manager.save(refund);
 
-            // 2. Update Sale Header
-            sale.is_refunded = true;
-            sale.refund_amount = Number(sale.refund_amount) + Number(amount);
+            // 2. Update SaleItem status
+            item.is_refunded = true;
+            await manager.save(item);
+
+            // 3. Update Sale Header
+            // Check if ALL items are now refunded
+            const allItemsRefunded = sale.items.every(i => i.is_refunded);
+            sale.is_refunded = allItemsRefunded;
+            sale.refund_amount = Number(sale.refund_amount || 0) + Number(amount);
             await manager.save(sale);
 
-            // 3. Reverse Stock (Add back to batch)
+            // 4. Reverse Stock (Add back to batch)
             const TransactionType = (await import('../stock/entities/stock-transaction.entity')).TransactionType;
             await this.stockService.recordTransaction(
                 item.batch_id,
                 TransactionType.IN,
                 quantity,
-                ReferenceType.SALE, // Or maybe REFUND if we had it, but SALE works for now
+                ReferenceType.SALE,
                 sale_id,
                 userId
             );

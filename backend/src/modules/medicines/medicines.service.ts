@@ -35,7 +35,6 @@ export class MedicinesService {
                     'm.category',
                     'm.unit',
                     'm.minimum_stock_level',
-                    'm.current_selling_price',
                     'm.is_controlled'
                 ])
                 .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
@@ -47,7 +46,6 @@ export class MedicinesService {
                 .addGroupBy('m.category')
                 .addGroupBy('m.unit')
                 .addGroupBy('m.minimum_stock_level')
-                .addGroupBy('m.current_selling_price')
                 .addGroupBy('m.is_controlled')
                 .getRawMany();
 
@@ -58,7 +56,6 @@ export class MedicinesService {
                 category: res.m_category,
                 unit: res.m_unit,
                 minimum_stock_level: res.m_minimum_stock_level,
-                current_selling_price: Number(res.m_current_selling_price || 0),
                 is_controlled: String(res.m_is_controlled) === 'true',
                 total_stock: Number(res.total_stock || 0),
                 selling_price: Number(res.selling_price || 0)

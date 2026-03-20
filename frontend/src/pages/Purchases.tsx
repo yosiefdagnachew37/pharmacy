@@ -117,7 +117,7 @@ const Purchases = () => {
                     quantity_received: item.quantity_ordered - item.quantity_received,
                     batch_number: '',
                     expiry_date: '',
-                    selling_price: item.medicine.current_selling_price || item.unit_price * 1.5,
+                    selling_price: item.unit_price * 1.5,
                 }));
             setReceiveData(initialReceiveData);
             setShowReceiveModal(true);

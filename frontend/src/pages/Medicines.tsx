@@ -17,7 +17,7 @@ interface Medicine {
   minimum_stock_level: number;
   unit: string;
   is_controlled: boolean;
-  current_selling_price: number;
+  selling_price: number;
 }
 
 interface ImportResult {
@@ -39,8 +39,7 @@ const Medicines = () => {
     category: '',
     unit: '',
     minimum_stock_level: 10,
-    is_controlled: false,
-    current_selling_price: 0
+    is_controlled: false
   });
 
   // Excel Import States
@@ -97,8 +96,7 @@ const Medicines = () => {
         category: '',
         unit: 'TAB',
         minimum_stock_level: 10,
-        is_controlled: false,
-        current_selling_price: 0
+        is_controlled: false
       });
     }
     setIsModalOpen(true);
@@ -112,8 +110,7 @@ const Medicines = () => {
       category: formData.category,
       unit: formData.unit,
       minimum_stock_level: formData.minimum_stock_level !== undefined ? Number(formData.minimum_stock_level) : undefined,
-      is_controlled: formData.is_controlled,
-      current_selling_price: formData.current_selling_price !== undefined ? Number(formData.current_selling_price) : undefined
+      is_controlled: formData.is_controlled
     };
 
     try {
@@ -322,7 +319,7 @@ const Medicines = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-black text-indigo-700">
-                        ETB {Number(med.current_selling_price || 0).toFixed(2)}
+                        ETB {Number(med.selling_price || 0).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
@@ -333,15 +330,6 @@ const Medicines = () => {
                           title="Edit Medicine"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canUpdate('medicines') && (
-                        <button
-                          onClick={() => handleOpenModal(med)}
-                          className="text-gray-400 hover:text-emerald-600 transition-colors"
-                          title="Update Price"
-                        >
-                          <DollarSign className="w-4 h-4" />
                         </button>
                       )}
                       {canDelete('medicines') && (
@@ -431,21 +419,6 @@ const Medicines = () => {
                   Controlled Substance
                 </label>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price Override (ETB)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm font-bold text-indigo-700"
-                  value={formData.current_selling_price ?? ''}
-                  onChange={(e) => setFormData({ ...formData, current_selling_price: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
-                />
-              </div>
-              <p className="text-[10px] text-gray-500 mt-1">This overrides the default batch selling price in the POS.</p>
             </div>
           </div>
           <div className="pt-4 flex justify-end space-x-3">

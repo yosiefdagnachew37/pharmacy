@@ -150,40 +150,42 @@ const Reports = () => {
     return (
         <div className="space-y-8 pb-10">
             {/* Header & Global Filters */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Analytics & Reports</h1>
-                    <p className="text-gray-500 mt-1 font-medium">Gain deep insights into your pharmacy's performance and inventory health.</p>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Analytics & Reports</h1>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium italic">Performance and inventory health insights.</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                            className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 p-0"
-                        />
-                        <span className="text-gray-300 mx-1">/</span>
-                        <input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                            className="bg-transparent border-none text-sm font-bold text-gray-700 focus:ring-0 p-0"
-                        />
+                <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 w-full sm:w-auto">
+                    <div className="flex items-center gap-1.5 flex-1 px-2 py-1.5 bg-gray-50 rounded-lg border border-gray-100">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="date"
+                                value={dateRange.start}
+                                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                                className="bg-transparent border-none text-[11px] sm:text-xs font-bold text-gray-700 focus:ring-0 p-0 w-[85px] sm:w-[100px]"
+                            />
+                            <span className="text-gray-300 text-[10px]">/</span>
+                            <input
+                                type="date"
+                                value={dateRange.end}
+                                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                                className="bg-transparent border-none text-[11px] sm:text-xs font-bold text-gray-700 focus:ring-0 p-0 w-[85px] sm:w-[100px]"
+                            />
+                        </div>
                     </div>
                     <button
                         onClick={fetchData}
-                        className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors"
+                        className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
                     >
-                        <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl w-fit">
+            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-2xl w-full overflow-x-auto no-scrollbar sm:w-fit whitespace-nowrap">
                 {[
                     { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp },
                     { id: 'sales', label: 'Sales Report', icon: ShoppingCart },
@@ -194,12 +196,12 @@ const Reports = () => {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as ReportTab)}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all ${activeTab === tab.id
                             ? 'bg-white text-indigo-600 shadow-sm scale-100'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                             }`}
                     >
-                        <tab.icon className="w-4 h-4" />
+                        <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         {tab.label}
                     </button>
                 ))}
@@ -233,7 +235,7 @@ const Reports = () => {
                                     </div>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
                                 <StatCard title="Total Revenue" value={`ETB ${(profitLoss.summary?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-indigo-500" icon={DollarSign} />
                                 <StatCard title="Total Cost" value={`ETB ${(profitLoss.summary?.totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-orange-500" icon={ShoppingCart} />
                                 <StatCard title="Gross Profit" value={`ETB ${(profitLoss.summary?.grossProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} color="bg-blue-500" icon={TrendingUp} />
@@ -392,14 +394,14 @@ const Reports = () => {
                                     <h3 className="text-xl font-bold text-gray-800">Sales Transactions</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">Detailed log of all sales within the selected period.</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleExport('sales', 'excel')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <button onClick={() => handleExport('sales', 'excel')} className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
                                         <FileSpreadsheet className="w-4 h-4" /> Export Excel
                                     </button>
-                                    <button onClick={() => handleExport('sales', 'pdf')} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100">
+                                    <button onClick={() => handleExport('sales', 'pdf')} className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100">
                                         <FileText className="w-4 h-4" /> Download PDF
                                     </button>
-                                    <button onClick={() => handleExport('sales', 'word')} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
+                                    <button onClick={() => handleExport('sales', 'word')} className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
                                         <FileIcon className="w-4 h-4" /> Word Doc
                                     </button>
                                 </div>

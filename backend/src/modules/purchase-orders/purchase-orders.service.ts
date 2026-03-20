@@ -140,8 +140,8 @@ export class PurchaseOrdersService {
 
         // Validate status transitions
         const validTransitions: Record<POStatus, POStatus[]> = {
-            [POStatus.DRAFT]: [POStatus.APPROVED, POStatus.CANCELLED],
-            [POStatus.APPROVED]: [POStatus.SENT, POStatus.CANCELLED],
+            [POStatus.DRAFT]: [POStatus.APPROVED, POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED],
+            [POStatus.APPROVED]: [POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED],
             [POStatus.SENT]: [POStatus.CONFIRMED, POStatus.CANCELLED],
             [POStatus.CONFIRMED]: [POStatus.PARTIALLY_RECEIVED, POStatus.COMPLETED, POStatus.CANCELLED],
             [POStatus.PARTIALLY_RECEIVED]: [POStatus.COMPLETED, POStatus.CANCELLED],

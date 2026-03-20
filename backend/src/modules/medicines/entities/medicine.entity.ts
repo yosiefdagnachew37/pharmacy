@@ -34,9 +34,6 @@ export class Medicine {
     @Column({ nullable: true })
     preferred_supplier_id: string; // FK to Supplier (Phase 2)
 
-    @Column('decimal', { precision: 10, scale: 2, nullable: true })
-    current_selling_price: number; // Owner-set selling price override
-
     @OneToMany(() => Batch, (batch) => batch.medicine)
     batches: Batch[];
 

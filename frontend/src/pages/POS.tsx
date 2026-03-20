@@ -31,7 +31,6 @@ interface Medicine {
   generic_name: string;
   total_stock: number;
   selling_price: number;
-  current_selling_price: number;
   barcode: string;
   sku: string;
   is_controlled: boolean;
@@ -81,7 +80,7 @@ const POS = () => {
       if (medRes?.data) {
         const formattedMeds = medRes.data.map((m: any) => ({
           ...m,
-          selling_price: m.current_selling_price ? Number(m.current_selling_price) : Number(m.selling_price)
+          selling_price: Number(m.selling_price || 0)
         }));
         setMedicines(formattedMeds);
       }

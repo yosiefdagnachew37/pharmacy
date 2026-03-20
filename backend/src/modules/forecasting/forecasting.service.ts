@@ -200,7 +200,10 @@ export class ForecastingService {
                 let orderQty = Math.ceil(predicted30Days - medicine.total_stock);
                 if (orderQty < 10) orderQty = reorderPoint * 2;
 
-                const estimatedCost = orderQty * (medicine.current_selling_price || 0);
+                const activeBatches = (medicine.batches || []).filter(b => b.quantity_remaining > 0);
+                const currentSellingPrice = activeBatches.length > 0 ? 
+                    Math.max(...activeBatches.map(b => Number(b.selling_price))) : 0;
+                const estimatedCost = orderQty * (currentSellingPrice || 0);
                 const urgency = medicine.total_stock === 0 ? 'CRITICAL' :
                     medicine.total_stock < (reorderPoint / 2) ? 'HIGH' : 'MEDIUM';
 
@@ -346,11 +349,10 @@ export class ForecastingService {
 
                     deadStock.push({
                         medicine: {
-                            id: med.id,
                             name: med.name,
                             generic_name: med.generic_name,
                             total_stock: med.total_stock,
-                            unit_price: med.current_selling_price
+                            unit_price: (med.batches || []).length > 0 ? Math.max(...med.batches.map(b => Number(b.selling_price))) : 0
                         },
                         days_since_last_sale: lastSale ? Math.floor((new Date().getTime() - lastSale.created_at.getTime()) / (1000 * 3600 * 24)) : 'Never'
                     });
