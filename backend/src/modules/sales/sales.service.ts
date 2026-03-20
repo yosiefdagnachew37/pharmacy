@@ -12,6 +12,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { CreditService } from '../credit/credit.service';
 import { Refund } from './entities/refund.entity';
+import { CreditStatus } from '../credit/entities/credit-record.entity';
 
 @Injectable()
 export class SalesService {
@@ -148,7 +149,7 @@ export class SalesService {
 
     async findAll(): Promise<Sale[]> {
         return await this.salesRepository.find({
-            relations: ['items', 'items.medicine', 'patient', 'user'],
+            relations: ['items', 'items.medicine', 'patient', 'user', 'credit_records'],
             order: { created_at: 'DESC' },
         });
     }
@@ -156,7 +157,7 @@ export class SalesService {
     async findOne(id: string): Promise<Sale | null> {
         return await this.salesRepository.findOne({
             where: { id },
-            relations: ['items', 'items.medicine', 'items.batch', 'patient', 'user'],
+            relations: ['items', 'items.medicine', 'items.batch', 'patient', 'user', 'credit_records'],
         });
     }
 
@@ -166,9 +167,18 @@ export class SalesService {
         return await this.dataSource.transaction(async (manager) => {
             const sale = await manager.findOne(Sale, {
                 where: { id: sale_id },
-                relations: ['items']
+                relations: ['items', 'credit_records']
             });
             if (!sale) throw new NotFoundException('Sale not found');
+
+            // 0. Validate Credit Status (Refund restricted until credit is PAID)
+            const hasUnpaidCredit = (sale.payment_method === PaymentMethod.CREDIT || 
+                                     sale.split_payments?.some(p => p.method === PaymentMethod.CREDIT)) && 
+                                    sale.credit_records?.some(cr => cr.status !== CreditStatus.PAID);
+
+            if (hasUnpaidCredit) {
+                throw new BadRequestException('Refund restricted: the associated credit/debt for this sale must be fully paid before a refund can be processed.');
+            }
 
             // Find an item that hasn't been refunded yet for this medicine
             const item = sale.items.find(i => i.medicine_id === medicine_id && !i.is_refunded);

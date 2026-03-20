@@ -3,6 +3,7 @@ import { User } from '../../users/entities/user.entity';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Prescription } from '../../prescriptions/entities/prescription.entity';
 import { SaleItem } from './sale-item.entity';
+import { CreditRecord } from '../../credit/entities/credit-record.entity';
 
 export enum PaymentMethod {
     CASH = 'CASH',
@@ -75,6 +76,9 @@ export class Sale {
 
     @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
     items: SaleItem[];
+
+    @OneToMany(() => CreditRecord, (credit) => credit.sale)
+    credit_records: CreditRecord[];
 
     @Index()
     @CreateDateColumn({ type: 'timestamp with time zone' })

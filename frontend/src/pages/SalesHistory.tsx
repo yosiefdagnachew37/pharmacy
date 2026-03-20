@@ -19,6 +19,8 @@ interface Sale {
     patient?: { name: string };
     user?: { name: string; username?: string };
     items: any[];
+    credit_records?: Array<{ status: string }>;
+    split_payments?: Array<{ method: string; amount: number }>;
 }
 
 const SalesHistory = () => {
@@ -367,13 +369,38 @@ const SalesHistory = () => {
                                         <div className="flex items-center gap-4">
                                             <p className="font-bold text-gray-900">ETB {Number(item.subtotal).toFixed(2)}</p>
                                             {!item.is_refunded && (
-                                                <button
-                                                    onClick={() => handleOpenRefund(selectedSale, item)}
-                                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                                    title="Process Refund"
-                                                >
-                                                    <RotateCcw className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            const hasUnpaidCredit = (selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
+                                                                                   selectedSale.credit_records?.some(cr => cr.status !== 'PAID');
+                                                            
+                                                            if (hasUnpaidCredit) {
+                                                                toastError('Refund Restricted', 'This sale was made on credit and must be fully paid before a refund can be processed.');
+                                                                return;
+                                                            }
+                                                            handleOpenRefund(selectedSale, item);
+                                                        }}
+                                                        className={`p-2 rounded-lg transition-all ${
+                                                            ((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
+                                                             selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
+                                                            ? 'text-gray-300 cursor-not-allowed' 
+                                                            : 'text-rose-500 hover:bg-rose-50'
+                                                        }`}
+                                                        title={((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
+                                                                selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
+                                                                ? 'Refund restricted until credit is paid'
+                                                                : 'Process Refund'}
+                                                    >
+                                                        <RotateCcw className="w-4 h-4" />
+                                                    </button>
+                                                    {((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
+                                                      selectedSale.credit_records?.some(cr => cr.status !== 'PAID')) && (
+                                                        <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100 italic">
+                                                            Awaiting Credit Payment
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                             {item.is_refunded && (
                                                 <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold border border-red-100">
