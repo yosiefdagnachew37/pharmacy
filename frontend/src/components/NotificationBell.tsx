@@ -143,14 +143,15 @@ const NotificationBell = () => {
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
                             {unreadCount > 0 && (
                                 <button
                                     onClick={handleMarkAllRead}
-                                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 px-2 py-1 bg-indigo-50 rounded-lg transition-colors"
+                                    className="text-[9px] sm:text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 px-1.5 py-1 bg-indigo-50 rounded-lg transition-colors whitespace-nowrap"
                                 >
                                     <CheckCheck className="w-3 h-3" />
-                                    Mark all read
+                                    <span className="hidden xs:inline">Mark all read</span>
+                                    <span className="xs:hidden">All Read</span>
                                 </button>
                             )}
                             <button
@@ -159,9 +160,10 @@ const NotificationBell = () => {
                                     fetchUnreadCount();
                                     if (notifications.length > 0) fetchNotifications();
                                 }}
-                                className="text-[10px] font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg transition-colors"
+                                className="text-[9px] sm:text-[10px] font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1 px-1.5 py-1 bg-amber-50 rounded-lg transition-colors whitespace-nowrap"
                             >
-                                Test
+                                <span className="hidden xs:inline">Test Notification</span>
+                                <span className="xs:hidden">Test</span>
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
@@ -173,7 +175,7 @@ const NotificationBell = () => {
                     </div>
 
                     {/* Notification List */}
-                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                    <div className="max-h-[calc(100vh-200px)] sm:max-h-[400px] overflow-y-auto custom-scrollbar">
                         {loading ? (
                             <div className="py-12 text-center text-gray-400 text-sm italic">Loading notifications...</div>
                         ) : notifications.length === 0 ? (
@@ -189,7 +191,7 @@ const NotificationBell = () => {
                                 return (
                                     <div
                                         key={n.id}
-                                        className={`flex items-start gap-3 px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
+                                        className={`flex items-start gap-3 px-4 sm:px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
                                             }`}
                                     >
                                         <div className={`p-2 rounded-xl ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
@@ -207,7 +209,7 @@ const NotificationBell = () => {
                                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
                                             <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{timeAgo(n.created_at)}</p>
                                         </div>
-                                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                        <div className="flex flex-col gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                             {!n.is_read && (
                                                 <button
                                                     onClick={(e) => handleMarkRead(n.id, e)}

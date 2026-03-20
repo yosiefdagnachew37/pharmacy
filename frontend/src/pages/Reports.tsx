@@ -329,23 +329,23 @@ const Reports = () => {
                                 </div>
                                 <div className="mt-6 overflow-x-auto">
                                     <table className="w-full text-left">
-                                        <thead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <thead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
                                             <tr>
-                                                <th className="pb-3 px-2">Date</th>
-                                                <th className="pb-3 px-2">Gross Profit</th>
-                                                <th className="pb-3 px-2">Expenses (Amortized)</th>
-                                                <th className="pb-3 px-2">Net Profit</th>
-                                                <th className="pb-3 px-2 text-right">Margin</th>
+                                                <th className="pb-3 px-3 whitespace-nowrap">Date</th>
+                                                <th className="pb-3 px-3 whitespace-nowrap">Gross Profit</th>
+                                                <th className="pb-3 px-3 whitespace-nowrap">Expenses (Amortized)</th>
+                                                <th className="pb-3 px-3 whitespace-nowrap">Net Profit</th>
+                                                <th className="pb-3 px-3 text-right whitespace-nowrap">Margin</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50 text-sm">
                                             {netProfitAnalytics.map((day, idx) => (
-                                                <tr key={idx}>
-                                                    <td className="py-3 px-2 text-gray-600 font-medium">{day.date}</td>
-                                                    <td className="py-3 px-2 text-gray-800 font-bold">ETB {(day.grossProfit || 0).toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-rose-500 font-bold">-ETB {(day.expenses || 0).toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-emerald-600 font-black">ETB {(day.netProfit || 0).toFixed(2)}</td>
-                                                    <td className="py-3 px-2 text-right text-gray-400 font-bold">{(day.margin || 0).toFixed(1)}%</td>
+                                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="py-3 px-3 text-gray-600 font-medium whitespace-nowrap">{day.date}</td>
+                                                    <td className="py-3 px-3 text-gray-800 font-bold whitespace-nowrap">ETB {(day.grossProfit || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-3 text-rose-500 font-bold whitespace-nowrap">-ETB {(day.expenses || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-3 text-emerald-600 font-black whitespace-nowrap">ETB {(day.netProfit || 0).toFixed(2)}</td>
+                                                    <td className="py-3 px-3 text-right text-gray-400 font-bold whitespace-nowrap">{(day.margin || 0).toFixed(1)}%</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -362,21 +362,21 @@ const Reports = () => {
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                                             <tr>
-                                                <th className="px-6 py-4">Medicine Name</th>
-                                                <th className="px-6 py-4">Qty Sold</th>
-                                                <th className="px-6 py-4">Revenue</th>
-                                                <th className="px-6 py-4">Cost</th>
-                                                <th className="px-6 py-4 text-right">Profit</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Medicine Name</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Qty Sold</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Revenue</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Cost</th>
+                                                <th className="px-6 py-4 text-right whitespace-nowrap">Profit</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
                                             {profitLoss.medicineBreakdown.map((item: any, i: number) => (
                                                 <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                                                    <td className="px-6 py-4 text-sm font-bold text-gray-700">{item.name}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">{item.quantity}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">ETB {Number(item.revenue).toFixed(2)}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">ETB {Number(item.cost).toFixed(2)}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-right text-emerald-600">ETB {Number(item.profit).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-gray-700 whitespace-nowrap">{item.name}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">{item.quantity}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">ETB {Number(item.revenue).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">ETB {Number(item.cost).toFixed(2)}</td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-right text-emerald-600 whitespace-nowrap">ETB {Number(item.profit).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -394,42 +394,44 @@ const Reports = () => {
                                     <h3 className="text-xl font-bold text-gray-800">Sales Transactions</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">Detailed log of all sales within the selected period.</p>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <button onClick={() => handleExport('sales', 'excel')} className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
-                                        <FileSpreadsheet className="w-4 h-4" /> Export Excel
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => handleExport('sales', 'excel')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100 whitespace-nowrap">
+                                        <FileSpreadsheet className="w-4 h-4" /> Excel
                                     </button>
-                                    <button onClick={() => handleExport('sales', 'pdf')} className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100">
-                                        <FileText className="w-4 h-4" /> Download PDF
+                                    <button onClick={() => handleExport('sales', 'pdf')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap">
+                                        <FileText className="w-4 h-4" /> PDF
                                     </button>
-                                    <button onClick={() => handleExport('sales', 'word')} className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
-                                        <FileIcon className="w-4 h-4" /> Word Doc
+                                    <button onClick={() => handleExport('sales', 'word')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100 whitespace-nowrap">
+                                        <FileIcon className="w-4 h-4" /> Word
                                     </button>
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                        <tr>
-                                            <th className="px-6 py-4">Receipt #</th>
-                                            <th className="px-6 py-4">Date & Time</th>
-                                            <th className="px-6 py-4">Patient</th>
-                                            <th className="px-6 py-4">Method</th>
-                                            <th className="px-6 py-4 text-right">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {sales.map((sale) => (
-                                            <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-600">{sale.receipt_number || 'TRX-XXXX'}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-500 font-medium">{new Date(sale.created_at).toLocaleString()}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-700 font-bold">{sale.patient?.name || 'Walk-in'}</td>
-                                                <td className="px-6 py-4 italic text-sm text-gray-400">{sale.payment_method}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-gray-900">ETB {Number(sale.total_amount).toFixed(2)}</td>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                                            <tr>
+                                                <th className="px-6 py-4 whitespace-nowrap">Receipt #</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Date & Time</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Patient</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Method</th>
+                                                <th className="px-6 py-4 text-right whitespace-nowrap">Total</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {sales.map((sale) => (
+                                                <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-600 whitespace-nowrap">{sale.receipt_number || 'TRX-XXXX'}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">{new Date(sale.created_at).toLocaleString()}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-700 font-bold whitespace-nowrap">{sale.patient?.name || 'Walk-in'}</td>
+                                                    <td className="px-6 py-4 italic text-sm text-gray-400 whitespace-nowrap">{sale.payment_method}</td>
+                                                    <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">ETB {Number(sale.total_amount).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -459,17 +461,17 @@ const Reports = () => {
                                 <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-center gap-4">
                                     <h3 className="text-xl font-bold text-gray-800">Inventory Reporting</h3>
                                     <p className="text-gray-500 font-medium">Export high-level overview of current stock levels and medicine categories.</p>
-                                    <div className="grid grid-cols-3 gap-3 mt-4">
-                                        <button onClick={() => handleExport('medicines', 'excel')} className="flex flex-col items-center gap-3 p-6 bg-emerald-50 text-emerald-700 rounded-3xl hover:bg-emerald-100 transition-all border border-emerald-100">
-                                            <FileSpreadsheet className="w-8 h-8" />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                                        <button onClick={() => handleExport('medicines', 'excel')} className="flex flex-row sm:flex-col items-center justify-center gap-3 p-4 sm:p-6 bg-emerald-50 text-emerald-700 rounded-3xl hover:bg-emerald-100 transition-all border border-emerald-100">
+                                            <FileSpreadsheet className="w-5 h-5 sm:w-8 sm:h-8" />
                                             <span className="text-[10px] font-extrabold uppercase tracking-widest">Excel</span>
                                         </button>
-                                        <button onClick={() => handleExport('medicines', 'pdf')} className="flex flex-col items-center gap-3 p-6 bg-rose-50 text-rose-700 rounded-3xl hover:bg-rose-100 transition-all border border-rose-100">
-                                            <FileText className="w-8 h-8" />
+                                        <button onClick={() => handleExport('medicines', 'pdf')} className="flex flex-row sm:flex-col items-center justify-center gap-3 p-4 sm:p-6 bg-rose-50 text-rose-700 rounded-3xl hover:bg-rose-100 transition-all border border-rose-100">
+                                            <FileText className="w-5 h-5 sm:w-8 sm:h-8" />
                                             <span className="text-[10px] font-extrabold uppercase tracking-widest">PDF</span>
                                         </button>
-                                        <button onClick={() => handleExport('medicines', 'word')} className="flex flex-col items-center gap-3 p-6 bg-indigo-50 text-indigo-700 rounded-3xl hover:bg-indigo-100 transition-all border border-indigo-100">
-                                            <FileIcon className="w-8 h-8" />
+                                        <button onClick={() => handleExport('medicines', 'word')} className="flex flex-row sm:flex-col items-center justify-center gap-3 p-4 sm:p-6 bg-indigo-50 text-indigo-700 rounded-3xl hover:bg-indigo-100 transition-all border border-indigo-100">
+                                            <FileIcon className="w-5 h-5 sm:w-8 sm:h-8" />
                                             <span className="text-[10px] font-extrabold uppercase tracking-widest">Word</span>
                                         </button>
                                     </div>
@@ -477,44 +479,46 @@ const Reports = () => {
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                        <tr>
-                                            <th className="px-6 py-4">Medicine</th>
-                                            <th className="px-6 py-4">Generic</th>
-                                            <th className="px-6 py-4">Category</th>
-                                            <th className="px-6 py-4">Stock</th>
-                                            <th className="px-6 py-4">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {medicines.map((m) => (
-                                            <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 text-sm font-bold text-gray-700">{m.name}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">{m.generic_name || '-'}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">
-                                                        {m.category || 'General'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-sm font-bold text-gray-900">{m.total_stock} {m.unit}</td>
-                                                <td className="px-6 py-4">
-                                                    {m.total_stock <= m.minimum_stock_level ? (
-                                                        <span className="flex items-center gap-1.5 text-rose-600 text-xs font-bold">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                                                            Low Stock
-                                                        </span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                                                            Healthy
-                                                        </span>
-                                                    )}
-                                                </td>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                                            <tr>
+                                                <th className="px-6 py-4 whitespace-nowrap">Medicine</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Generic</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Category</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Stock</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Status</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {medicines.map((m) => (
+                                                <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-gray-700 whitespace-nowrap">{m.name}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{m.generic_name || '-'}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">
+                                                            {m.category || 'General'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">{m.total_stock} {m.unit}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        {m.total_stock <= m.minimum_stock_level ? (
+                                                            <span className="flex items-center gap-1.5 text-rose-600 text-xs font-bold">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                                                                Low Stock
+                                                            </span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                                                Healthy
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -527,44 +531,46 @@ const Reports = () => {
                                     <h3 className="text-xl font-bold text-gray-800">Batch Lifetime & Expiry</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">Monitor specific batch numbers and expiration timelines.</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleExport('batches', 'excel')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100">
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => handleExport('batches', 'excel')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100 whitespace-nowrap">
                                         <FileSpreadsheet className="w-4 h-4" /> Excel
                                     </button>
-                                    <button onClick={() => handleExport('batches', 'pdf')} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100">
+                                    <button onClick={() => handleExport('batches', 'pdf')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap">
                                         <FileText className="w-4 h-4" /> PDF
                                     </button>
-                                    <button onClick={() => handleExport('batches', 'word')} className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100">
+                                    <button onClick={() => handleExport('batches', 'word')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100 whitespace-nowrap">
                                         <FileIcon className="w-4 h-4" /> Word
                                     </button>
                                 </div>
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                        <tr>
-                                            <th className="px-6 py-4">Medicine</th>
-                                            <th className="px-6 py-4">Batch Number</th>
-                                            <th className="px-6 py-4">Expiry Date</th>
-                                            <th className="px-6 py-4">Remaining</th>
-                                            <th className="px-6 py-4 text-right">Selling Price</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {batches.map((b) => (
-                                            <tr key={b.id} className="hover:bg-gray-100/50 transition-colors">
-                                                <td className="px-6 py-4 text-sm font-bold text-gray-700">{b.medicine?.name}</td>
-                                                <td className="px-6 py-4 text-xs font-mono text-indigo-600">{b.batch_number}</td>
-                                                <td className="px-6 py-4 text-sm font-medium text-gray-500">
-                                                    {new Date(b.expiry_date).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-900 font-bold">{b.quantity_remaining}</td>
-                                                <td className="px-6 py-4 text-right font-bold text-gray-900">ETB {Number(b.selling_price).toFixed(2)}</td>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                                            <tr>
+                                                <th className="px-6 py-4 whitespace-nowrap">Medicine</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Batch Number</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Expiry Date</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Remaining</th>
+                                                <th className="px-6 py-4 text-right whitespace-nowrap">Selling Price</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {batches.map((b) => (
+                                                <tr key={b.id} className="hover:bg-gray-100/50 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold text-gray-700 whitespace-nowrap">{b.medicine?.name}</td>
+                                                    <td className="px-6 py-4 text-xs font-mono text-indigo-600 whitespace-nowrap">{b.batch_number}</td>
+                                                    <td className="px-6 py-4 text-sm font-medium text-gray-500 whitespace-nowrap">
+                                                        {new Date(b.expiry_date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900 font-bold whitespace-nowrap">{b.quantity_remaining}</td>
+                                                    <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">ETB {Number(b.selling_price).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -654,28 +660,28 @@ const Reports = () => {
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left">
                                             <thead>
-                                                <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                                                    <th className="py-3 px-2">Medicine / Batch</th>
-                                                    <th className="py-3 px-2 text-right">Qty</th>
-                                                    <th className="py-3 px-2 text-right text-gray-800">Days to Deplete</th>
+                                                <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                                                    <th className="py-3 px-2 whitespace-nowrap">Medicine / Batch</th>
+                                                    <th className="py-3 px-2 text-right whitespace-nowrap">Qty</th>
+                                                    <th className="py-3 px-2 text-right text-gray-800 whitespace-nowrap">Days to Deplete</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50 text-sm">
                                                 {batchTurnover.length === 0 ? (
                                                     <tr className="bg-emerald-50/30">
-                                                        <td className="py-3 px-2 italic text-gray-400 text-xs" colSpan={3}>
+                                                        <td className="py-3 px-2 italic text-gray-400 text-xs whitespace-nowrap" colSpan={3}>
                                                             No batch depletion logs found for the selected period.
                                                         </td>
                                                     </tr>
                                                 ) : (
                                                     batchTurnover.slice(0, 10).map((bt, i) => (
                                                         <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                                            <td className="py-3 px-2">
+                                                            <td className="py-3 px-2 whitespace-nowrap">
                                                                 <p className="font-bold text-gray-700">{bt.name}</p>
                                                                 <p className="text-[10px] text-indigo-500 font-mono italic">{bt.batchNo}</p>
                                                             </td>
-                                                            <td className="py-3 px-2 text-right font-medium text-gray-500">{bt.qty}</td>
-                                                            <td className="py-3 px-2 text-right">
+                                                            <td className="py-3 px-2 text-right font-medium text-gray-500 whitespace-nowrap">{bt.qty}</td>
+                                                            <td className="py-3 px-2 text-right whitespace-nowrap">
                                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${bt.days_to_deplete <= 7 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                                                     {bt.days_to_deplete} Days
                                                                 </span>
@@ -710,19 +716,19 @@ const Reports = () => {
                                         <tbody className="divide-y divide-gray-50 text-sm">
                                             {supplierAging.length === 0 ? (
                                                 <tr className="bg-emerald-50/30">
-                                                    <td className="py-3 px-2 italic text-gray-400 text-xs" colSpan={6}>
+                                                    <td className="py-4 px-3 italic text-gray-400 text-xs whitespace-nowrap" colSpan={6}>
                                                         No outstanding payables currently recorded.
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 supplierAging.map((sa: any, i: number) => (
                                                     <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="py-3 px-2 font-bold text-gray-700">{sa.supplier_name}</td>
-                                                        <td className="py-3 px-2 text-right text-gray-500">{sa.current > 0 ? 'ETB ' + sa.current.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-amber-500">{sa.days_31_60 > 0 ? 'ETB ' + sa.days_31_60.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-orange-500 font-medium">{sa.days_61_90 > 0 ? 'ETB ' + sa.days_61_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right text-rose-600 font-bold">{sa.over_90 > 0 ? 'ETB ' + sa.over_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                                        <td className="py-3 px-2 text-right font-black text-gray-900">{'ETB ' + sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                        <td className="py-4 px-3 font-bold text-gray-700 whitespace-nowrap">{sa.supplier_name}</td>
+                                                        <td className="py-4 px-3 text-right text-gray-500 whitespace-nowrap">{sa.current > 0 ? 'ETB ' + sa.current.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-4 px-3 text-right text-amber-500 whitespace-nowrap">{sa.days_31_60 > 0 ? 'ETB ' + sa.days_31_60.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-4 px-3 text-right text-orange-500 font-medium whitespace-nowrap">{sa.days_61_90 > 0 ? 'ETB ' + sa.days_61_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-4 px-3 text-right text-rose-600 font-bold whitespace-nowrap">{sa.over_90 > 0 ? 'ETB ' + sa.over_90.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                                        <td className="py-4 px-3 text-right font-black text-gray-900 whitespace-nowrap">{'ETB ' + sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                     </tr>
                                                 ))
                                             )}
@@ -730,12 +736,12 @@ const Reports = () => {
                                         {supplierAging.length > 0 && (
                                             <tfoot className="border-t-2 border-gray-100">
                                                 <tr className="text-sm font-black text-gray-900">
-                                                    <td className="py-3 px-2 text-right uppercase tracking-wider text-xs text-gray-500">Total</td>
-                                                    <td className="py-3 px-2 text-right">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.current, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-amber-600">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_31_60, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-orange-600">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_61_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-rose-700">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.over_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                    <td className="py-3 px-2 text-right text-indigo-700">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.total_outstanding, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-4 px-3 text-right uppercase tracking-wider text-xs text-gray-500 whitespace-nowrap">Total</td>
+                                                    <td className="py-4 px-3 text-right whitespace-nowrap">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.current, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-4 px-3 text-right text-amber-600 whitespace-nowrap">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_31_60, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-4 px-3 text-right text-orange-600 whitespace-nowrap">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.days_61_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-4 px-3 text-right text-rose-700 whitespace-nowrap">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.over_90, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                    <td className="py-4 px-3 text-right text-indigo-700 whitespace-nowrap">{'ETB ' + supplierAging.reduce((acc: number, curr: any) => acc + curr.total_outstanding, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 </tr>
                                             </tfoot>
                                         )}
