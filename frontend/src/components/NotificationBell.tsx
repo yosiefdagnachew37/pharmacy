@@ -132,9 +132,9 @@ const NotificationBell = () => {
 
             {/* Dropdown Panel */}
             {isOpen && (
-                <div className="fixed sm:absolute top-[70px] sm:top-full left-4 right-4 sm:left-auto sm:right-0 sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                <div className="fixed sm:absolute top-[80px] sm:top-full right-4 sm:right-0 left-auto w-[calc(100vw-32px)] xs:w-[320px] sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
+                    <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
                         <div className="flex items-center gap-2">
                             <h3 className="text-sm font-bold text-gray-800">Notifications</h3>
                             {unreadCount > 0 && (
@@ -191,7 +191,7 @@ const NotificationBell = () => {
                                 return (
                                     <div
                                         key={n.id}
-                                        className={`flex items-start gap-3 px-4 sm:px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
+                                        className={`flex items-start gap-3 px-3 sm:px-5 py-3 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
                                             }`}
                                     >
                                         <div className={`p-2 rounded-xl ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
