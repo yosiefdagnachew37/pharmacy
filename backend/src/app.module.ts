@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { User } from './modules/users/entities/user.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
@@ -40,6 +41,7 @@ import { BranchesModule } from './modules/branches/branches.module';
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([User]),
     UsersModule,
     AuthModule,
     MedicinesModule,

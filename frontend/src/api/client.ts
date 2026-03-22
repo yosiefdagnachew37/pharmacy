@@ -1,7 +1,21 @@
 import axios from 'axios';
 
+// Detect if we are running inside an Electron desktop app at runtime.
+// In Electron (with nodeIntegration: true), window.process.type === 'renderer'.
+// In a regular browser this will be undefined, so isElectron is false.
+const isElectron =
+    typeof window !== 'undefined' &&
+    typeof (window as Window & { process?: { type?: string } }).process === 'object' &&
+    (window as Window & { process?: { type?: string } }).process?.type === 'renderer';
+
+// Web app (browser) → use the Railway backend URL from VITE_API_URL
+// Electron desktop → always use local backend on port 3001
+const BASE_URL = isElectron
+    ? 'http://localhost:3001'
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
+
 const client = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+    baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
