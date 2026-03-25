@@ -3,10 +3,10 @@ import axios from 'axios';
 // Detect if we are running inside an Electron desktop app at runtime.
 // In Electron (with nodeIntegration: true), window.process.type === 'renderer'.
 // In a regular browser this will be undefined, so isElectron is false.
+// Robust Electron detection (contextIsolation compatible)
 const isElectron =
-    typeof window !== 'undefined' &&
-    typeof (window as Window & { process?: { type?: string } }).process === 'object' &&
-    (window as Window & { process?: { type?: string } }).process?.type === 'renderer';
+    (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
+    (typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron'));
 
 // Web app (browser) → use the Railway backend URL from VITE_API_URL
 // Electron desktop → always use local backend on port 3001
@@ -37,7 +37,14 @@ client.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Dispatch storage event so AuthProvider picks it up immediately
+            window.dispatchEvent(new Event('storage'));
+            
+            if (isElectron) {
+                window.location.hash = '#/login';
+            } else {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

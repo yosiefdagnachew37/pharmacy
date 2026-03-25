@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
@@ -23,10 +23,16 @@ import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from './components/Toast';
 
+const isElectron = 
+  (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
+  (typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron'));
+
+const Router = isElectron ? HashRouter : BrowserRouter;
+
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <ToastContainer />
         <OfflineBanner />
         <Routes>
@@ -163,7 +169,7 @@ function App() {
           </Route>
           <Route path="/login" element={<Login />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
 }

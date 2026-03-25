@@ -16,7 +16,7 @@
 
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { spawn: _spawn_unpatched, execSync } = require('child_process');
 const fs = require('fs');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,9 +26,16 @@ const fs = require('fs');
 // app.asar.unpacked. This patch transparently redirects any such call to the
 // real filesystem path so embedded-postgres can make its binaries executable.
 // ─────────────────────────────────────────────────────────────────────────────
-(function patchAsarChmod() {
+(function patchAsar() {
     const _chmod = fs.chmod.bind(fs);
     const _chmodSync = fs.chmodSync.bind(fs);
+    let _promisesChmod = null;
+    if (fs.promises && fs.promises.chmod) {
+        _promisesChmod = fs.promises.chmod.bind(fs.promises);
+    }
+
+    const cp = require('child_process');
+    const _spawn = cp.spawn;
 
     function fixAsarPath(p) {
         // Turn  ...app.asar\node_modules\...  →  ...app.asar.unpacked\node_modules\...
@@ -41,6 +48,16 @@ const fs = require('fs');
     fs.chmodSync = (p, mode) => {
         try { _chmodSync(fixAsarPath(p), mode); } catch (_) { /* ignore on Windows */ }
     };
+    if (_promisesChmod) {
+        fs.promises.chmod = (p, mode) => _promisesChmod(fixAsarPath(p), mode);
+    }
+
+    cp.spawn = function (command, args, options) {
+        return _spawn(fixAsarPath(command), args, options);
+    };
+
+    // Export a globally accessible patched spawn for use in this file
+    global.patchedSpawn = cp.spawn;
 }());
 
 const isDev = !app.isPackaged;
@@ -51,6 +68,19 @@ let backendProcess = null;
 let pgInstance = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Shell Utilities
+// ─────────────────────────────────────────────────────────────────────────────
+function killProcessByName(name) {
+    try {
+        console.log(`[Shell] Attempting to kill any existing ${name} processes...`);
+        // We use execSync for immediate termination before proceed
+        child_process.execSync(`taskkill /F /IM ${name} /T`, { stdio: 'ignore' });
+    } catch (e) {
+        // Expected if no processes are found
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Embedded PostgreSQL
 // ─────────────────────────────────────────────────────────────────────────────
 async function startDatabase() {
@@ -59,7 +89,6 @@ async function startDatabase() {
     const { default: EmbeddedPostgres } = await import('embedded-postgres');
 
     const pgDataDir = path.join(app.getPath('userData'), 'pgdata');
-
     console.log('[DB] Data directory:', pgDataDir);
 
     pgInstance = new EmbeddedPostgres({
@@ -70,8 +99,60 @@ async function startDatabase() {
         persistent: true,
     });
 
-    await pgInstance.initialise();
-    await pgInstance.start();
+    async function attemptStartup(isRetry = false) {
+        try {
+            const versionFile = path.join(pgDataDir, 'PG_VERSION');
+            const isAlreadyInitialized = !isRetry && fs.existsSync(versionFile);
+
+            if (!isAlreadyInitialized) {
+                console.log(`[DB] ${isRetry ? 'Retrying' : 'Fresh'} initialization...`);
+                // If this is a retry, ensure no zombie process is holding onto the directory
+                if (isRetry) killProcessByName('postgres.exe');
+                await pgInstance.initialise();
+            } else {
+                console.log('[DB] Data directory found (PG_VERSION detected) — skipping initdb.');
+            }
+
+            console.log('[DB] Starting database...');
+            await pgInstance.start();
+
+        } catch (err) {
+            console.error(`[DB] Startup failed (isRetry=${isRetry}):`, err);
+
+            // Check if the error is related to directory conflicts or general init failure
+            const errorStr = (err.message || '').toLowerCase();
+            const isDirConflict = errorStr.includes('already exist') || errorStr.includes('code 1');
+
+            if (!isRetry) {
+                console.log('[DB] Failure detected — triggering aggressive nuke-and-retry...');
+                
+                // 1. Force kill any postgres process that might be locking the files
+                killProcessByName('postgres.exe');
+
+                // 2. Nuke the directory entirely
+                try {
+                    if (fs.existsSync(pgDataDir)) {
+                        console.log('[DB] Deleting corrupted data directory...');
+                        fs.rmSync(pgDataDir, { recursive: true, force: true });
+                    }
+                } catch (rmErr) {
+                    console.error('[DB] Failed to delete directory:', rmErr);
+                }
+
+                // 3. Retry exactly once
+                return attemptStartup(true);
+            }
+
+            // If we are here, it's a retry failure or unrecoverable error
+            if (isRetry && err) {
+                err.message = `[RETRY FAILURE] ${err.message}`;
+            }
+            throw err;
+        }
+    }
+
+    await attemptStartup();
+    console.log('[DB] PostgreSQL started.');
 
     // Create the pharmacy_db database (no-op if it already exists)
     const client = pgInstance.getPgClient();
@@ -84,7 +165,6 @@ async function startDatabase() {
     } finally {
         await client.end();
     }
-
     console.log('[DB] PostgreSQL started on port 5433');
 }
 
@@ -145,7 +225,10 @@ function startBackend(nodeBin) {
 
         console.log('[Backend] Spawning:', nodeBin, backendMain);
 
-        backendProcess = spawn(nodeBin, [backendMain], {
+        // Use the globally patched spawn to ensure ASAR redirection works
+        const spawnFunc = global.patchedSpawn || _spawn_unpatched;
+
+        backendProcess = spawnFunc(nodeBin, [backendMain], {
             cwd: backendDir,
             env,
             shell: false,
@@ -325,21 +408,29 @@ app.whenReady().then(async () => {
     }
 
     try {
+        console.log('[App] 1. Initializing database...');
         // 2. Start embedded database
         await startDatabase();
 
+        console.log('[App] 2. Initializing backend...');
         // 3. Start NestJS backend
         await startBackend(nodeBin);
 
+        console.log('[App] 3. Starting main window...');
         // 4. Open main window — splash closes automatically in ready-to-show
         createMainWindow();
 
     } catch (err) {
         console.error('[App] Startup failed:', err);
         if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
+
+        const errorMessage = err 
+            ? (err.stack || err.message || JSON.stringify(err, null, 2)) 
+            : 'Unknown error occurred (undefined rejection)';
+
         dialog.showErrorBox(
             'Startup Error',
-            `The application failed to start.\n\nError: ${err.message}\n\n` +
+            `The application failed (Step ${pgInstance ? '2' : '1'}).\n\nError: ${errorMessage}\n\n` +
             'Please check that no other application is using ports 3001 or 5433, then try again.'
         );
         app.quit();
