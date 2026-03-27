@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
-import { Pill, Lock, User, AlertCircle } from 'lucide-react';
+import { Pill, Lock, User, AlertCircle, Building2 } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,11 +17,21 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await client.post('/auth/login', { username, password });
+      const response = await client.post('/auth/login', { 
+        username, 
+        password,
+        organization_name: organizationName 
+      });
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       window.dispatchEvent(new Event('storage'));
-      navigate('/');
+      
+      const user = response.data.user;
+      if (user.role === 'SUPER_ADMIN') {
+        navigate('/super-admin');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -61,7 +72,6 @@ const Login = () => {
               />
             </div>
           </div>
-
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
             <div className="relative">
@@ -73,6 +83,23 @@ const Login = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest text-[#B3B3B3]">Organization</label>
+              <span className="text-[9px] font-black text-indigo-400 uppercase bg-indigo-50 px-1.5 py-0.5 rounded tracking-tighter">Optional if unique</span>
+            </div>
+            <div className="relative">
+              <Building2 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5" />
+              <input 
+                type="text" 
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold placeholder:font-medium uppercase placeholder:normal-case text-sm tracking-tight"
+                placeholder="Pharmacy name (e.g. Kelem Pharmacy)"
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
               />
             </div>
           </div>

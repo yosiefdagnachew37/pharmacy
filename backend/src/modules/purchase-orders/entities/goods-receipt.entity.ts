@@ -1,13 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Unique } from 'typeorm';
 import { PurchaseOrder } from './purchase-order.entity';
 import { User } from '../../users/entities/user.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('goods_receipts')
+@Unique(['grn_number', 'organization_id'])
 export class GoodsReceipt {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
+    @Column()
     grn_number: string;
 
     @ManyToOne(() => PurchaseOrder, { onDelete: 'CASCADE' })
@@ -26,6 +28,13 @@ export class GoodsReceipt {
 
     @Column({ type: 'text', nullable: true })
     notes: string; // Discrepancy notes
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @CreateDateColumn()
     received_at: Date;

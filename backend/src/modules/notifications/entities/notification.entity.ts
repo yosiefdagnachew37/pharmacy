@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum NotificationType {
     LOW_STOCK = 'LOW_STOCK',
@@ -41,4 +42,11 @@ export class Notification {
     @Index()
     @CreateDateColumn()
     created_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

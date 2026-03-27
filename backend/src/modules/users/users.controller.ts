@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -18,14 +18,18 @@ export class UsersController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post()
     @Roles(UserRole.ADMIN) // Only Admin can create users
-    create(@Body() createUserDto: CreateUserDto) {
+    create(@Body() createUserDto: CreateUserDto, @Req() req: any) {
+        // Automatically assign organization_id if not super admin
+        if (req.user.role !== UserRole.SUPER_ADMIN) {
+            createUserDto.organization_id = req.user.organization_id;
+        }
         return this.usersService.create(createUserDto);
     }
 
     @Get()
     @Roles(UserRole.ADMIN)
-    findAll() {
-        return this.usersService.findAll();
+    findAll(@Req() req: any) {
+        return this.usersService.findAll(req.user);
     }
 
     @Get(':id')
@@ -36,15 +40,15 @@ export class UsersController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Patch(':id')
     @Roles(UserRole.ADMIN)
-    update(@Param('id') id: string, @Body() updateUserDto: any) {
-        return this.usersService.update(id, updateUserDto);
+    update(@Param('id') id: string, @Body() updateUserDto: any, @Req() req: any) {
+        return this.usersService.update(id, updateUserDto, req.user);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Delete(':id')
     @Roles(UserRole.ADMIN)
-    remove(@Param('id') id: string) {
-        return this.usersService.remove(id);
+    remove(@Param('id') id: string, @Req() req: any) {
+        return this.usersService.remove(id, req.user);
     }
 
     @UseGuards(JwtAuthGuard)

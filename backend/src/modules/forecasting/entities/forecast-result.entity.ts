@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { Medicine } from '../../medicines/entities/medicine.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum ForecastMethod {
     SMA = 'SMA', // Simple Moving Average
@@ -42,4 +43,11 @@ export class ForecastResult {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

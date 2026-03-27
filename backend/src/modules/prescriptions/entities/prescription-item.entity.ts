@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Prescription } from './prescription.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('prescription_items')
 export class PrescriptionItem {
@@ -32,4 +33,11 @@ export class PrescriptionItem {
 
     @Column({ type: 'int', default: 0 })
     quantity_dispensed: number;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

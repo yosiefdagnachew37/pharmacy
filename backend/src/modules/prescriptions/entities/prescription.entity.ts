@@ -1,8 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, Unique } from 'typeorm';
 import { Patient } from '../../patients/entities/patient.entity';
 import { PrescriptionItem } from './prescription-item.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('prescriptions')
+@Unique(['prescription_number', 'organization_id'])
 export class Prescription {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -34,4 +36,11 @@ export class Prescription {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

@@ -17,4 +17,8 @@ export class CreateUserDto {
     @IsString()
     @IsOptional()
     manager_pin?: string;
+
+    @IsString()
+    @IsOptional()
+    organization_id?: string;
 }

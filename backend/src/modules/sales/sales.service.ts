@@ -13,6 +13,7 @@ import { NotificationType } from '../notifications/entities/notification.entity'
 import { CreditService } from '../credit/credit.service';
 import { Refund } from './entities/refund.entity';
 import { CreditStatus } from '../credit/entities/credit-record.entity';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class SalesService {
@@ -35,10 +36,10 @@ export class SalesService {
 
         try {
             const sale = await this.dataSource.transaction(async (manager) => {
-                // 0. Check for Controlled Substances
+                // 0. Check for Controlled Substances (Scoped)
                 const medIds = items.map(i => i.medicine_id);
                 const medicines = await manager.getRepository(Medicine).find({
-                    where: { id: In(medIds) }
+                    where: { id: In(medIds), organization_id: getTenantId() }
                 });
 
                 const hasControlled = medicines.some(m => m.is_controlled);
@@ -63,6 +64,7 @@ export class SalesService {
                     prescription_image_url: createSaleDto.prescription_image_url,
                     is_controlled_transaction: hasControlled,
                     created_by: userId,
+                    organization_id: getTenantId(),
                 });
                 const savedSale = await manager.save(saleHeader);
 
@@ -112,13 +114,14 @@ export class SalesService {
                             quantity: tx.quantity,
                             unit_price: item.unit_price,
                             subtotal: tx.quantity * item.unit_price,
+                            organization_id: getTenantId(),
                         });
                         await manager.save(saleItem);
                     }
                 }
 
                 const finalSale = await manager.findOne(Sale, {
-                    where: { id: savedSale.id },
+                    where: { id: savedSale.id, organization_id: getTenantId() },
                     relations: ['items', 'items.medicine', 'items.batch', 'patient'],
                 });
 
@@ -149,6 +152,7 @@ export class SalesService {
 
     async findAll(): Promise<Sale[]> {
         return await this.salesRepository.find({
+            where: { organization_id: getTenantId() },
             relations: ['items', 'items.medicine', 'patient', 'user', 'credit_records'],
             order: { created_at: 'DESC' },
         });
@@ -156,7 +160,7 @@ export class SalesService {
 
     async findOne(id: string): Promise<Sale | null> {
         return await this.salesRepository.findOne({
-            where: { id },
+            where: { id, organization_id: getTenantId() },
             relations: ['items', 'items.medicine', 'items.batch', 'patient', 'user', 'credit_records'],
         });
     }
@@ -166,7 +170,7 @@ export class SalesService {
 
         return await this.dataSource.transaction(async (manager) => {
             const sale = await manager.findOne(Sale, {
-                where: { id: sale_id },
+                where: { id: sale_id, organization_id: getTenantId() },
                 relations: ['items', 'credit_records']
             });
             if (!sale) throw new NotFoundException('Sale not found');
@@ -194,7 +198,8 @@ export class SalesService {
                 quantity,
                 amount,
                 reason,
-                processed_by_id: userId
+                processed_by_id: userId,
+                organization_id: getTenantId(),
             });
             const savedRefund = await manager.save(refund);
 

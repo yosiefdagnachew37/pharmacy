@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Medicine } from './entities/medicine.entity';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
+import { scopeQuery, getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class MedicinesService {
@@ -13,7 +14,10 @@ export class MedicinesService {
     ) { }
 
     async create(createMedicineDto: CreateMedicineDto): Promise<Medicine> {
-        const medicine = this.medicinesRepository.create(createMedicineDto);
+        const medicine = this.medicinesRepository.create({
+            ...createMedicineDto,
+            organization_id: getTenantId(),
+        });
         try {
             return await this.medicinesRepository.save(medicine);
         } catch (err: any) {
@@ -26,8 +30,12 @@ export class MedicinesService {
 
     async findAll() {
         try {
-            const results = await this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now AND b.deleted_at IS NULL', { now: new Date().toISOString().split('T')[0] })
+            let qb = this.medicinesRepository.createQueryBuilder('m')
+                .leftJoin('m.batches', 'b', 'b.expiry_date >= :now AND b.deleted_at IS NULL', { now: new Date().toISOString().split('T')[0] });
+            
+            qb = scopeQuery(qb, 'm');
+
+            const results = await qb
                 .select([
                     'm.id',
                     'm.name',
@@ -39,7 +47,7 @@ export class MedicinesService {
                 ])
                 .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
                 .addSelect('MAX(b.selling_price)', 'selling_price')
-                .where('m.deleted_at IS NULL')
+                .andWhere('m.deleted_at IS NULL')
                 .groupBy('m.id')
                 .addGroupBy('m.name')
                 .addGroupBy('m.generic_name')
@@ -67,7 +75,9 @@ export class MedicinesService {
     }
 
     async findOne(id: string): Promise<Medicine> {
-        const medicine = await this.medicinesRepository.findOne({ where: { id } });
+        const medicine = await this.medicinesRepository.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!medicine) {
             throw new NotFoundException(`Medicine with ID ${id} not found`);
         }
@@ -120,7 +130,10 @@ export class MedicinesService {
                 return;
             }
 
-            created.push({ name, generic_name, category, unit, minimum_stock_level, is_controlled });
+            created.push({ 
+                ...({ name, generic_name, category, unit, minimum_stock_level, is_controlled }),
+                organization_id: getTenantId()
+            });
         });
 
         let savedCount = 0;

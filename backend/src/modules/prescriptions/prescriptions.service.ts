@@ -5,6 +5,7 @@ import { Prescription } from './entities/prescription.entity';
 import { PrescriptionItem } from './entities/prescription-item.entity';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class PrescriptionsService {
@@ -18,10 +19,14 @@ export class PrescriptionsService {
 
     async create(createPrescriptionDto: CreatePrescriptionDto): Promise<Prescription> {
         const { items, ...prescriptionData } = createPrescriptionDto;
+        const organization_id = getTenantId();
 
         return await this.dataSource.transaction(async (manager) => {
             // Create Prescription
-            const prescription = manager.create(Prescription, prescriptionData);
+            const prescription = manager.create(Prescription, {
+                ...prescriptionData,
+                organization_id,
+            });
             const savedPrescription = await manager.save(prescription);
 
             // Create Items
@@ -30,13 +35,14 @@ export class PrescriptionsService {
                     manager.create(PrescriptionItem, {
                         ...item,
                         prescription_id: savedPrescription.id,
+                        organization_id,
                     })
                 );
                 await manager.save(itemEntities);
             }
 
             const finalPrescription = await manager.findOne(Prescription, {
-                where: { id: savedPrescription.id },
+                where: { id: savedPrescription.id, organization_id },
                 relations: ['items', 'items.medicine', 'patient'],
             });
 
@@ -47,6 +53,7 @@ export class PrescriptionsService {
 
     async findAll(): Promise<Prescription[]> {
         return await this.prescriptionsRepository.find({
+            where: { organization_id: getTenantId() },
             relations: ['items', 'items.medicine', 'patient'],
             order: { created_at: 'DESC' },
         });
@@ -54,7 +61,7 @@ export class PrescriptionsService {
 
     async findOne(id: string): Promise<Prescription> {
         const prescription = await this.prescriptionsRepository.findOne({
-            where: { id },
+            where: { id, organization_id: getTenantId() },
             relations: ['items', 'items.medicine', 'patient'],
         });
         if (!prescription) {
@@ -65,7 +72,7 @@ export class PrescriptionsService {
 
     async findByPatient(patientId: string): Promise<Prescription[]> {
         return await this.prescriptionsRepository.find({
-            where: { patient_id: patientId },
+            where: { patient_id: patientId, organization_id: getTenantId() },
             relations: ['items', 'items.medicine'],
             order: { created_at: 'DESC' },
         });

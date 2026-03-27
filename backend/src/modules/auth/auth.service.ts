@@ -11,8 +11,8 @@ export class AuthService {
         private jwtService: JwtService,
     ) { }
 
-    async validateUser(username: string, pass: string): Promise<any> {
-        const user = await this.usersService.findOne(username);
+    async validateUser(username: string, pass: string, orgName?: string): Promise<any> {
+        const user = await this.usersService.findOne(username, orgName);
         if (user && (await bcrypt.compare(pass, user.password_hash))) { // Compare hash
             const { password_hash, ...result } = user;
             return result;
@@ -21,13 +21,21 @@ export class AuthService {
     }
 
     async login(user: any) {
-        const payload = { username: user.username, sub: user.id, role: user.role };
+        const payload = { 
+            username: user.username, 
+            sub: user.id, 
+            role: user.role, 
+            organizationId: user.organization_id,
+            organizationName: user.organization?.name || 'N/A'
+        };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 id: user.id,
                 username: user.username,
                 role: user.role,
+                organizationId: user.organization_id,
+                organizationName: user.organization?.name || 'N/A'
             },
         };
     }

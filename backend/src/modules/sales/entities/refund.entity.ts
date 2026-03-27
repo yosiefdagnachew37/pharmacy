@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { Sale } from '../../sales/entities/sale.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 import { User } from '../../users/entities/user.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('refunds')
 export class Refund {
@@ -37,6 +38,13 @@ export class Refund {
     @ManyToOne(() => User)
     @JoinColumn({ name: 'processed_by_id' })
     processed_by: User;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @CreateDateColumn()
     created_at: Date;

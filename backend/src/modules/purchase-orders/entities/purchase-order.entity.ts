@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 import { Supplier } from '../../suppliers/entities/supplier.entity';
 import { User } from '../../users/entities/user.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum POStatus {
     DRAFT = 'DRAFT',
@@ -25,11 +26,12 @@ export enum POPaymentStatus {
 }
 
 @Entity('purchase_orders')
+@Unique(['po_number', 'organization_id'])
 export class PurchaseOrder {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
+    @Column()
     po_number: string; // Auto-generated
 
     @ManyToOne(() => Supplier, { onDelete: 'SET NULL', nullable: true })
@@ -59,6 +61,13 @@ export class PurchaseOrder {
 
     @Column({ nullable: true })
     branch_id: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @ManyToOne(() => User, { nullable: true })
     @JoinColumn({ name: 'created_by' })

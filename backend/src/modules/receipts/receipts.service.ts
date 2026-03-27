@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sale } from '../sales/entities/sale.entity';
 import * as QRCode from 'qrcode';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class ReceiptsService {
@@ -13,7 +14,7 @@ export class ReceiptsService {
 
     async generateReceipt(saleId: string) {
         const sale = await this.saleRepository.findOne({
-            where: { id: saleId },
+            where: { id: saleId, organization_id: getTenantId() },
             relations: ['items', 'items.medicine', 'patient', 'user']
         });
 

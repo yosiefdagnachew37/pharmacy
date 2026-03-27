@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog, AuditAction } from './entities/audit-log.entity';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class AuditService {
@@ -20,12 +21,16 @@ export class AuditService {
         ip_address?: string;
         is_controlled_transaction?: boolean;
     }) {
-        const logEntry = this.auditRepository.create(data);
+        const logEntry = this.auditRepository.create({
+            ...data,
+            organization_id: getTenantId(),
+        });
         return await this.auditRepository.save(logEntry);
     }
 
     async findAll() {
         return await this.auditRepository.find({
+            where: { organization_id: getTenantId() },
             relations: ['user'],
             order: { created_at: 'DESC' },
         });
@@ -33,7 +38,7 @@ export class AuditService {
 
     async findByUser(userId: string) {
         return await this.auditRepository.find({
-            where: { user_id: userId },
+            where: { user_id: userId, organization_id: getTenantId() },
             order: { created_at: 'DESC' },
         });
     }

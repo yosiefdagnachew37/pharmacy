@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 't
 import { AuditSession } from './audit-session.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 import { Batch } from '../../batches/entities/batch.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('audit_items')
 export class AuditItem {
@@ -40,4 +41,11 @@ export class AuditItem {
 
     @Column({ type: 'text', nullable: true })
     notes: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

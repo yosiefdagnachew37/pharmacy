@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { Customer } from './customer.entity';
 import { CreditRecord } from './credit-record.entity';
 import { User } from '../../users/entities/user.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('credit_payments')
 export class CreditPayment {
@@ -40,4 +41,11 @@ export class CreditPayment {
 
     @CreateDateColumn()
     payment_date: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

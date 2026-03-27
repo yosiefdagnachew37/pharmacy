@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Expense, ExpenseFrequency } from './entities/expense.entity';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class ExpensesService {
@@ -11,29 +12,38 @@ export class ExpensesService {
     ) { }
 
     async findAll() {
-        return this.expenseRepo.find({ order: { expense_date: 'DESC' } });
+        return this.expenseRepo.find({ 
+            where: { organization_id: getTenantId() },
+            order: { expense_date: 'DESC' } 
+        });
     }
 
     async findOne(id: string) {
-        const expense = await this.expenseRepo.findOne({ where: { id } });
+        const expense = await this.expenseRepo.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!expense) throw new NotFoundException('Expense not found');
         return expense;
     }
 
     async create(data: Partial<Expense>, userId: string) {
-        const expense = this.expenseRepo.create({ ...data, created_by: userId });
+        const expense = this.expenseRepo.create({ 
+            ...data, 
+            created_by: userId,
+            organization_id: getTenantId(),
+        });
         return this.expenseRepo.save(expense);
     }
 
     async update(id: string, data: Partial<Expense>) {
-        await this.findOne(id);
-        await this.expenseRepo.update(id, data);
+        await this.findOne(id); // findOne handles tenant check
+        await this.expenseRepo.update({ id, organization_id: getTenantId() }, data);
         return this.findOne(id);
     }
 
     async remove(id: string) {
         await this.findOne(id);
-        await this.expenseRepo.delete(id);
+        await this.expenseRepo.delete({ id, organization_id: getTenantId() });
         return { deleted: true };
     }
 
@@ -41,7 +51,9 @@ export class ExpensesService {
      * Calculate daily amortized expense from all recurring expenses
      */
     async getDailyExpectedExpense() {
-        const recurring = await this.expenseRepo.find({ where: { is_recurring: true } });
+        const recurring = await this.expenseRepo.find({ 
+            where: { is_recurring: true, organization_id: getTenantId() } 
+        });
 
         let totalDaily = 0;
         const breakdown: Array<{ name: string; category: string; monthly_amount: number; daily_cost: number }> = [];
@@ -87,6 +99,7 @@ export class ExpensesService {
         return this.expenseRepo.find({
             where: {
                 expense_date: Between(startDate, endDate),
+                organization_id: getTenantId(),
             },
             order: { expense_date: 'DESC' },
         });

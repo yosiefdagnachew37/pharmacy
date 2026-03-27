@@ -6,6 +6,9 @@ import { Sale } from '../sales/entities/sale.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import * as ss from 'simple-statistics';
+import { getTenantId } from '../../common/utils/tenant-query';
+import { tenantStorage } from '../../common/context/tenant.context';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
 export class AnomalyDetectionService {
@@ -15,13 +18,29 @@ export class AnomalyDetectionService {
         @InjectRepository(Sale)
         private saleRepository: Repository<Sale>,
         private notificationsService: NotificationsService,
+        private readonly organizationsService: OrganizationsService,
     ) { }
 
     @Cron(CronExpression.EVERY_DAY_AT_2AM)
     async runDailyAnomalyScan() {
-        this.logger.log('Starting daily anomaly detection scan...');
-        await this.detectSalesSpikes();
-        await this.detectHighRefundRates();
+        this.logger.log('Starting daily multi-tenant anomaly detection scan...');
+        try {
+            const orgs = await this.organizationsService.findAll();
+            for (const org of orgs) {
+                if (!org.is_active) continue;
+
+                await tenantStorage.run({ 
+                    organizationId: org.id, 
+                    userId: 'SYSTEM', 
+                    isSuperAdmin: false 
+                }, async () => {
+                    await this.detectSalesSpikes();
+                    await this.detectHighRefundRates();
+                });
+            }
+        } catch (error) {
+            this.logger.error('Failed to run daily anomaly scan', error);
+        }
         this.logger.log('Anomaly detection scan completed.');
     }
 
@@ -30,9 +49,11 @@ export class AnomalyDetectionService {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+        const organization_id = getTenantId();
         const sales = await this.saleRepository.find({
             where: {
                 created_at: MoreThan(thirtyDaysAgo),
+                organization_id,
             },
         });
 
@@ -68,8 +89,12 @@ export class AnomalyDetectionService {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+        const organization_id = getTenantId();
         const sales = await this.saleRepository.find({
-            where: { created_at: MoreThan(sevenDaysAgo) },
+            where: { 
+                created_at: MoreThan(sevenDaysAgo),
+                organization_id
+            },
         });
 
         const userStats: Record<string, { total: number, refunded: number }> = {};

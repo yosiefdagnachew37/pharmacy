@@ -14,6 +14,7 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, Headi
 import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { CreditRecord } from '../credit/entities/credit-record.entity';
 import { Refund } from '../sales/entities/refund.entity';
+import { getTenantId, TenantQuery } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class ReportingService {
@@ -41,10 +42,12 @@ export class ReportingService {
     ) { }
 
     async getDashboardStats() {
+        const orgId = getTenantId();
         try {
             // Using Timezone-aware CURRENT_DATE for more robust "Today" filtering (+03:00)
             const salesStats = await this.salesRepository.createQueryBuilder('s')
                 .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
+                .andWhere('s.organization_id = :orgId', { orgId })
                 .select('COUNT(s.id)', 'count')
                 .addSelect('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
                 .getRawOne();
@@ -52,6 +55,7 @@ export class ReportingService {
             const lowStockCount = await this.medicinesRepository.createQueryBuilder('m')
                 .leftJoin('m.batches', 'b', "b.expiry_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .select('m.id')
+                .where('m.organization_id = :orgId', { orgId })
                 .groupBy('m.id')
                 .having('COALESCE(SUM(b.quantity_remaining), 0) <= m.minimum_stock_level')
                 .getRawMany();
@@ -59,18 +63,21 @@ export class ReportingService {
             const expiringSoon = await this.batchesRepository.createQueryBuilder('b')
                 .where("b.expiry_date BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date AND ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '30 days')")
                 .andWhere('b.quantity_remaining > 0')
+                .andWhere('b.organization_id = :orgId', { orgId })
                 .getCount();
 
             const expiredBatches = await this.batchesRepository.createQueryBuilder('b')
                 .where("b.expiry_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .andWhere('b.quantity_remaining > 0')
+                .andWhere('b.organization_id = :orgId', { orgId })
                 .getCount();
 
             const activeAlerts = await this.alertsRepository.count({
-                where: { status: AlertStatus.ACTIVE }
+                where: { status: AlertStatus.ACTIVE, organization_id: orgId }
             });
 
             const recentSales = await this.salesRepository.find({
+                where: { organization_id: orgId },
                 relations: ['patient'],
                 order: { created_at: 'DESC' },
                 take: 15
@@ -84,6 +91,7 @@ export class ReportingService {
                     'm.minimum_stock_level AS minimum_stock_level',
                     'COALESCE(SUM(b.quantity_remaining), 0) AS total_stock'
                 ])
+                .where('m.organization_id = :orgId', { orgId })
                 .groupBy('m.id')
                 .addGroupBy('m.name')
                 .addGroupBy('m.minimum_stock_level')
@@ -91,7 +99,9 @@ export class ReportingService {
                 .take(15)
                 .getRawMany();
 
-            const totalMedicines = await this.medicinesRepository.count();
+            const totalMedicines = await this.medicinesRepository.count({
+                where: { organization_id: orgId }
+            });
 
             return {
                 todaySalesCount: parseInt(salesStats?.count, 10) || 0,
@@ -125,10 +135,12 @@ export class ReportingService {
             const endDay = new Date(endDate);
             endDay.setHours(23, 59, 59, 999);
 
+            const orgId = getTenantId();
             // 1. Get all sale items for revenue and COGS
             const saleItems = await this.saleItemsRepository.find({
                 where: {
-                    sale: { created_at: Between(startDay, endDay) }
+                    sale: { created_at: Between(startDay, endDay) },
+                    organization_id: orgId,
                 },
                 relations: ['sale', 'batch', 'medicine'],
                 order: { sale: { created_at: 'ASC' } }
@@ -137,7 +149,8 @@ export class ReportingService {
             // 2. Get all refunds for the same period to subtract them
             const refunds = await this.refundRepository.find({
                 where: {
-                    created_at: Between(startDay, endDay)
+                    created_at: Between(startDay, endDay),
+                    organization_id: orgId,
                 },
                 relations: ['sale', 'medicine']
             });
@@ -200,7 +213,11 @@ export class ReportingService {
             // If not found in the current period, fetch it from DB to get the correct purchase price
             if (!originalSaleItem) {
                 originalSaleItem = await this.saleItemsRepository.findOne({
-                    where: { sale_id: refund.sale_id, medicine_id: refund.medicine_id },
+                    where: { 
+                        sale_id: refund.sale_id, 
+                        medicine_id: refund.medicine_id,
+                        organization_id: orgId,
+                    },
                     relations: ['batch']
                 });
             }
@@ -234,9 +251,11 @@ export class ReportingService {
 
         // 3. Add Expenses (One-time and Amortized Recurring)
         const daysCount = Math.round((endDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24));
-        const recurringExpenses = await this.expensesRepository.find({ where: { is_recurring: true } });
+        const recurringExpenses = await this.expensesRepository.find({ 
+            where: { is_recurring: true, organization_id: orgId } 
+        });
         const oneTimeExpenses = await this.expensesRepository.find({
-            where: { expense_date: Between(startDay, endDay), is_recurring: false }
+            where: { expense_date: Between(startDay, endDay), is_recurring: false, organization_id: orgId }
         });
 
         let totalExpenses = 0;
@@ -319,8 +338,10 @@ export class ReportingService {
     // ─── MEDICINE & BATCH REPORTS ───────────────────────────────
 
     async getMedicineReport() {
+        const orgId = getTenantId();
         return await this.medicinesRepository.createQueryBuilder('m')
             .leftJoin('m.batches', 'b', 'b.expiry_date >= CURRENT_DATE')
+            .where('m.organization_id = :orgId', { orgId })
             .select([
                 'm.id AS id',
                 'm.name AS name',
@@ -341,6 +362,7 @@ export class ReportingService {
 
     async getBatchReport() {
         return await this.batchesRepository.find({
+            where: { organization_id: getTenantId() },
             relations: ['medicine'],
             order: { expiry_date: 'ASC' }
         });
@@ -349,10 +371,12 @@ export class ReportingService {
     // ─── TRENDING ANALYTICS (DASHBOARD) ──────────────────────────
 
     async getTrendingMedicines(limit: number = 10) {
+        const orgId = getTenantId();
         return await this.saleItemsRepository.createQueryBuilder('si')
             .leftJoin('si.medicine', 'm')
             .select('m.name', 'name')
             .addSelect('SUM(si.quantity)', 'total_quantity')
+            .where('si.organization_id = :orgId', { orgId })
             .groupBy('m.id')
             .addGroupBy('m.name')
             .orderBy('total_quantity', 'DESC')
@@ -361,10 +385,12 @@ export class ReportingService {
     }
 
     async getLeastSellingMedicines(limit: number = 10) {
+        const orgId = getTenantId();
         return await this.medicinesRepository.createQueryBuilder('m')
             .leftJoin('m.saleItems', 'si')
             .select('m.name', 'name')
             .addSelect('COALESCE(SUM(si.quantity), 0)', 'total_quantity')
+            .where('m.organization_id = :orgId', { orgId })
             .groupBy('m.id')
             .addGroupBy('m.name')
             .orderBy('total_quantity', 'ASC')
@@ -373,8 +399,10 @@ export class ReportingService {
     }
 
     async getSalesTrend(days: number = 30) {
+        const orgId = getTenantId();
         const sales = await this.salesRepository.createQueryBuilder('s')
             .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date > (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date - INTERVAL '1 day' * :days", { days })
+            .andWhere('s.organization_id = :orgId', { orgId })
             .orderBy('s.created_at', 'ASC')
             .getMany();
 
@@ -402,8 +430,10 @@ export class ReportingService {
     }
 
     async getRevenueComparison() {
+        const orgId = getTenantId();
         const query = (where: string) => this.salesRepository.createQueryBuilder('s')
             .where(where)
+            .andWhere('s.organization_id = :orgId', { orgId })
             .select('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
             .getRawOne();
 
@@ -423,6 +453,7 @@ export class ReportingService {
     // ─── EXPORT LOGIC (EXCEL, PDF, WORD) ──────────────────────────
 
     async getSalesReport(startDate: Date, endDate: Date) {
+        const orgId = getTenantId();
         return await this.salesRepository.createQueryBuilder('s')
             .leftJoinAndSelect('s.items', 'items')
             .leftJoinAndSelect('items.medicine', 'medicine')
@@ -432,6 +463,7 @@ export class ReportingService {
                 start: startDate.toISOString().split('T')[0],
                 end: endDate.toISOString().split('T')[0]
             })
+            .andWhere('s.organization_id = :orgId', { orgId })
             .orderBy('s.created_at', 'DESC')
             .getMany();
     }

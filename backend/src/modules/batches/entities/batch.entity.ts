@@ -1,8 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Index, DeleteDateColumn, Unique } from 'typeorm';
 import { Medicine } from '../../medicines/entities/medicine.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('batches')
-@Unique(['medicine_id', 'batch_number'])
+@Unique(['medicine_id', 'batch_number', 'organization_id'])
 export class Batch {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -47,6 +48,13 @@ export class Batch {
 
     @Column({ nullable: true })
     branch_id: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;

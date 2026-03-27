@@ -4,6 +4,7 @@ import { Repository, DataSource, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { StockTransaction, TransactionType, ReferenceType } from './entities/stock-transaction.entity';
 import { Batch } from '../batches/entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
+import { getTenantId, TenantQuery } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class StockService {
@@ -26,8 +27,11 @@ export class StockService {
         reference_id: string,
         userId: string,
     ) {
+        const organization_id = getTenantId();
         return await this.dataSource.transaction(async (manager) => {
-            const batch = await manager.findOne(Batch, { where: { id: batchId } });
+            const batch = await manager.findOne(Batch, { 
+                where: { id: batchId, organization_id } 
+            });
             if (!batch) throw new NotFoundException('Batch not found');
 
             if (type === TransactionType.OUT && batch.quantity_remaining < quantity) {
@@ -52,6 +56,7 @@ export class StockService {
                 reference_type,
                 reference_id,
                 created_by: userId,
+                organization_id,
             });
 
             return await manager.save(transaction);
@@ -71,6 +76,7 @@ export class StockService {
         reference_id: string,
         userId: string,
     ) {
+        const organization_id = getTenantId();
         return await this.dataSource.transaction(async (manager) => {
             const tomorrow = new Date();
             tomorrow.setHours(tomorrow.getHours() + 24);
@@ -81,6 +87,7 @@ export class StockService {
                 .createQueryBuilder(Batch, 'b')
                 .setLock('pessimistic_write')
                 .where('b.medicine_id = :medicineId', { medicineId })
+                .andWhere('b.organization_id = :organization_id', { organization_id })
                 .andWhere('b.quantity_remaining > 0')
                 .andWhere('b.is_locked = :locked', { locked: false })
                 .andWhere('b.is_quarantined = :quarantined', { quarantined: false })
@@ -115,6 +122,7 @@ export class StockService {
                     reference_id,
                     created_by: userId,
                     is_fefo_override: false,
+                    organization_id,
                 });
 
                 const savedTransaction = await manager.save(transaction);
@@ -145,9 +153,10 @@ export class StockService {
         userId: string,
         overrideReason: string,
     ) {
+        const organization_id = getTenantId();
         return await this.dataSource.transaction(async (manager) => {
             const batch = await manager.findOne(Batch, {
-                where: { id: batchId },
+                where: { id: batchId, organization_id },
                 relations: ['medicine'],
             });
             if (!batch) throw new NotFoundException('Batch not found');
@@ -183,6 +192,7 @@ export class StockService {
                 created_by: userId,
                 is_fefo_override: true,
                 override_reason: overrideReason.trim(),
+                organization_id,
             });
 
             return await manager.save(transaction);
@@ -190,22 +200,24 @@ export class StockService {
     }
 
     async getTransactionHistory(batchId?: string) {
-        const query = this.transactionRepository.createQueryBuilder('t')
+        const qb = this.transactionRepository.createQueryBuilder('t')
             .leftJoinAndSelect('t.batch', 'batch')
             .leftJoinAndSelect('batch.medicine', 'medicine')
             .orderBy('t.created_at', 'DESC');
 
         if (batchId) {
-            query.where('t.batch_id = :batchId', { batchId });
+            qb.andWhere('t.batch_id = :batchId', { batchId });
         }
 
-        return await query.getMany();
+        return await TenantQuery.scopeQuery(qb, 't').getMany();
     }
 
     async getMedicineStock(medicineId: string) {
+        const orgId = getTenantId();
         const res = await this.batchesRepository.createQueryBuilder('b')
             .select('SUM(b.quantity_remaining)', 'total')
             .where('b.medicine_id = :medicineId', { medicineId })
+            .andWhere('b.organization_id = :orgId', { orgId })
             .andWhere('b.is_locked = :locked', { locked: false })
             .andWhere('b.is_quarantined = :quarantined', { quarantined: false })
             .andWhere('b.expiry_date >= :now', { now: new Date() })

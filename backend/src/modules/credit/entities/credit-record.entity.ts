@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Customer } from './customer.entity';
 import { Sale } from '../../sales/entities/sale.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum CreditStatus {
     UNPAID = 'UNPAID',
@@ -44,4 +45,11 @@ export class CreditRecord {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

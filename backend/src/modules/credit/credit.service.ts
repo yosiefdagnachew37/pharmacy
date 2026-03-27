@@ -6,6 +6,7 @@ import { CreditRecord, CreditStatus } from './entities/credit-record.entity';
 import { CreditPayment } from './entities/credit-payment.entity';
 import { ChequeRecord, ChequeStatus } from './entities/cheque-record.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { getTenantId, scopeQuery } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class CreditService {
@@ -25,15 +26,20 @@ export class CreditService {
 
     // ─── Customer CRUD ────────────────────────────────
     async findAllCustomers() {
-        return this.customerRepo.find({ order: { name: 'ASC' } });
+        return this.customerRepo.find({ 
+            where: { organization_id: getTenantId() },
+            order: { name: 'ASC' } 
+        });
     }
 
     async getCustomerWithCredit(id: string) {
-        const customer = await this.customerRepo.findOne({ where: { id } });
+        const customer = await this.customerRepo.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!customer) throw new NotFoundException('Customer not found');
 
         const activeCredit = await this.creditRecordRepo.find({
-            where: { customer_id: id },
+            where: { customer_id: id, organization_id: getTenantId() },
             order: { due_date: 'ASC' },
             relations: ['sale'],
         });
@@ -46,15 +52,20 @@ export class CreditService {
     }
 
     async createCustomer(data: Partial<Customer>) {
-        const customer = this.customerRepo.create(data);
+        const customer = this.customerRepo.create({
+            ...data,
+            organization_id: getTenantId(),
+        });
         return this.customerRepo.save(customer);
     }
 
     async updateCustomer(id: string, data: Partial<Customer>) {
-        const customer = await this.customerRepo.findOne({ where: { id } });
+        const customer = await this.customerRepo.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!customer) throw new NotFoundException('Customer not found');
-        await this.customerRepo.update(id, data);
-        return this.customerRepo.findOne({ where: { id } });
+        await this.customerRepo.update({ id, organization_id: getTenantId() }, data);
+        return this.customerRepo.findOne({ where: { id, organization_id: getTenantId() } });
     }
 
     // ─── Credit Operations ────────────────────────────
@@ -71,11 +82,16 @@ export class CreditService {
         externalManager?: EntityManager,
     ) {
         const work = async (manager: EntityManager) => {
-            let customer = await manager.findOne(Customer, { where: { id: customerId } });
+            const orgId = getTenantId();
+            let customer = await manager.findOne(Customer, { 
+                where: { id: customerId, organization_id: orgId } 
+            });
             
             if (!customer) {
-                // Try to find as a Patient and auto-migrate to Customer
-                const patient = await manager.findOne(Patient, { where: { id: customerId } });
+                // Try to find as a Patient and auto-migrate to Customer (Scoped)
+                const patient = await manager.findOne(Patient, { 
+                    where: { id: customerId, organization_id: orgId } 
+                });
                 if (!patient) {
                     throw new NotFoundException(`Customer or Patient with ID ${customerId} not found`);
                 }
@@ -87,7 +103,8 @@ export class CreditService {
                     phone: patient.phone,
                     address: patient.address,
                     total_credit: 0,
-                    is_active: true
+                    is_active: true,
+                    organization_id: orgId,
                 });
                 await manager.save(customer);
             }
@@ -99,6 +116,7 @@ export class CreditService {
                 original_amount: amount,
                 due_date: dueDate,
                 notes,
+                organization_id: orgId,
             });
             await manager.save(record);
 
@@ -128,7 +146,10 @@ export class CreditService {
         recordIds?: string[]; // Specific records to pay towards
     }, userId: string) {
         return await this.dataSource.transaction(async (manager) => {
-            const customer = await manager.findOne(Customer, { where: { id: data.customerId } });
+            const orgId = getTenantId();
+            const customer = await manager.findOne(Customer, { 
+                where: { id: data.customerId, organization_id: orgId } 
+            });
             if (!customer) throw new NotFoundException('Customer not found');
 
             const paymentAmount = Number(data.amount);
@@ -144,6 +165,7 @@ export class CreditService {
                 payment_method: data.paymentMethod,
                 reference_number: data.referenceNumber,
                 received_by: userId,
+                organization_id: orgId,
             });
             const savedPayment = await manager.save(payment);
 
@@ -156,7 +178,7 @@ export class CreditService {
             }
 
             const activeRecords = await manager.find(CreditRecord, {
-                where: query,
+                where: { ...query, organization_id: orgId },
                 order: { due_date: 'ASC' },
             });
 
@@ -190,29 +212,35 @@ export class CreditService {
 
     // ─── Reporting & Alerts ───────────────────────────
     async getOverdueCredits() {
-        return this.creditRecordRepo
+        let qb = this.creditRecordRepo
             .createQueryBuilder('cr')
             .leftJoinAndSelect('cr.customer', 'customer')
             .where('cr.status != :status', { status: CreditStatus.PAID })
-            .andWhere('cr.due_date < :today', { today: new Date() })
-            .orderBy('cr.due_date', 'ASC')
-            .getMany();
+            .andWhere('cr.due_date < :today', { today: new Date() });
+        
+        qb = scopeQuery(qb, 'cr');
+        
+        return qb.orderBy('cr.due_date', 'ASC').getMany();
     }
 
     async getCreditSummary() {
-        const result = await this.customerRepo
+        let qb = this.customerRepo
             .createQueryBuilder('c')
-            .select('SUM(c.total_credit)', 'total_outstanding')
-            .getRawOne();
+            .select('SUM(c.total_credit)', 'total_outstanding');
+        
+        qb = scopeQuery(qb, 'c');
+        const result = await qb.getRawOne();
 
-        const overdueCount = await this.creditRecordRepo
+        let overdueQb = this.creditRecordRepo
             .createQueryBuilder('cr')
             .where('cr.status != :status', { status: CreditStatus.PAID })
-            .andWhere('cr.due_date < :today', { today: new Date() })
-            .getCount();
+            .andWhere('cr.due_date < :today', { today: new Date() });
+        
+        overdueQb = scopeQuery(overdueQb, 'cr');
+        const overdueCount = await overdueQb.getCount();
 
         const topDebtors = await this.customerRepo.find({
-            where: { is_active: true },
+            where: { is_active: true, organization_id: getTenantId() },
             order: { total_credit: 'DESC' },
             take: 5,
         });
@@ -225,7 +253,7 @@ export class CreditService {
     }
 
     async getPaymentsHistory(customerId?: string) {
-        const query: any = {};
+        const query: any = { organization_id: getTenantId() };
         if (customerId) query.customer_id = customerId;
 
         return this.paymentRepo.find({
@@ -237,7 +265,7 @@ export class CreditService {
     }
 
     async findAllCreditRecords(customerId?: string) {
-        const query: any = {};
+        const query: any = { organization_id: getTenantId() };
         if (customerId) query.customer_id = customerId;
 
         return this.creditRecordRepo.find({

@@ -7,6 +7,9 @@ import { SaleItem } from '../sales/entities/sale-item.entity';
 import { ForecastResult, ForecastMethod } from './entities/forecast-result.entity';
 import { PurchaseRecommendation, RecommendationStatus } from './entities/purchase-recommendation.entity';
 import * as ss from 'simple-statistics';
+import { getTenantId } from '../../common/utils/tenant-query';
+import { tenantStorage } from '../../common/context/tenant.context';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
 export class ForecastingService {
@@ -21,30 +24,47 @@ export class ForecastingService {
         private forecastRepository: Repository<ForecastResult>,
         @InjectRepository(PurchaseRecommendation)
         private recommendationRepository: Repository<PurchaseRecommendation>,
+        private readonly organizationsService: OrganizationsService,
     ) { }
 
     @Cron(CronExpression.EVERY_DAY_AT_2AM)
     async generateDailyForecasts() {
-        this.logger.log('Starting nightly forecast generation...');
+        this.logger.log('Starting nightly multi-tenant forecast generation...');
         try {
-            const medicines = await this.medicineRepository.find({
-                where: { is_active: true },
-                relations: ['batches']
-            });
+            const orgs = await this.organizationsService.findAll();
+            for (const org of orgs) {
+                if (!org.is_active) continue;
 
-            for (const medRaw of medicines) {
-                const medWithStock = {
-                    ...medRaw,
-                    total_stock: (medRaw.batches || []).reduce((sum, b) => sum + Number(b.quantity_remaining || 0), 0)
-                } as Medicine & { total_stock: number };
-
-                await this.generateForecastForMedicine(medWithStock);
+                await tenantStorage.run({ 
+                    organizationId: org.id, 
+                    userId: 'SYSTEM', 
+                    isSuperAdmin: false 
+                }, async () => {
+                    await this.runForecastsForCurrentTenant();
+                });
             }
-
-            this.logger.log(`Completed forecast generation for ${medicines.length} medicines.`);
         } catch (error) {
             this.logger.error('Failed to generate daily forecasts', error);
         }
+    }
+
+    private async runForecastsForCurrentTenant() {
+        const orgId = getTenantId();
+        const medicines = await this.medicineRepository.find({
+            where: { is_active: true, organization_id: orgId },
+            relations: ['batches']
+        });
+
+        for (const medRaw of medicines) {
+            const medWithStock = {
+                ...medRaw,
+                total_stock: (medRaw.batches || []).reduce((sum, b) => sum + Number(b.quantity_remaining || 0), 0)
+            } as Medicine & { total_stock: number };
+
+            await this.generateForecastForMedicine(medWithStock);
+        }
+
+        this.logger.log(`Completed forecast generation for ${medicines.length} medicines in org ${orgId}.`);
     }
 
     async generateForecastForMedicine(medicine: Medicine & { total_stock: number }) {
@@ -53,10 +73,12 @@ export class ForecastingService {
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(today.getDate() - 90);
 
+        const organization_id = getTenantId();
         const sales = await this.saleItemRepository.find({
             where: {
                 medicine_id: medicine.id,
                 created_at: Between(ninetyDaysAgo, today),
+                organization_id,
             },
             order: { created_at: 'ASC' }
         });
@@ -137,7 +159,8 @@ export class ForecastingService {
                 method: ForecastMethod.LINEAR_REGRESSION,
                 predicted_demand: lrPredictedTotal,
                 confidence_score: parseFloat(lrConfidence.toFixed(2)),
-                historical_data_points: timeSeriesData
+                historical_data_points: timeSeriesData,
+                organization_id
             }),
             this.forecastRepository.create({
                 medicine_id: medicine.id,
@@ -145,7 +168,8 @@ export class ForecastingService {
                 method: ForecastMethod.SMA,
                 predicted_demand: smaPredictedTotal,
                 confidence_score: parseFloat(smaConfidence.toFixed(2)),
-                historical_data_points: last7DaysSales
+                historical_data_points: last7DaysSales,
+                organization_id
             }),
             this.forecastRepository.create({
                 medicine_id: medicine.id,
@@ -153,7 +177,8 @@ export class ForecastingService {
                 method: ForecastMethod.WMA,
                 predicted_demand: wmaPredictedTotal,
                 confidence_score: parseFloat(wmaConfidence.toFixed(2)),
-                historical_data_points: last7DaysSales
+                historical_data_points: last7DaysSales,
+                organization_id
             })
         ];
 
@@ -180,7 +205,8 @@ export class ForecastingService {
             const existingRec = await this.recommendationRepository.findOne({
                 where: {
                     medicine_id: medicine.id,
-                    status: RecommendationStatus.PENDING
+                    status: RecommendationStatus.PENDING,
+                    organization_id,
                 }
             });
 
@@ -216,6 +242,7 @@ export class ForecastingService {
                     suggested_supplier_id: (medicine as any).preferred_supplier_id || null, // Best-scoring supplier or default
                     estimated_cost: estimatedCost,
                     urgency: urgency,
+                    organization_id,
                     reasoning: `Avg Daily Sales: ${avgDailySales.toFixed(1)}. Safety Stock: ${safetyStock}. Reorder Point: ${reorderPoint}. Predicted 7-day demand is ${Math.ceil(predictedTotalNext7Days)} units (Model: ${bestForecast.method}). Current stock is ${medicine.total_stock}. 30-day forecast recommends ordering ${orderQty} units.`,
                 });
 
@@ -225,6 +252,7 @@ export class ForecastingService {
     }
 
     async getForecastedDemand(medicineId: string, days: number): Promise<number> {
+        const organization_id = getTenantId();
         const today = new Date();
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(today.getDate() - 90);
@@ -233,6 +261,7 @@ export class ForecastingService {
             where: {
                 medicine_id: medicineId,
                 created_at: Between(ninetyDaysAgo, today),
+                organization_id,
             },
             order: { created_at: 'ASC' }
         });
@@ -300,14 +329,16 @@ export class ForecastingService {
 
     async getRecommendations() {
         return this.recommendationRepository.find({
-            where: { status: RecommendationStatus.PENDING },
+            where: { status: RecommendationStatus.PENDING, organization_id: getTenantId() },
             relations: ['medicine'],
             order: { created_at: 'DESC' }
         });
     }
 
     async updateRecommendationStatus(id: string, status: RecommendationStatus, reason?: string) {
-        const rec = await this.recommendationRepository.findOne({ where: { id } });
+        const rec = await this.recommendationRepository.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!rec) throw new NotFoundException('Recommendation not found');
 
         rec.status = status;
@@ -318,12 +349,13 @@ export class ForecastingService {
     }
 
     async getDeadStock() {
+        const organization_id = getTenantId();
         // Medicines with > 0 stock, no sales in 60 days
         const sixtyDaysAgo = new Date();
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
         const medicines = await this.medicineRepository.find({
-            where: { is_active: true },
+            where: { is_active: true, organization_id },
             relations: ['batches']
         });
 
@@ -337,13 +369,14 @@ export class ForecastingService {
                 const recentSale = await this.saleItemRepository.findOne({
                     where: {
                         medicine_id: med.id,
-                        created_at: Between(sixtyDaysAgo, new Date())
+                        created_at: Between(sixtyDaysAgo, new Date()),
+                        organization_id,
                     }
                 });
 
                 if (!recentSale) {
                     const lastSale = await this.saleItemRepository.findOne({
-                        where: { medicine_id: med.id },
+                        where: { medicine_id: med.id, organization_id },
                         order: { created_at: 'DESC' }
                     });
 

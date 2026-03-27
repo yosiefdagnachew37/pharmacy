@@ -1,13 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, Index, DeleteDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn, Index, DeleteDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Batch } from '../../batches/entities/batch.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('medicines')
+@Unique(['name', 'organization_id'])
+@Unique(['barcode', 'organization_id'])
+@Unique(['sku', 'organization_id'])
 export class Medicine {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Index({ unique: true })
-    @Column({ unique: true })
+    @Index()
+    @Column()
     name: string;
 
     @Column({ nullable: true })
@@ -22,10 +26,10 @@ export class Medicine {
     @Column({ default: false })
     is_controlled: boolean; // For controlled substances
 
-    @Column({ unique: true, nullable: true })
+    @Column({ nullable: true })
     barcode: string; // EAN/UPC barcode
 
-    @Column({ unique: true, nullable: true })
+    @Column({ nullable: true })
     sku: string; // Internal stock-keeping unit
 
     @Column({ nullable: true })
@@ -45,6 +49,13 @@ export class Medicine {
 
     @Column({ nullable: true })
     branch_id: string; // Multi-branch support
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @CreateDateColumn({ type: 'timestamp with time zone' })
     created_at: Date;

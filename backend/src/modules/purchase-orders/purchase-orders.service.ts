@@ -10,6 +10,9 @@ import { StockTransaction, TransactionType, ReferenceType } from '../stock/entit
 import { ForecastingService } from '../forecasting/forecasting.service';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { ExpiryIntelligenceService } from '../stock/expiry-intelligence.service';
+import { getTenantId } from '../../common/utils/tenant-query';
+import { tenantStorage } from '../../common/context/tenant.context';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -22,6 +25,7 @@ export class PurchaseOrdersService {
         private readonly grRepo: Repository<GoodsReceipt>,
         @InjectRepository(Medicine)
         private readonly medicineRepo: Repository<Medicine>,
+        private readonly organizationsService: OrganizationsService,
         private forecastingService: ForecastingService,
         private expiryIntelligenceService: ExpiryIntelligenceService,
         private dataSource: DataSource,
@@ -29,7 +33,7 @@ export class PurchaseOrdersService {
 
     // ─── PO CRUD ──────────────────────────────────────
     async findAll(status?: POStatus) {
-        const query: any = {};
+        const query: any = { organization_id: getTenantId() };
         if (status) query.status = status;
 
         return this.poRepo.find({
@@ -41,7 +45,7 @@ export class PurchaseOrdersService {
 
     async findOne(id: string) {
         const po = await this.poRepo.findOne({
-            where: { id },
+            where: { id, organization_id: getTenantId() },
             relations: ['supplier'],
         });
         if (!po) throw new NotFoundException('Purchase order not found');
@@ -50,7 +54,7 @@ export class PurchaseOrdersService {
 
     async getItems(poId: string) {
         return this.poItemRepo.find({
-            where: { purchase_order_id: poId },
+            where: { purchase_order_id: poId, organization_id: getTenantId() },
             relations: ['medicine'],
         });
     }
@@ -67,9 +71,10 @@ export class PurchaseOrdersService {
         cheque_due_date?: string;
         cheque_amount?: number;
     }, userId: string) {
+        const organization_id = getTenantId();
         return await this.dataSource.transaction(async (manager) => {
-            // Generate PO number
-            const count = await manager.count(PurchaseOrder);
+            // Generate PO number (scoped to org)
+            const count = await manager.count(PurchaseOrder, { where: { organization_id } });
             const poNumber = `PO-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(count + 1).padStart(4, '0')}`;
 
             // Calculate total
@@ -89,6 +94,7 @@ export class PurchaseOrdersService {
                 expected_delivery: data.expected_delivery ? new Date(data.expected_delivery) : undefined,
                 payment_method: data.payment_method || POPaymentMethod.CASH,
                 created_by: userId,
+                organization_id,
                 // Cheque fields (only relevant when payment_method === CHEQUE)
                 cheque_bank_name: data.cheque_bank_name || undefined,
                 cheque_number: data.cheque_number || undefined,
@@ -102,7 +108,7 @@ export class PurchaseOrdersService {
             for (const item of items) {
                 // Rule 3.3: Over-Purchase Prevention
                 const medicine = await manager.findOne(Medicine, {
-                    where: { id: item.medicine_id },
+                    where: { id: item.medicine_id, organization_id },
                     relations: ['batches']
                 });
                 // Phase 1.5: Expiry Risk Blocking
@@ -127,6 +133,7 @@ export class PurchaseOrdersService {
                     quantity_ordered: item.quantity_ordered,
                     unit_price: item.unit_price,
                     subtotal: item.subtotal,
+                    organization_id,
                 });
                 await manager.save(poItem);
             }
@@ -158,7 +165,7 @@ export class PurchaseOrdersService {
         }
 
         po.status = status;
-        return this.poRepo.save(po);
+        return this.poRepo.save(po); // po already verified in findOne
     }
 
     // ─── Goods Receipt ────────────────────────────────
@@ -168,9 +175,12 @@ export class PurchaseOrdersService {
         userId: string,
         notes?: string,
     ) {
+        const organization_id = getTenantId();
         try {
             return await this.dataSource.transaction(async (manager) => {
-                const po = await manager.findOne(PurchaseOrder, { where: { id: poId } });
+                const po = await manager.findOne(PurchaseOrder, { 
+                    where: { id: poId, organization_id } 
+                });
                 if (!po) throw new NotFoundException('PO not found');
 
                 // Generate unique GRN number (format: GRN-YYYYMMDD-XXXX)
@@ -184,12 +194,15 @@ export class PurchaseOrdersService {
                     received_by: userId,
                     grn_number: grnNumber,
                     notes,
+                    organization_id,
                 });
                 const savedGR = await manager.save(gr);
 
                 for (const item of items) {
                     // Update PO item received qty
-                    const poItem = await manager.findOne(PurchaseOrderItem, { where: { id: item.po_item_id } });
+                    const poItem = await manager.findOne(PurchaseOrderItem, { 
+                        where: { id: item.po_item_id, organization_id } 
+                    });
                     if (!poItem) continue;
 
                     poItem.quantity_received += item.quantity_received;
@@ -205,6 +218,7 @@ export class PurchaseOrdersService {
                         initial_quantity: item.quantity_received,
                         quantity_remaining: item.quantity_received,
                         supplier_id: po.supplier_id,
+                        organization_id,
                     });
                     const savedBatch = await manager.save(batch);
 
@@ -216,12 +230,15 @@ export class PurchaseOrdersService {
                         reference_type: ReferenceType.PURCHASE,
                         reference_id: savedGR.id,
                         created_by: userId,
+                        organization_id,
                     });
                     await manager.save(tx);
                 }
 
                 // Update PO status based on received quantities
-                const allItems = await manager.find(PurchaseOrderItem, { where: { purchase_order_id: poId } });
+                const allItems = await manager.find(PurchaseOrderItem, { 
+                    where: { purchase_order_id: poId, organization_id } 
+                });
                 const allFullyReceived = allItems.every(i => i.quantity_received >= i.quantity_ordered);
                 const anyReceived = allItems.some(i => i.quantity_received > 0);
 
@@ -249,22 +266,24 @@ export class PurchaseOrdersService {
 
     async getReceipts(poId: string) {
         return this.grRepo.find({
-            where: { purchase_order_id: poId },
+            where: { purchase_order_id: poId, organization_id: getTenantId() },
             order: { received_at: 'DESC' },
         });
     }
 
     // ─── Dashboard ────────────────────────────────────
     async getSummary() {
-        const total = await this.poRepo.count();
-        const draft = await this.poRepo.count({ where: { status: POStatus.DRAFT } });
-        const pending = await this.poRepo.count({ where: { status: POStatus.SENT } });
-        const confirmed = await this.poRepo.count({ where: { status: POStatus.CONFIRMED } });
+        const organization_id = getTenantId();
+        const total = await this.poRepo.count({ where: { organization_id } });
+        const draft = await this.poRepo.count({ where: { status: POStatus.DRAFT, organization_id } });
+        const pending = await this.poRepo.count({ where: { status: POStatus.SENT, organization_id } });
+        const confirmed = await this.poRepo.count({ where: { status: POStatus.CONFIRMED, organization_id } });
 
         const totalValue = await this.poRepo
             .createQueryBuilder('po')
             .select('COALESCE(SUM(po.total_amount), 0)', 'total')
             .where('po.status != :status', { status: POStatus.CANCELLED })
+            .andWhere('po.organization_id = :organization_id', { organization_id })
             .getRawOne();
 
         return {
@@ -279,13 +298,38 @@ export class PurchaseOrdersService {
     // ─── Cheque Reminder Check ────────────────────────────────────
     @Cron(CronExpression.EVERY_DAY_AT_9AM)
     async checkChequeReminders(): Promise<{ checked: number; alerts: number }> {
+        const orgStore = await this.organizationsService.findAll();
+        let totalChecked = 0;
+        let totalAlerts = 0;
+
+        for (const org of orgStore) {
+            if (!org.is_active) continue;
+
+            const res = await tenantStorage.run({ 
+                organizationId: org.id, 
+                userId: 'SYSTEM', 
+                isSuperAdmin: false 
+            }, async () => {
+                return this.runChequeCheckForCurrentTenant();
+            });
+
+            totalChecked += res.checked;
+            totalAlerts += res.alerts;
+        }
+
+        return { checked: totalChecked, alerts: totalAlerts };
+    }
+
+    private async runChequeCheckForCurrentTenant(): Promise<{ checked: number; alerts: number }> {
         const today = new Date();
+        const organization_id = getTenantId();
         today.setHours(0, 0, 0, 0);
 
         const chequePOs = await this.poRepo
             .createQueryBuilder('po')
             .leftJoinAndSelect('po.supplier', 'supplier')
             .where('po.payment_method = :method', { method: POPaymentMethod.CHEQUE })
+            .andWhere('po.organization_id = :organization_id', { organization_id })
             .andWhere('po.cheque_due_date IS NOT NULL')
             .andWhere('po.status NOT IN (:...exclude)', { exclude: [POStatus.CANCELLED] })
             .andWhere('po.payment_status != :paid', { paid: 'PAID' })

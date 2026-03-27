@@ -5,6 +5,7 @@ import { Batch } from './entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { CreateBatchDto } from './dto/create-batch.dto';
 import { UpdateBatchDto } from './dto/update-batch.dto';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class BatchesService {
@@ -24,7 +25,10 @@ export class BatchesService {
             quantity_remaining: quantity_remaining ?? initial_quantity,
         };
 
-        const batch = this.batchesRepository.create(batchData);
+        const batch = this.batchesRepository.create({
+            ...batchData,
+            organization_id: getTenantId(),
+        });
         try {
             return await this.batchesRepository.save(batch);
         } catch (err) {
@@ -36,19 +40,22 @@ export class BatchesService {
     }
 
     async findAll(): Promise<Batch[]> {
-        return await this.batchesRepository.find({ relations: ['medicine'] });
+        return await this.batchesRepository.find({ 
+            where: { organization_id: getTenantId() },
+            relations: ['medicine'] 
+        });
     }
 
     async findByMedicine(medicineId: string): Promise<Batch[]> {
         return await this.batchesRepository.find({
-            where: { medicine_id: medicineId },
+            where: { medicine_id: medicineId, organization_id: getTenantId() },
             order: { expiry_date: 'ASC' },
         });
     }
 
     async findOne(id: string): Promise<Batch> {
         const batch = await this.batchesRepository.findOne({
-            where: { id },
+            where: { id, organization_id: getTenantId() },
             relations: ['medicine'],
         });
         if (!batch) {
@@ -83,6 +90,7 @@ export class BatchesService {
             where: {
                 expiry_date: LessThan(date),
                 quantity_remaining: MoreThanOrEqual(1),
+                organization_id: getTenantId(),
             },
             relations: ['medicine'],
             order: { expiry_date: 'ASC' },
@@ -93,6 +101,7 @@ export class BatchesService {
         return await this.batchesRepository.find({
             where: {
                 expiry_date: LessThan(new Date()),
+                organization_id: getTenantId(),
             },
             relations: ['medicine'],
         });
@@ -108,8 +117,10 @@ export class BatchesService {
             return { created: 0, errors: [{ row: 0, message: 'No worksheet found in file' }] };
         }
 
-        // Pre-fetch all medicines for name lookup
-        const allMedicines = await this.medicinesRepository.find();
+        // Pre-fetch all medicines for name lookup (scoped to tenant)
+        const allMedicines = await this.medicinesRepository.find({
+            where: { organization_id: getTenantId() }
+        });
         const medicineMap = new Map(allMedicines.map(m => [m.name.toLowerCase(), m.id]));
 
         const toCreate: any[] = [];
@@ -148,6 +159,7 @@ export class BatchesService {
                 selling_price,
                 initial_quantity,
                 quantity_remaining: initial_quantity,
+                organization_id: getTenantId(),
             });
         });
 

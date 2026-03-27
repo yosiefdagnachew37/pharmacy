@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, Index, Unique } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Prescription } from '../../prescriptions/entities/prescription.entity';
 import { SaleItem } from './sale-item.entity';
 import { CreditRecord } from '../../credit/entities/credit-record.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum PaymentMethod {
     CASH = 'CASH',
@@ -15,11 +16,12 @@ export enum PaymentMethod {
 }
 
 @Entity('sales')
+@Unique(['receipt_number', 'organization_id'])
 export class Sale {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
+    @Column()
     receipt_number: string;
 
     @ManyToOne(() => Patient, { nullable: true })
@@ -73,6 +75,13 @@ export class Sale {
 
     @Column({ nullable: true })
     branch_id: string;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
     items: SaleItem[];

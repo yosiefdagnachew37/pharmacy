@@ -8,6 +8,7 @@ import { PriceHistory } from './entities/price-history.entity';
 import { SupplierPayment } from './entities/supplier-payment.entity';
 import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { User } from '../users/entities/user.entity';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class SuppliersService {
@@ -28,63 +29,82 @@ export class SuppliersService {
 
     // ─── Supplier CRUD ─────────────────────────────────
     async findAll() {
-        return this.supplierRepo.find({ order: { name: 'ASC' } });
+        return this.supplierRepo.find({ 
+            where: { organization_id: getTenantId() },
+            order: { name: 'ASC' } 
+        });
     }
 
     async findOne(id: string) {
-        const supplier = await this.supplierRepo.findOne({ where: { id } });
+        const supplier = await this.supplierRepo.findOne({ 
+            where: { id, organization_id: getTenantId() } 
+        });
         if (!supplier) throw new NotFoundException('Supplier not found');
         return supplier;
     }
 
     async create(data: Partial<Supplier>) {
-        const supplier = this.supplierRepo.create(data);
+        const supplier = this.supplierRepo.create({
+            ...data,
+            organization_id: getTenantId(),
+        });
         return this.supplierRepo.save(supplier);
     }
 
     async update(id: string, data: Partial<Supplier>) {
-        await this.findOne(id);
-        await this.supplierRepo.update(id, data);
+        await this.findOne(id); // findOne handles tenant check
+        await this.supplierRepo.update({ id, organization_id: getTenantId() }, data);
         return this.findOne(id);
     }
 
     async remove(id: string) {
         await this.findOne(id);
-        await this.supplierRepo.delete(id);
+        await this.supplierRepo.delete({ id, organization_id: getTenantId() });
         return { deleted: true };
     }
 
     // ─── Contract CRUD ─────────────────────────────────
     async getContracts(supplierId: string) {
         return this.contractRepo.find({
-            where: { supplier_id: supplierId },
+            where: { supplier_id: supplierId, organization_id: getTenantId() },
             order: { effective_date: 'DESC' },
         });
     }
 
     async createContract(supplierId: string, data: Partial<SupplierContract>) {
         await this.findOne(supplierId);
-        const contract = this.contractRepo.create({ ...data, supplier_id: supplierId });
+        const contract = this.contractRepo.create({ 
+            ...data, 
+            supplier_id: supplierId,
+            organization_id: getTenantId(),
+        });
         return this.contractRepo.save(contract);
     }
 
     async deleteContract(id: string) {
-        await this.contractRepo.delete(id);
+        const orgId = getTenantId();
+        const contract = await this.contractRepo.findOne({ where: { id, organization_id: orgId } });
+        if (!contract) throw new NotFoundException('Contract not found');
+        await this.contractRepo.delete({ id, organization_id: orgId });
         return { deleted: true };
     }
 
     // ─── Performance ───────────────────────────────────
     async getPerformance(supplierId: string) {
         return this.performanceRepo.find({
-            where: { supplier_id: supplierId },
+            where: { supplier_id: supplierId, organization_id: getTenantId() },
             order: { period: 'DESC' },
         });
     }
 
     async recordPerformance(supplierId: string, data: Partial<SupplierPerformance>) {
         await this.findOne(supplierId);
-        const perf = this.performanceRepo.create({ ...data, supplier_id: supplierId });
-
+        const perf = this.performanceRepo.create({ 
+            ...data, 
+            supplier_id: supplierId,
+            organization_id: getTenantId(),
+        });
+        
         // Auto-calculate composite score
         perf.computed_score = this.calculateScore(perf);
 
@@ -128,7 +148,7 @@ export class SuppliersService {
 
     // ─── Price History ─────────────────────────────────
     async getPriceHistory(medicineId: string, supplierId?: string) {
-        const query: any = { medicine_id: medicineId };
+        const query: any = { medicine_id: medicineId, organization_id: getTenantId() };
         if (supplierId) query.supplier_id = supplierId;
 
         return this.priceHistoryRepo.find({
@@ -143,15 +163,16 @@ export class SuppliersService {
             medicine_id: medicineId,
             supplier_id: supplierId,
             unit_price: unitPrice,
+            organization_id: getTenantId(),
         });
         return this.priceHistoryRepo.save(record);
     }
 
     // ─── Supplier Ranking ──────────────────────────────
     async getSupplierRanking(limit = 5) {
-        // Get latest performance for each supplier
+        // Get latest performance for each supplier (scoped to tenant)
         const suppliers = await this.supplierRepo.find({
-            where: { is_active: true },
+            where: { is_active: true, organization_id: getTenantId() },
             order: { name: 'ASC' },
         });
 
@@ -166,7 +187,7 @@ export class SuppliersService {
         }> = [];
         for (const supplier of suppliers) {
             const latestPerf = await this.performanceRepo.findOne({
-                where: { supplier_id: supplier.id },
+                where: { supplier_id: supplier.id, organization_id: getTenantId() },
                 order: { period: 'DESC' },
             });
 
@@ -188,7 +209,7 @@ export class SuppliersService {
 
     // ─── Supplier Payments ─────────────────────────────
     async getPayments(supplierId?: string, poId?: string) {
-        const query: any = {};
+        const query: any = { organization_id: getTenantId() };
         if (supplierId) query.purchase_order = { supplier_id: supplierId };
         if (poId) query.purchase_order_id = poId;
 
@@ -208,10 +229,15 @@ export class SuppliersService {
         notes?: string;
         created_by: string;
     }) {
-        const po = await this.poRepo.findOne({ where: { id: data.purchase_order_id } });
+        const po = await this.poRepo.findOne({ 
+            where: { id: data.purchase_order_id, organization_id: getTenantId() } 
+        });
         if (!po) throw new NotFoundException('Purchase Order not found');
 
-        const payment = this.paymentRepo.create(data);
+        const payment = this.paymentRepo.create({
+            ...data,
+            organization_id: getTenantId(),
+        });
         const savedPayment = await this.paymentRepo.save(payment);
 
         // Update PO stats

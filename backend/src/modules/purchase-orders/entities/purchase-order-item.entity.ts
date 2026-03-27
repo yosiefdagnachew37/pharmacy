@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { PurchaseOrder } from './purchase-order.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('purchase_order_items')
 export class PurchaseOrderItem {
@@ -32,6 +33,13 @@ export class PurchaseOrderItem {
 
     @Column('decimal', { precision: 12, scale: 2, default: 0 })
     subtotal: number;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @CreateDateColumn()
     created_at: Date;

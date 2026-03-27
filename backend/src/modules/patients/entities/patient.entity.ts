@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Prescription } from '../../prescriptions/entities/prescription.entity';
 import { Sale } from '../../sales/entities/sale.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum Gender {
     MALE = 'MALE',
@@ -9,6 +10,7 @@ export enum Gender {
 }
 
 @Entity('patients')
+@Unique(['phone', 'organization_id'])
 export class Patient {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -55,4 +57,11 @@ export class Patient {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

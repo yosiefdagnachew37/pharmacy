@@ -1,6 +1,7 @@
 import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import DashboardLayout from './layouts/DashboardLayout';
+import SuperAdminLayout from './layouts/SuperAdminLayout';
 import Dashboard from './pages/Dashboard';
 import Medicines from './pages/Medicines';
 import Batches from './pages/Batches';
@@ -22,6 +23,12 @@ import StockAudit from './pages/StockAudit';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from './components/Toast';
+import SuperAdminDashboard from './pages/super-admin/Dashboard';
+import TenantList from './pages/super-admin/TenantList';
+import SuperAdminBilling from './pages/super-admin/Billing';
+import SuperAdminAudit from './pages/super-admin/AuditLogs';
+import TenantDetails from './pages/super-admin/TenantDetails';
+import MasterInventory from './pages/super-admin/MasterInventory';
 
 const isElectron = 
   (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
@@ -41,7 +48,7 @@ function App() {
             <Route
               path="medicines"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
                   <Medicines />
                 </ProtectedRoute>
               }
@@ -49,7 +56,7 @@ function App() {
             <Route
               path="batches"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <Batches />
                 </ProtectedRoute>
               }
@@ -57,7 +64,7 @@ function App() {
             <Route
               path="pos"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
                   <POS />
                 </ProtectedRoute>
               }
@@ -65,7 +72,7 @@ function App() {
             <Route
               path="sales"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'CASHIER']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'CASHIER', 'SUPER_ADMIN']}>
                   <SalesHistory />
                 </ProtectedRoute>
               }
@@ -73,7 +80,7 @@ function App() {
             <Route
               path="reports"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN']}>
                   <Reports />
                 </ProtectedRoute>
               }
@@ -81,7 +88,7 @@ function App() {
             <Route
               path="patients"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
                   <Patients />
                 </ProtectedRoute>
               }
@@ -89,7 +96,7 @@ function App() {
             <Route
               path="alerts"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <Alerts />
                 </ProtectedRoute>
               }
@@ -97,7 +104,7 @@ function App() {
             <Route
               path="audit"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'AUDITOR']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'AUDITOR', 'SUPER_ADMIN']}>
                   <AuditLogs />
                 </ProtectedRoute>
               }
@@ -105,7 +112,7 @@ function App() {
             <Route
               path="system"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                   <System />
                 </ProtectedRoute>
               }
@@ -113,7 +120,7 @@ function App() {
             <Route
               path="suppliers"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                   <Suppliers />
                 </ProtectedRoute>
               }
@@ -121,7 +128,7 @@ function App() {
             <Route
               path="suppliers/:id"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                   <SupplierDetail />
                 </ProtectedRoute>
               }
@@ -129,7 +136,7 @@ function App() {
             <Route
               path="purchases"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <Purchases />
                 </ProtectedRoute>
               }
@@ -137,7 +144,7 @@ function App() {
             <Route
               path="expenses"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
                   <Expenses />
                 </ProtectedRoute>
               }
@@ -145,7 +152,7 @@ function App() {
             <Route
               path="credit"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN']}>
                   <CreditManagement />
                 </ProtectedRoute>
               }
@@ -153,7 +160,7 @@ function App() {
             <Route
               path="forecasting"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <IntelligentForecasting />
                 </ProtectedRoute>
               }
@@ -161,12 +168,26 @@ function App() {
             <Route
               path="stock-audit"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <StockAudit />
                 </ProtectedRoute>
               }
             />
           </Route>
+          
+          <Route path="/super-admin" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <SuperAdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="tenants" element={<TenantList />} />
+            <Route path="tenants/:id" element={<TenantDetails />} />
+            <Route path="inventory" element={<MasterInventory />} />
+            <Route path="billing" element={<SuperAdminBilling />} />
+            <Route path="audit" element={<SuperAdminAudit />} />
+          </Route>
+
           <Route path="/login" element={<Login />} />
         </Routes>
       </Router>

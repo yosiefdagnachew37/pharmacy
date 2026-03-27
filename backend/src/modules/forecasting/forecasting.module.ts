@@ -9,7 +9,8 @@ import { ForecastResult } from './entities/forecast-result.entity';
 import { PurchaseRecommendation } from './entities/purchase-recommendation.entity';
 import { AnomalyDetectionService } from './anomaly-detection.service';
 import { Sale } from '../sales/entities/sale.entity';
-import { NotificationsModule } from '../notifications/notifications.module'; // Assuming this path for NotificationsModule
+import { NotificationsModule } from '../notifications/notifications.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module'; // 
       SaleItem
     ]),
     NotificationsModule,
+    OrganizationsModule,
   ],
   controllers: [ForecastingController],
   providers: [ForecastingService, AnomalyDetectionService],

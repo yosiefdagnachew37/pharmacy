@@ -39,22 +39,23 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR'] },
-  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR'] },
-  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
-  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER'] },
-  { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR'] },
-  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN'] },
-  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST'] },
-  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN'] },
-  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR'] },
-  { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN'] },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN', 'SUPER_ADMIN'] },
+  { icon: Shield, label: 'Super Admin Panel', path: '/super-admin', roles: ['SUPER_ADMIN'] },
 ];
 
 const roleBadgeColors: Record<UserRole, string> = {
@@ -62,12 +63,13 @@ const roleBadgeColors: Record<UserRole, string> = {
   PHARMACIST: 'bg-emerald-500',
   CASHIER: 'bg-amber-500',
   AUDITOR: 'bg-sky-500',
+  SUPER_ADMIN: 'bg-indigo-600',
 };
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, selectedOrganization } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Barcode Lookup State
@@ -280,11 +282,18 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-2 sm:gap-4">
             {role && (
               <>
-                <div className="hidden sm:flex items-center bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl mr-2">
-                  <div className={`w-2 h-2 rounded-full ${roleBadgeColors[role] || 'bg-gray-400'} mr-2 animate-pulse`} />
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
-                    {role} Mode
-                  </span>
+                <div className="hidden sm:flex flex-col items-end mr-4">
+                  <div className="flex items-center">
+                    <div className={`w-2 h-2 rounded-full ${roleBadgeColors[role] || 'bg-gray-400'} mr-2 animate-pulse`} />
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                      {role === 'SUPER_ADMIN' ? 'Platform Admin' : role}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-black text-indigo-600 uppercase tracking-tight mt-0.5">
+                    {role === 'SUPER_ADMIN' && selectedOrganization 
+                      ? `Viewing: ${selectedOrganization.name}` 
+                      : user?.organizationName || 'Pharmacy'}
+                  </div>
                 </div>
                 
                 <NotificationBell />

@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Supplier } from './supplier.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('supplier_contracts')
 export class SupplierContract {
@@ -30,4 +31,11 @@ export class SupplierContract {
 
     @CreateDateColumn()
     created_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

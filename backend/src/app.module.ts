@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { User } from './modules/users/entities/user.entity';
+import { Organization } from './modules/organizations/entities/organization.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
+import { TenantSubscriber } from './common/subscribers/tenant.subscriber';
 import databaseConfig from './config/database.config';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -26,6 +30,7 @@ import { CreditModule } from './modules/credit/credit.module';
 import { ForecastingModule } from './modules/forecasting/forecasting.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { BranchesModule } from './modules/branches/branches.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 
 @Module({
   imports: [
@@ -38,10 +43,11 @@ import { BranchesModule } from './modules/branches/branches.module';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         ...configService.get('database'),
+        subscribers: [TenantSubscriber],
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Organization]),
     UsersModule,
     AuthModule,
     MedicinesModule,
@@ -62,8 +68,15 @@ import { BranchesModule } from './modules/branches/branches.module';
     ForecastingModule,
     ReceiptsModule,
     BranchesModule,
+    OrganizationsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantContextInterceptor,
+    },
+  ],
 })
 export class AppModule { }

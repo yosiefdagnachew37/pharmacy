@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-export type UserRole = 'ADMIN' | 'PHARMACIST' | 'CASHIER' | 'AUDITOR';
+export type UserRole = 'ADMIN' | 'PHARMACIST' | 'CASHIER' | 'AUDITOR' | 'SUPER_ADMIN';
 
 interface AuthUser {
   id: string;
   username: string;
   role: UserRole;
+  organizationName: string;
 }
 
 interface AuthContextType {
@@ -19,6 +20,8 @@ interface AuthContextType {
   canDelete: (entity: string) => boolean;
   canUpdate: (entity: string) => boolean;
   logout: () => void;
+  selectedOrganization: { id: string; name: string } | null;
+  setSelectedOrganization: (org: { id: string; name: string } | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,6 +32,8 @@ const AuthContext = createContext<AuthContextType>({
   canDelete: () => false,
   canUpdate: () => false,
   logout: () => { },
+  selectedOrganization: null,
+  setSelectedOrganization: () => { },
 });
 
 // Permission matrix: entity -> action -> allowed roles
@@ -60,6 +65,7 @@ const permissions: Record<string, Record<string, UserRole[]>> = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [selectedOrganization, setSelectedOrganizationState] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -68,7 +74,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(JSON.parse(stored));
       } catch { /* ignore bad data */ }
     }
+
+    const storedOrg = localStorage.getItem('selectedOrganization');
+    if (storedOrg) {
+      try {
+        setSelectedOrganizationState(JSON.parse(storedOrg));
+      } catch { /* ignore bad data */ }
+    }
   }, []);
+
+  const setSelectedOrganization = (org: { id: string; name: string } | null) => {
+    setSelectedOrganizationState(org);
+    if (org) {
+      localStorage.setItem('selectedOrganization', JSON.stringify(org));
+    } else {
+      localStorage.removeItem('selectedOrganization');
+    }
+    // Dispatch storage event to notify other tabs/components
+    window.dispatchEvent(new Event('storage'));
+  };
 
   // Listen for storage changes (e.g., login from another component)
   useEffect(() => {
@@ -78,6 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try { setUser(JSON.parse(stored)); } catch { setUser(null); }
       } else {
         setUser(null);
+      }
+
+      const storedOrg = localStorage.getItem('selectedOrganization');
+      if (storedOrg) {
+        try { setSelectedOrganizationState(JSON.parse(storedOrg)); } catch { setSelectedOrganizationState(null); }
+      } else {
+        setSelectedOrganizationState(null);
       }
     };
     window.addEventListener('storage', onStorage);
@@ -93,27 +124,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const canCreate = (entity: string) => {
     if (!role) return false;
+    // Super Admins have all permissions for support
+    if (role === 'SUPER_ADMIN') return true;
     return permissions[entity]?.create?.includes(role) ?? false;
   };
 
   const canDelete = (entity: string) => {
     if (!role) return false;
+    if (role === 'SUPER_ADMIN') return true;
     return permissions[entity]?.delete?.includes(role) ?? false;
   };
 
   const canUpdate = (entity: string) => {
     if (!role) return false;
+    if (role === 'SUPER_ADMIN') return true;
     return permissions[entity]?.update?.includes(role) ?? false;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('selectedOrganization');
     setUser(null);
+    setSelectedOrganizationState(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, hasRole, canCreate, canDelete, canUpdate, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      role, 
+      hasRole, 
+      canCreate, 
+      canDelete, 
+      canUpdate, 
+      logout,
+      selectedOrganization,
+      setSelectedOrganization
+    }}>
       {children}
     </AuthContext.Provider>
   );

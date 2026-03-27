@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { Sale } from './sale.entity';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 import { Batch } from '../../batches/entities/batch.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('sale_items')
 export class SaleItem {
@@ -40,6 +41,13 @@ export class SaleItem {
 
     @Column({ default: false })
     is_refunded: boolean;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 
     @Index()
     @CreateDateColumn({ type: 'timestamp with time zone' })

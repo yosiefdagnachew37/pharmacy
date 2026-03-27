@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Organization } from '../../organizations/entities/organization.entity';
 
 export enum PaymentTerms {
     NET_15 = 'NET_15',
@@ -8,6 +9,7 @@ export enum PaymentTerms {
 }
 
 @Entity('suppliers')
+@Unique(['name', 'organization_id'])
 export class Supplier {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -44,4 +46,11 @@ export class Supplier {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @ManyToOne(() => Organization)
+    @JoinColumn({ name: 'organization_id' })
+    organization: Organization;
+
+    @Column({ type: 'uuid' })
+    organization_id: string;
 }

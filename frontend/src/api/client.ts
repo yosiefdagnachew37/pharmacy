@@ -21,12 +21,24 @@ const client = axios.create({
     },
 });
 
-// Add interceptor for tokens if we have them in localStorage
+// Add interceptor for tokens and organization overrides
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Impersonation support: add organization override if selected
+    const selectedOrg = localStorage.getItem('selectedOrganization');
+    if (selectedOrg) {
+        try {
+            const org = JSON.parse(selectedOrg);
+            if (org.id) {
+                config.headers['x-organization-id'] = org.id;
+            }
+        } catch (e) { /* ignore parse errors */ }
+    }
+    
     return config;
 });
 

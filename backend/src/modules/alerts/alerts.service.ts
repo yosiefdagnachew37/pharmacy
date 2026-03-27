@@ -7,6 +7,9 @@ import { Batch } from '../batches/entities/batch.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { tenantStorage } from '../../common/context/tenant.context';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class AlertsService {
@@ -16,40 +19,65 @@ export class AlertsService {
         @InjectRepository(Alert)
         private readonly alertsRepository: Repository<Alert>,
         private readonly notificationsService: NotificationsService,
+        private readonly organizationsService: OrganizationsService,
         private dataSource: DataSource,
     ) { }
 
     async findAll(): Promise<Alert[]> {
         return await this.alertsRepository.find({
+            where: { organization_id: getTenantId() },
             order: { created_at: 'DESC' },
         });
     }
 
     async findActive(): Promise<Alert[]> {
         return await this.alertsRepository.find({
-            where: { status: AlertStatus.ACTIVE },
+            where: { status: AlertStatus.ACTIVE, organization_id: getTenantId() },
             order: { created_at: 'DESC' },
         });
     }
 
     async resolve(id: string): Promise<void> {
-        await this.alertsRepository.update(id, { status: AlertStatus.RESOLVED });
+        await this.alertsRepository.update(
+            { id, organization_id: getTenantId() },
+            { status: AlertStatus.RESOLVED }
+        );
     }
 
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     async handleCron() {
-        this.logger.debug('Running Alert check cron job...');
-        await this.checkLowStock();
-        await this.checkExpiringMedicines();
+        this.logger.debug('Running Alert check cron job for all tenants...');
+        const orgs = await this.organizationsService.findAll();
+        
+        for (const org of orgs) {
+            if (!org.is_active) continue;
+            
+            await tenantStorage.run({ 
+                organizationId: org.id, 
+                userId: 'SYSTEM', 
+                isSuperAdmin: false 
+            }, async () => {
+                try {
+                    await this.checkLowStock();
+                    await this.checkExpiringMedicines();
+                } catch (err) {
+                    this.logger.error(`Error in Alert cron for org ${org.name}: ${err.message}`);
+                }
+            });
+        }
     }
 
     async checkLowStock() {
-        const medicines = await this.dataSource.getRepository(Medicine).find();
+        const orgId = getTenantId();
+        const medicines = await this.dataSource.getRepository(Medicine).find({
+            where: { organization_id: orgId }
+        });
         for (const medicine of medicines) {
             const stock = await this.dataSource.getRepository(Batch)
                 .createQueryBuilder('b')
                 .select('SUM(b.quantity_remaining)', 'total')
                 .where('b.medicine_id = :id', { id: medicine.id })
+                .andWhere('b.organization_id = :orgId', { orgId })
                 .andWhere('b.expiry_date >= :now', { now: new Date().toISOString().split('T')[0] })
                 .getRawOne();
 
@@ -66,6 +94,7 @@ export class AlertsService {
 
     async checkExpiringMedicines() {
         const now = new Date();
+        const orgId = getTenantId();
         const expiringSoonDate = new Date();
         expiringSoonDate.setDate(expiringSoonDate.getDate() + 30); // 30 days window
 
@@ -74,6 +103,7 @@ export class AlertsService {
             where: {
                 expiry_date: LessThan(now),
                 quantity_remaining: MoreThanOrEqual(1),
+                organization_id: orgId,
             },
             relations: ['medicine'],
         });
@@ -91,6 +121,7 @@ export class AlertsService {
             .leftJoinAndSelect('b.medicine', 'm')
             .where('b.expiry_date BETWEEN :now AND :soon', { now: now.toISOString().split('T')[0], soon: expiringSoonDate.toISOString().split('T')[0] })
             .andWhere('b.quantity_remaining >= 1')
+            .andWhere('b.organization_id = :orgId', { orgId })
             .getMany();
 
         for (const batch of soonExpiringBatches) {
@@ -103,12 +134,14 @@ export class AlertsService {
     }
 
     private async createAlert(type: AlertType, message: string, referenceId: string) {
+        const orgId = getTenantId();
         // Check if an active alert already exists for this medicine and type to avoid spam
         const existing = await this.alertsRepository.findOne({
             where: {
                 type,
                 reference_id: referenceId,
                 status: AlertStatus.ACTIVE,
+                organization_id: orgId,
             }
         });
 
@@ -118,6 +151,7 @@ export class AlertsService {
                 message,
                 reference_id: referenceId,
                 status: AlertStatus.ACTIVE,
+                organization_id: orgId,
             });
             await this.alertsRepository.save(alert);
 

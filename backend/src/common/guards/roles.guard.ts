@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { UserRole } from '../enums/user-role.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -16,6 +17,11 @@ export class RolesGuard implements CanActivate {
         }
 
         const { user } = context.switchToHttp().getRequest();
+        
+        if (user?.role === UserRole.SUPER_ADMIN) {
+            return true;
+        }
+
         return requiredRoles.some((role) => user?.role === role);
     }
 }
