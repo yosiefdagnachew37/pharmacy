@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('customers')
+@Unique(['phone', 'organization_id'])
 export class Customer {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -31,6 +32,6 @@ export class Customer {
     @JoinColumn({ name: 'organization_id' })
     organization: Organization;
 
-    @Column({ type: 'uuid' })
+    @Column({ type: 'uuid', nullable: false })
     organization_id: string;
 }

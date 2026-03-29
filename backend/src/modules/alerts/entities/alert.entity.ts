@@ -43,6 +43,6 @@ export class Alert {
     @JoinColumn({ name: 'organization_id' })
     organization: Organization;
 
-    @Column({ type: 'uuid' })
+    @Column({ type: 'uuid', nullable: false })
     organization_id: string;
 }

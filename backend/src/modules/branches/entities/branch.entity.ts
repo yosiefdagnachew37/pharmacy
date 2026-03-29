@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Unique } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('branches')
+@Unique(['name', 'organization_id'])
 export class Branch {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -31,6 +32,6 @@ export class Branch {
     @JoinColumn({ name: 'organization_id' })
     organization: Organization;
 
-    @Column({ type: 'uuid' })
+    @Column({ type: 'uuid', nullable: false })
     organization_id: string;
 }

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Unique } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 
@@ -20,6 +20,7 @@ export enum ExpenseFrequency {
 }
 
 @Entity('expenses')
+@Unique(['receipt_reference', 'organization_id'])
 export class Expense {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -65,6 +66,6 @@ export class Expense {
     @JoinColumn({ name: 'organization_id' })
     organization: Organization;
 
-    @Column({ type: 'uuid' })
+    @Column({ type: 'uuid', nullable: false })
     organization_id: string;
 }

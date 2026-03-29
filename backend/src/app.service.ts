@@ -20,20 +20,20 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   private async seedAdminUser() {
-    // 1. Ensure a default organization exists
-    let defaultOrg = await this.organizationRepository.findOne({
+    // 1. Ensure a platform anchor organization exists
+    let platformOrg = await this.organizationRepository.findOne({
       where: { id: '00000000-0000-0000-0000-000000000000' }
     });
 
-    if (!defaultOrg) {
-      console.log('No default organization found. Creating "Legacy Default Organization"...');
-      defaultOrg = this.organizationRepository.create({
+    if (!platformOrg) {
+      console.log('No platform anchor found. Creating "Platform System HQ"...');
+      platformOrg = this.organizationRepository.create({
         id: '00000000-0000-0000-0000-000000000000',
-        name: 'Legacy Default Organization',
-        subscription_plan: SubscriptionPlan.BASIC,
+        name: 'Platform System HQ',
+        subscription_plan: SubscriptionPlan.GOLD,
         is_active: true,
       });
-      await this.organizationRepository.save(defaultOrg);
+      await this.organizationRepository.save(platformOrg);
     }
 
     const adminCount = await this.userRepository.count();
@@ -47,7 +47,7 @@ export class AppService implements OnApplicationBootstrap {
         password_hash,
         role: UserRole.ADMIN,
         is_active: true,
-        organization_id: defaultOrg.id,
+        organization_id: platformOrg.id,
       });
 
       await this.userRepository.save(admin);
@@ -60,7 +60,7 @@ export class AppService implements OnApplicationBootstrap {
         password_hash: superAdminPasswordHash,
         role: UserRole.SUPER_ADMIN,
         is_active: true,
-        organization_id: defaultOrg.id, // Super admin also needs an org in this schema
+        organization_id: platformOrg.id, // Super admin also needs an org in this schema
       });
       await this.userRepository.save(superAdmin);
       console.log('Default super admin created: superadmin / superadmin123');
