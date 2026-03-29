@@ -11,11 +11,13 @@ import { AuditSession } from './entities/audit-session.entity';
 import { AuditItem } from './entities/audit-item.entity';
 import { StockAuditService } from './stock-audit.service';
 import { StockAuditController } from './stock-audit.controller';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([StockTransaction, Batch, Medicine, AuditSession, AuditItem]),
         NotificationsModule,
+        OrganizationsModule,
     ],
     controllers: [StockController, StockAuditController],
     providers: [StockService, ExpiryIntelligenceService, StockAuditService],

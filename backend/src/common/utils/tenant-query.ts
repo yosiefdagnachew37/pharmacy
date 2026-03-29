@@ -1,6 +1,7 @@
 import { SelectQueryBuilder, ObjectLiteral } from 'typeorm';
 import { UnauthorizedException } from '@nestjs/common';
 import { tenantStorage } from '../context/tenant.context';
+export { tenantStorage };
 
 export function scopeQuery<T extends ObjectLiteral>(queryBuilder: SelectQueryBuilder<T>, alias: string): SelectQueryBuilder<T> {
   const store = tenantStorage.getStore();
@@ -32,4 +33,5 @@ export function getTenantId(): string {
 export const TenantQuery = {
   scopeQuery,
   getTenantId,
+  tenantStorage,
 };

@@ -29,10 +29,10 @@ export class AnomalyDetectionService {
             for (const org of orgs) {
                 if (!org.is_active) continue;
 
-                await tenantStorage.run({ 
-                    organizationId: org.id, 
-                    userId: 'SYSTEM', 
-                    isSuperAdmin: false 
+                await tenantStorage.run({
+                    organizationId: org.id,
+                    userId: 'SYSTEM',
+                    isSuperAdmin: false
                 }, async () => {
                     await this.detectSalesSpikes();
                     await this.detectHighRefundRates();

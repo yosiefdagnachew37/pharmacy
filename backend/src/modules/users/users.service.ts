@@ -44,10 +44,17 @@ export class UsersService {
             .where('user.username = :username', { username });
 
         if (orgName) {
-            query.andWhere('organization.name = :orgName', { orgName });
+            query.andWhere('LOWER(organization.name) = LOWER(:orgName)', { orgName });
         }
 
         return query.getOne();
+    }
+
+    async findByUsername(username: string): Promise<User[]> {
+        return this.usersRepository.createQueryBuilder('user')
+            .leftJoinAndSelect('user.organization', 'organization')
+            .where('user.username = :username', { username })
+            .getMany();
     }
 
     async findById(id: string): Promise<User | null> {

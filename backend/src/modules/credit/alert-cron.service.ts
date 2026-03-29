@@ -6,6 +6,8 @@ import { CreditRecord, CreditStatus } from '../credit/entities/credit-record.ent
 import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { tenantStorage, getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class AlertCronService {
@@ -17,13 +19,24 @@ export class AlertCronService {
         @InjectRepository(PurchaseOrder)
         private poRepository: Repository<PurchaseOrder>,
         private notificationsService: NotificationsService,
+        private organizationsService: OrganizationsService,
     ) { }
 
     @Cron(CronExpression.EVERY_DAY_AT_8AM)
     async runFinancialAlerts() {
-        this.logger.log('Running daily financial alerts cron job...');
-        await this.checkCreditDueDates();
-        await this.checkSupplierPaymentDueDates();
+        const organizations = await this.organizationsService.findAll();
+        this.logger.log(`Running daily financial alerts for ${organizations.length} organizations...`);
+
+        for (const org of organizations) {
+            await tenantStorage.run({ 
+                organizationId: org.id,
+                userId: 'SYSTEM',
+                isSuperAdmin: false
+            }, async () => {
+                await this.checkCreditDueDates();
+                await this.checkSupplierPaymentDueDates();
+            });
+        }
         this.logger.log('Financial alerts cron job completed.');
     }
 
@@ -36,7 +49,8 @@ export class AlertCronService {
         const upcomingCredits = await this.creditRepository.find({
             where: {
                 due_date: LessThanOrEqual(threeDaysFromNow),
-                status: MoreThan(CreditStatus.PAID as any), // This is tricky with enums, let's use status NOT PAID
+                status: MoreThan(CreditStatus.PAID as any),
+                organization_id: getTenantId(),
             },
             relations: ['customer'],
         });
@@ -69,6 +83,7 @@ export class AlertCronService {
             where: {
                 payment_status: POPaymentStatus.PENDING,
                 expected_delivery: LessThanOrEqual(threeDaysFromNow),
+                organization_id: getTenantId(),
             },
             relations: ['supplier'],
         });

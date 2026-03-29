@@ -10,11 +10,13 @@ import { AlertCronService } from './alert-cron.service';
 import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity';
 import { Patient } from '../patients/entities/patient.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([Customer, CreditRecord, CreditPayment, PurchaseOrder, ChequeRecord, Patient]),
         NotificationsModule,
+        OrganizationsModule,
     ],
     controllers: [CreditController],
     providers: [CreditService, AlertCronService],

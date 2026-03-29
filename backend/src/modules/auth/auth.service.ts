@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -12,12 +12,37 @@ export class AuthService {
     ) { }
 
     async validateUser(username: string, pass: string, orgName?: string): Promise<any> {
-        const user = await this.usersService.findOne(username, orgName);
-        if (user && (await bcrypt.compare(pass, user.password_hash))) { // Compare hash
-            const { password_hash, ...result } = user;
-            return result;
+        const users = await this.usersService.findByUsername(username);
+        
+        const matches: User[] = [];
+        for (const user of users) {
+             if (user.password_hash && (await bcrypt.compare(pass, user.password_hash))) {
+                 matches.push(user);
+             }
         }
-        return null;
+
+        if (matches.length === 0) return null;
+
+        // If organization name is provided, find the exact match (case-insensitive)
+        if (orgName) {
+            const exactMatch = matches.find(u => 
+                u.organization?.name?.toLowerCase() === orgName.toLowerCase()
+            );
+            if (exactMatch) {
+                const { password_hash, ...result } = exactMatch;
+                return result;
+            }
+            return null;
+        }
+
+        // If no organization name provided and multiple matches found -> CONFLICT
+        if (matches.length > 1) {
+            throw new ConflictException('Ambiguous login. Multiple organizations found with these credentials. Please specify your Pharmacy name.');
+        }
+
+        // Single match found
+        const { password_hash, ...result } = matches[0];
+        return result;
     }
 
     async login(user: any) {

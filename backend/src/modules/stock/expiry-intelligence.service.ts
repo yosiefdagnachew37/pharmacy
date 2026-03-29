@@ -6,6 +6,8 @@ import { Batch } from '../batches/entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { tenantStorage, scopeQuery, getTenantId } from '../../common/utils/tenant-query';
 
 export interface ExpiryRiskResult {
     medicine_id: string;
@@ -31,31 +33,43 @@ export class ExpiryIntelligenceService {
         @InjectRepository(Medicine)
         private readonly medicinesRepository: Repository<Medicine>,
         private readonly notificationsService: NotificationsService,
+        private readonly organizationsService: OrganizationsService,
     ) { }
 
     /**
      * Cron: Lock expired batches every hour
-     * Prevents accidental sale of expired medicines
+     * Refactored for Multi-Tenant: Iterates through all organizations
      */
     @Cron(CronExpression.EVERY_HOUR)
     async lockExpiredBatches() {
+        const organizations = await this.organizationsService.findAll();
         const now = new Date();
-        const result = await this.batchesRepository
-            .createQueryBuilder()
-            .update(Batch)
-            .set({ is_locked: true })
-            .where('expiry_date <= :now', { now })
-            .andWhere('is_locked = :locked', { locked: false })
-            .execute();
 
-        if (result.affected && result.affected > 0) {
-            this.logger.warn(`Locked ${result.affected} expired batch(es)`);
+        for (const org of organizations) {
+            await tenantStorage.run({ 
+                organizationId: org.id,
+                userId: 'SYSTEM',
+                isSuperAdmin: false
+            }, async () => {
+                const result = await this.batchesRepository
+                    .createQueryBuilder('b')
+                    .update(Batch)
+                    .set({ is_locked: true })
+                    .where('expiry_date <= :now', { now })
+                    .andWhere('is_locked = :locked', { locked: false })
+                    .andWhere('organization_id = :orgId', { orgId: org.id })
+                    .execute();
 
-            // Create notification for each locked batch
-            await this.notificationsService.create({
-                title: 'Expired Batches Locked',
-                message: `${result.affected} batch(es) have been automatically locked due to expiration.`,
-                type: NotificationType.EXPIRING,
+                if (result.affected && result.affected > 0) {
+                    this.logger.warn(`[${org.name}] Locked ${result.affected} expired batch(es)`);
+
+                    // Create notification for this specific organization
+                    await this.notificationsService.create({
+                        title: 'Expired Batches Locked',
+                        message: `${result.affected} batch(es) have been automatically locked due to expiration.`,
+                        type: NotificationType.EXPIRING,
+                    });
+                }
             });
         }
     }
@@ -69,14 +83,16 @@ export class ExpiryIntelligenceService {
         const now = new Date();
 
         // Get all non-locked, non-expired batches with remaining stock
-        const batches = await this.batchesRepository
+        let qb = this.batchesRepository
             .createQueryBuilder('b')
             .leftJoinAndSelect('b.medicine', 'm')
             .where('b.is_locked = :locked', { locked: false })
             .andWhere('b.quantity_remaining > 0')
-            .andWhere('b.expiry_date > :now', { now })
-            .orderBy('b.expiry_date', 'ASC')
-            .getMany();
+            .andWhere('b.expiry_date > :now', { now });
+        
+        qb = scopeQuery(qb, 'b');
+
+        const batches = await qb.orderBy('b.expiry_date', 'ASC').getMany();
 
         const results: ExpiryRiskResult[] = [];
 
@@ -179,6 +195,7 @@ export class ExpiryIntelligenceService {
             .from('sale_items', 'si')
             .where('si.medicine_id = :medicineId', { medicineId })
             .andWhere('si.created_at >= :sinceDate', { sinceDate })
+            .andWhere('si.organization_id = :orgId', { orgId: getTenantId() })
             .getRawOne();
 
         const totalSold = parseFloat(result?.total_sold) || 0;
@@ -194,7 +211,8 @@ export class ExpiryIntelligenceService {
             .select('COUNT(*)', 'total_transactions')
             .addSelect('SUM(CASE WHEN st.is_fefo_override = true THEN 1 ELSE 0 END)', 'override_count')
             .from('stock_transactions', 'st')
-            .where('st.type = :type', { type: 'OUT' });
+            .where('st.type = :type', { type: 'OUT' })
+            .andWhere('st.organization_id = :orgId', { orgId: getTenantId() });
 
         if (startDate) {
             query.andWhere('st.created_at >= :startDate', { startDate });

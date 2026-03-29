@@ -859,7 +859,10 @@ export class ReportingService {
 
     async getStockMovementReport(startDate: Date, endDate: Date) {
         return await this.transactionsRepository.find({
-            where: { created_at: Between(startDate, endDate) },
+            where: { 
+                created_at: Between(startDate, endDate),
+                organization_id: getTenantId()
+            },
             relations: ['batch', 'batch.medicine'],
             order: { created_at: 'DESC' },
         });
@@ -873,6 +876,7 @@ export class ReportingService {
             where: {
                 expiry_date: Between(new Date(), date),
                 quantity_remaining: Between(1, 999999),
+                organization_id: getTenantId(),
             },
             relations: ['medicine'],
             order: { expiry_date: 'ASC' },
@@ -883,7 +887,8 @@ export class ReportingService {
         return await this.salesRepository.find({
             where: {
                 created_at: Between(startDate, endDate),
-                is_controlled_transaction: true
+                is_controlled_transaction: true,
+                organization_id: getTenantId(),
             },
             relations: ['items', 'items.medicine', 'patient', 'user'],
             order: { created_at: 'ASC' }
@@ -893,9 +898,11 @@ export class ReportingService {
     async getFEFOComplianceReport(startDate: Date, endDate: Date) {
         // This report identifies cases where the sold batch was NOT the one with the earliest expiry
         // (implying a FEFO override or error)
+        const orgId = getTenantId();
         const saleItems = await this.saleItemsRepository.find({
             where: {
-                sale: { created_at: Between(startDate, endDate) }
+                sale: { created_at: Between(startDate, endDate) },
+                organization_id: orgId,
             },
             relations: ['sale', 'batch', 'medicine', 'medicine.batches'],
         });
@@ -936,7 +943,10 @@ export class ReportingService {
 
     async getInventoryValuation() {
         const batches = await this.batchesRepository.find({
-            where: { quantity_remaining: MoreThan(0) },
+            where: { 
+                quantity_remaining: MoreThan(0),
+                organization_id: getTenantId(),
+            },
         });
 
         const totalValue = batches.reduce((sum, b) => sum + (Number(b.quantity_remaining) * Number(b.purchase_price)), 0);
@@ -944,12 +954,13 @@ export class ReportingService {
     }
 
     async getExpiryLossReport() {
+        const orgId = getTenantId();
         // Actual loss (Locked/Expired)
         const expiredBatches = await this.batchesRepository.find({
             where: [
-                { is_locked: true },
-                { is_quarantined: true },
-                { expiry_date: LessThan(new Date()) }
+                { is_locked: true, organization_id: orgId },
+                { is_quarantined: true, organization_id: orgId },
+                { expiry_date: LessThan(new Date()), organization_id: orgId }
             ],
             relations: ['medicine']
         });
@@ -964,7 +975,8 @@ export class ReportingService {
             where: {
                 expiry_date: Between(new Date(), thirtyDaysFromNow),
                 quantity_remaining: Between(1, 999999),
-                is_locked: false
+                is_locked: false,
+                organization_id: orgId,
             }
         });
 
@@ -980,6 +992,7 @@ export class ReportingService {
 
     async getBatchTurnoverReport() {
         const sales = await this.saleItemsRepository.find({
+            where: { organization_id: getTenantId() },
             relations: ['batch', 'medicine'],
             order: { created_at: 'ASC' }
         });
@@ -1010,7 +1023,10 @@ export class ReportingService {
     }
 
     async getProfitMarginAnalysis() {
-        const medicines = await this.medicinesRepository.find({ relations: ['batches'] });
+        const medicines = await this.medicinesRepository.find({ 
+            where: { organization_id: getTenantId() },
+            relations: ['batches'] 
+        });
         return medicines.map(m => {
             const activeBatches = (m.batches || []).filter(b => b.quantity_remaining > 0);
             const avgPurchasePrice = m.batches?.length ?
@@ -1034,7 +1050,10 @@ export class ReportingService {
 
     async getParetoAnalysis(startDate: Date, endDate: Date) {
         const sales = await this.saleItemsRepository.find({
-            where: { created_at: Between(startDate, endDate) },
+            where: { 
+                created_at: Between(startDate, endDate),
+                organization_id: getTenantId(),
+            },
             relations: ['medicine']
         });
 
@@ -1061,8 +1080,12 @@ export class ReportingService {
     }
 
     async getInventoryTurnoverRatio(startDate: Date, endDate: Date) {
+        const orgId = getTenantId();
         const cogsItems = await this.saleItemsRepository.find({
-            where: { created_at: Between(startDate, endDate) },
+            where: { 
+                created_at: Between(startDate, endDate),
+                organization_id: orgId,
+            },
             relations: ['batch']
         });
 
@@ -1086,6 +1109,7 @@ export class ReportingService {
 
     async getExpenseTrendReport() {
         const expenses = await this.expensesRepository.find({
+            where: { organization_id: getTenantId() },
             order: { created_at: 'ASC' }
         });
 
@@ -1099,10 +1123,17 @@ export class ReportingService {
     }
 
     async getWorkingCapital() {
+        const orgId = getTenantId();
         const [inventory, credits, orders] = await Promise.all([
             this.getInventoryValuation(),
-            this.creditRecordRepository.find({ select: ['original_amount', 'paid_amount'] }),
-            this.poRepository.find({ select: ['total_amount', 'total_paid'] })
+            this.creditRecordRepository.find({ 
+                where: { organization_id: orgId },
+                select: ['original_amount', 'paid_amount'] 
+            }),
+            this.poRepository.find({ 
+                where: { organization_id: orgId },
+                select: ['total_amount', 'total_paid'] 
+            })
         ]);
 
         const totalInventoryValue = inventory.total_valuation;
@@ -1118,7 +1149,9 @@ export class ReportingService {
     }
 
     async getDailyExpenseSummary() {
-        const recurring = await this.expensesRepository.find({ where: { is_recurring: true } });
+        const recurring = await this.expensesRepository.find({ 
+            where: { is_recurring: true, organization_id: getTenantId() } 
+        });
         let dailyCost = 0;
         const details: { id: string; name: string; category: string; frequency: string; original_amount: number; daily_amortized: number }[] = [];
 
@@ -1151,8 +1184,12 @@ export class ReportingService {
     }
 
     async getSupplierPaymentAging() {
+        const orgId = getTenantId();
         const pos = await this.poRepository.find({
-            where: { payment_status: Not(POPaymentStatus.PAID) },
+            where: { 
+                payment_status: Not(POPaymentStatus.PAID),
+                organization_id: orgId,
+            },
             relations: ['supplier']
         });
 
