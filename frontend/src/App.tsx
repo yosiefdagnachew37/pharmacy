@@ -29,6 +29,8 @@ import SuperAdminBilling from './pages/super-admin/Billing';
 import SuperAdminAudit from './pages/super-admin/AuditLogs';
 import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
+// System page is shared between Admin (read-only backup) and SuperAdmin (full access)
+// System is already imported above
 
 const isElectron = 
   (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
@@ -186,6 +188,7 @@ function App() {
             <Route path="inventory" element={<MasterInventory />} />
             <Route path="billing" element={<SuperAdminBilling />} />
             <Route path="audit" element={<SuperAdminAudit />} />
+            <Route path="system" element={<System />} />
           </Route>
 
           <Route path="/login" element={<Login />} />

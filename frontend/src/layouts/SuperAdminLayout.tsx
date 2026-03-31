@@ -13,6 +13,7 @@ import {
   InboxStackIcon,
   UserCircleIcon,
   MagnifyingGlassIcon,
+  CogIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Master Inventory', href: '/super-admin/inventory', icon: InboxStackIcon },
   { name: 'Billing', href: '/super-admin/billing', icon: CreditCardIcon },
   { name: 'Audit Logs', href: '/super-admin/audit', icon: ClipboardDocumentListIcon },
+  { name: 'System', href: '/super-admin/system', icon: CogIcon },
   { name: 'Pharmacy View', href: '/', icon: ShieldCheckIcon },
 ];
 

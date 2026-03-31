@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Database, 
   Download, 
@@ -9,13 +10,13 @@ import {
   HardDrive,
   Cpu,
   CheckCircle2,
-  AlertCircle,
   Users,
   Edit,
   Trash2,
   Plus,
   Lock,
-  Check
+  Check,
+  ShieldOff
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import Modal from '../components/Modal';
@@ -45,6 +46,9 @@ interface User {
 }
 
 const System = () => {
+  const { role } = useAuth();
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+
   const [activeTab, setActiveTab] = useState<'system' | 'users'>('system');
   const [backups, setBackups] = useState<Backup[]>([]);
   const [status, setStatus] = useState<SystemStatus | null>(null);
@@ -74,12 +78,14 @@ const System = () => {
     setLoading(true);
     try {
       if (activeTab === 'system') {
-        const [backupsRes, statusRes] = await Promise.all([
-          client.get('/system/backups'),
-          client.get('/system/status')
-        ]);
-        setBackups(backupsRes.data);
+        // Status is accessible to all admins; backups list is SuperAdmin-only
+        const statusRes = await client.get('/system/status');
         setStatus(statusRes.data);
+
+        if (isSuperAdmin) {
+          const backupsRes = await client.get('/system/backups');
+          setBackups(backupsRes.data);
+        }
       } else {
         const res = await client.get('/users');
         setUsers(res.data);
@@ -116,6 +122,7 @@ const System = () => {
   }, [activeTab]);
 
   const handleBackup = async () => {
+    if (!isSuperAdmin) return;
     setActionLoading(true);
     try {
       await client.post('/system/backup');
@@ -129,6 +136,7 @@ const System = () => {
   };
 
   const handleRestore = async (filename: string) => {
+    if (!isSuperAdmin) return;
     setActionLoading(true);
     try {
       await client.post(`/system/restore/${filename}`);
@@ -201,14 +209,16 @@ const System = () => {
         </div>
         <div className="flex gap-4">
            {activeTab === 'system' ? (
-              <button 
-                onClick={handleBackup}
-                disabled={actionLoading}
-                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all disabled:opacity-50"
-              >
-                <Download className="w-5 h-5 mr-3" />
-                {actionLoading ? 'Creating...' : 'Create Backup'}
-              </button>
+              isSuperAdmin ? (
+                <button 
+                  onClick={handleBackup}
+                  disabled={actionLoading}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all disabled:opacity-50"
+                >
+                  <Download className="w-5 h-5 mr-3" />
+                  {actionLoading ? 'Creating...' : 'Create Backup'}
+                </button>
+              ) : null
            ) : (
               <button 
                 onClick={() => {
@@ -231,7 +241,7 @@ const System = () => {
           className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'system' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
         >
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4" /> System Status & Backups
+            <Activity className="w-4 h-4" /> System Status &amp; Backups
           </div>
         </button>
         <button
@@ -289,55 +299,72 @@ const System = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-50 flex items-center">
-              <Database className="w-5 h-5 text-indigo-600 mr-3" />
-              <h2 className="font-bold text-gray-800">Backup History</h2>
+          {/* SuperAdmin-only: Backup History */}
+          {isSuperAdmin ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-50 flex items-center">
+                <Database className="w-5 h-5 text-indigo-600 mr-3" />
+                <h2 className="font-bold text-gray-800">Backup History</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
+                    <tr>
+                      <th className="px-6 py-4">Filename</th>
+                      <th className="px-6 py-4">Created At</th>
+                      <th className="px-6 py-4 text-center">Size</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                    {loading ? (
+                      <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Scanning archives...</td></tr>
+                    ) : backups.length === 0 ? (
+                      <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">No backups available yet.</td></tr>
+                    ) : (
+                      backups.map((backup) => (
+                        <tr key={backup.filename} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
+                          <td className="px-6 py-4 text-sm">{new Date(backup.createdAt).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                               onClick={() => setRestoreConfirm(backup.filename)}
+                               disabled={actionLoading}
+                               className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
+                            >
+                              <RotateCcw className="w-4 h-4 mr-2" /> Restore
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest">
-                  <tr>
-                    <th className="px-6 py-4">Filename</th>
-                    <th className="px-6 py-4">Created At</th>
-                    <th className="px-6 py-4 text-center">Size</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
-                  {loading ? (
-                    <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">Scanning archives...</td></tr>
-                  ) : backups.length === 0 ? (
-                    <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">No backups available yet.</td></tr>
-                  ) : (
-                    backups.map((backup) => (
-                      <tr key={backup.filename} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
-                        <td className="px-6 py-4 text-sm">{new Date(backup.createdAt).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                             onClick={() => setRestoreConfirm(backup.filename)}
-                             disabled={actionLoading}
-                             className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
-                          >
-                            <RotateCcw className="w-4 h-4 mr-2" /> Restore
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          ) : (
+            /* Admin: locked banner instead of backup controls */
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 flex items-center gap-5">
+              <div className="flex-shrink-0 bg-amber-100 p-4 rounded-xl">
+                <ShieldOff className="w-8 h-8 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-800 text-base">Backup &amp; Restore — SuperAdmin Only</h3>
+                <p className="text-sm text-amber-600 mt-1">
+                  Database backup and restore operations are restricted to Platform SuperAdmins.
+                  The system status above is available for monitoring purposes. Contact your platform administrator for backup operations.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
           <div className="p-6 border-b border-gray-50 flex items-center justify-between gap-4">
             <div className="flex items-center">
               <Users className="w-5 h-5 text-indigo-600 mr-3" />
-              <h2 className="font-bold text-gray-800">System Users</h2>
+              <h2 className="font-bold text-gray-800">Organization Users</h2>
             </div>
             {activeFilterCount > 0 && (
               <button

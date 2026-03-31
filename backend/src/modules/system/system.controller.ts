@@ -7,26 +7,31 @@ import { UserRole } from '../../common/enums/user-role.enum';
 
 @Controller('system')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SUPER_ADMIN)
 export class SystemController {
     constructor(private readonly systemService: SystemService) { }
 
+    // ─── ADMIN-accessible: read-only system status ─────────────
     @Get('status')
+    @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
     getSystemStatus() {
         return this.systemService.getSystemStatus();
     }
 
+    // ─── SUPER_ADMIN-only: all backup/restore actions ──────────
     @Post('backup')
+    @Roles(UserRole.SUPER_ADMIN)
     createBackup() {
         return this.systemService.createBackup();
     }
 
     @Get('backups')
+    @Roles(UserRole.SUPER_ADMIN)
     listBackups() {
         return this.systemService.listBackups();
     }
 
     @Post('restore/:filename')
+    @Roles(UserRole.SUPER_ADMIN)
     restoreBackup(@Param('filename') filename: string) {
         return this.systemService.restoreBackup(filename);
     }

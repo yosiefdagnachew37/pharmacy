@@ -44,18 +44,21 @@ export const activateTenant = async (id: string): Promise<Tenant> => {
     return response.data;
 };
 
-export const createTenantUser = async (data: any): Promise<any> => {
-    const response = await client.post('/users', data);
+export const createTenantUser = async (data: any, tenantId?: string): Promise<any> => {
+    const config = tenantId ? { headers: { 'x-organization-id': tenantId } } : {};
+    const response = await client.post('/users', data, config);
     return response.data;
 };
 
-export const updateTenantUser = async (id: string, data: any): Promise<any> => {
-    const response = await client.patch(`/users/${id}`, data);
+export const updateTenantUser = async (id: string, data: any, tenantId?: string): Promise<any> => {
+    const config = tenantId ? { headers: { 'x-organization-id': tenantId } } : {};
+    const response = await client.patch(`/users/${id}`, data, config);
     return response.data;
 };
 
-export const deleteTenantUser = async (id: string): Promise<any> => {
-    const response = await client.delete(`/users/${id}`);
+export const deleteTenantUser = async (id: string, tenantId?: string): Promise<any> => {
+    const config = tenantId ? { headers: { 'x-organization-id': tenantId } } : {};
+    const response = await client.delete(`/users/${id}`, config);
     return response.data;
 };
 

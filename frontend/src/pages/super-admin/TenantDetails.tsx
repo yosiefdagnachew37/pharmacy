@@ -91,10 +91,10 @@ export default function TenantDetails() {
       
       if (editingUser) {
         if (!payload.password) delete (payload as any).password;
-        await updateTenantUser(editingUser.id, payload);
+        await updateTenantUser(editingUser.id, payload, id);
         toastSuccess('Staff Updated', 'Account details have been modified successfully.');
       } else {
-        await createTenantUser(payload);
+        await createTenantUser(payload, id);
         toastSuccess('Staff Provisioned', `Account for ${payload.username} has been created.`);
       }
       
@@ -115,9 +115,9 @@ export default function TenantDetails() {
   };
 
   const confirmDeleteUser = async () => {
-    if (!userToDeleteId) return;
+    if (!userToDeleteId || !id) return;
     try {
-      await deleteTenantUser(userToDeleteId);
+      await deleteTenantUser(userToDeleteId, id);
       toastSuccess('Staff Revoked', 'The account has been successfully deactivated.');
       fetchTenant();
     } catch (err) {
