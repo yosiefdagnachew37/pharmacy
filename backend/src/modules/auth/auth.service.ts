@@ -25,57 +25,44 @@ export class AuthService {
 
         if (matches.length === 0) return null;
 
-        // If organization name is provided, find the exact match (case-insensitive)
+        let targetedUser: User | null = null;
+
         if (orgName) {
-            const exactMatch = matches.find(u => 
+            targetedUser = matches.find(u => 
                 u.organization?.name?.toLowerCase() === orgName.toLowerCase()
-            );
-            if (!exactMatch) return null;
-
-            if (exactMatch.is_active === false) {
-                throw new ForbiddenException('USER_DEACTIVATED');
+            ) || null;
+            if (!targetedUser) return null;
+        } else {
+            if (matches.length > 1) {
+                throw new ConflictException('Ambiguous login. Multiple organizations found with these credentials. Please specify your Pharmacy name.');
             }
-
-            // Check if organization is suspended
-            if (exactMatch.organization && exactMatch.organization.is_active === false) {
-                throw new ForbiddenException('ORGANIZATION_SUSPENDED');
-            }
-
-            const { password_hash, ...result } = exactMatch;
-            return result;
+            targetedUser = matches[0];
         }
 
-        // If no organization name provided and multiple matches found -> CONFLICT
-        if (matches.length > 1) {
-            throw new ConflictException('Ambiguous login. Multiple organizations found with these credentials. Please specify your Pharmacy name.');
-        }
-
-        // Single match found — check org suspension
-        const singleMatch = matches[0];
-        
-        if (singleMatch.is_active === false) {
+        if (targetedUser.is_active === false) {
             throw new ForbiddenException('USER_DEACTIVATED');
         }
 
-        if (singleMatch.organization && singleMatch.organization.is_active === false) {
+        if (targetedUser.organization && targetedUser.organization.is_active === false) {
             throw new ForbiddenException('ORGANIZATION_SUSPENDED');
         }
 
-        const { password_hash, ...result } = singleMatch;
+        const { password_hash, ...result } = targetedUser;
+        
         // Attach the effective subscription status to the user object
         let subStatus = 'TRIAL';
         let subFeatures: string[] = [];
 
-        if (singleMatch.organization) {
-            if (singleMatch.organization.subscription_status) {
-                subStatus = singleMatch.organization.subscription_status;
+        if (targetedUser.organization) {
+            if (targetedUser.organization.subscription_status) {
+                subStatus = targetedUser.organization.subscription_status;
             }
-            if (singleMatch.organization.subscription_expiry_date && new Date(singleMatch.organization.subscription_expiry_date) < new Date()) {
+            if (targetedUser.organization.subscription_expiry_date && new Date(targetedUser.organization.subscription_expiry_date) < new Date()) {
                 subStatus = 'EXPIRED';
             }
             
             // Look up plan features
-            const planName = singleMatch.organization.subscription_plan;
+            const planName = targetedUser.organization.subscription_plan_name || targetedUser.organization.subscription_plan;
             if (planName) {
                 try {
                     const allPlans = await this.plansService.findAll();
