@@ -10,7 +10,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAmbiguous, setIsAmbiguous] = useState(false);
-  
+
   // Terms and Conditions State
   const [agreedToTerms, setAgreedToTerms] = useState(
     localStorage.getItem('hasAcceptedTerms') === 'true'
@@ -25,20 +25,20 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await client.post('/auth/login', { 
-        username, 
+      const response = await client.post('/auth/login', {
+        username,
         password,
-        organization_name: organizationName 
+        organization_name: organizationName
       });
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
+
       if (agreedToTerms) {
         localStorage.setItem('hasAcceptedTerms', 'true');
       }
 
       window.dispatchEvent(new Event('storage'));
-      
+
       const user = response.data.user;
       if (user.role === 'SUPER_ADMIN') {
         navigate('/super-admin');
@@ -85,7 +85,7 @@ const Login = () => {
             <Pill className="w-10 h-10" />
           </div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Pharmacy ERP</h1>
-          <p className="text-gray-500 mt-2 font-medium">Secure Access Portal</p>
+          <p className="text-gray-900 mt-2 font-medium">Secure Access Portal</p>
         </div>
 
         <form onSubmit={handleLogin} className="p-8 space-y-6">
@@ -97,11 +97,11 @@ const Login = () => {
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Username</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Username</label>
             <div className="relative">
               <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 required
                 className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-medium"
                 placeholder="Enter your username"
@@ -111,11 +111,11 @@ const Login = () => {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Password</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300 w-5 h-5" />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 required
                 className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-medium"
                 placeholder="••••••••"
@@ -133,8 +133,8 @@ const Login = () => {
               </div>
               <div className="relative">
                 <Building2 className="absolute left-4 top-1/2 transform -translate-y-1/2 text-indigo-400 w-5 h-5" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required={isAmbiguous}
                   className="w-full pl-12 pr-4 py-4 bg-indigo-50/30 border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold placeholder:font-medium uppercase placeholder:normal-case text-sm tracking-tight text-indigo-900 shadow-inner"
                   placeholder="e.g. ABINET PHARMACY"
@@ -147,8 +147,8 @@ const Login = () => {
 
           {(!localStorage.getItem('hasAcceptedTerms')) && (
             <div className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="terms"
                 required
                 checked={agreedToTerms}
@@ -161,7 +161,7 @@ const Login = () => {
             </div>
           )}
 
-          <button 
+          <button
             type="submit"
             disabled={loading || (!agreedToTerms && !localStorage.getItem('hasAcceptedTerms'))}
             className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -185,7 +185,7 @@ const Login = () => {
             </div>
             <div className="p-6 text-sm text-gray-600 overflow-y-auto max-h-[60vh] space-y-4 font-medium leading-relaxed">
               <p>By accessing and utilizing this Pharmacy Enterprise Resource Planning application ("The System"), you enter into a binding agreement summarizing the terms of service.</p>
-              
+
               <p className="font-bold text-gray-900 mb-1">1. Licensing & Usage Limitations</p>
               <p>This software is provided specifically for the authorized organizational node under a designated subscription tier. You may not reverse-engineer, decompile, bypass internal module locks, or duplicate the deployment binaries without explicit platform administration consent.</p>
 
@@ -193,7 +193,7 @@ const Login = () => {
               <p>All stock tracking, financial auditing, and usage logs recorded within The System belong strictly to the managing entity. The platform administrators reserve the right to temporarily suspend, block, or limit access to specific modules if an organization fails to maintain an active subscription or violates proper usage policies.</p>
             </div>
             <div className="p-4 bg-gray-50 flex justify-end">
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   setAgreedToTerms(true);
