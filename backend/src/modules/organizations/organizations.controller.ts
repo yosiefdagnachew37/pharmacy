@@ -16,6 +16,11 @@ export class OrganizationsController {
     findAll() {
         return this.organizationsService.findAll();
     }
+    
+    @Get('stats')
+    getStats() {
+        return this.organizationsService.getPlatformStats();
+    }
 
     @Get(':id')
     findOne(@Param('id') id: string) {

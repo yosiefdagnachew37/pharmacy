@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { superAdminService, type Tenant } from '../../api/superAdminService';
+import { Link, useNavigate } from 'react-router-dom';
+import { superAdminService, type Tenant, getPlatformStats } from '../../api/superAdminService';
 import { 
   BuildingOffice2Icon, 
   CheckCircleIcon, 
@@ -12,34 +13,33 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function SuperAdminDashboard() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchTenants = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const data = await superAdminService.getAllTenants();
-        setTenants(data || []);
+        const statsData = await getPlatformStats();
+        setStats(statsData);
       } catch (error) {
-        console.error('Failed to fetch tenants:', error);
+        console.error('Failed to fetch dashboard stats:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchTenants();
+    fetchDashboardData();
   }, []);
 
-  const totalTenants = tenants.length;
-  // Plans are SILVER or GOLD for higher revenue
-  const totalMRR = tenants.reduce((acc, t) => acc + (t.subscription_plan === 'GOLD' ? 2500 : (t.subscription_plan === 'SILVER' ? 1800 : 1200)), 0);
-
-  if (loading) {
+  if (loading || !stats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
+
+  const { totalTenants, totalMRR, totalUsers, growth, health, recentTenants } = stats;
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
@@ -50,9 +50,9 @@ export default function SuperAdminDashboard() {
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex -space-x-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="w-8 h-8 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-600 uppercase">
-                {String.fromCharCode(64 + i)}
+            {recentTenants.slice(0, 3).map((t: any, i: number) => (
+              <div key={t.id} className="w-8 h-8 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-600 uppercase">
+                {t.name.charAt(0)}
               </div>
             ))}
           </div>
@@ -66,28 +66,28 @@ export default function SuperAdminDashboard() {
           icon={BuildingOffice2Icon} 
           label="Total Pharmacies" 
           value={totalTenants} 
-          trend="+12% this month"
+          trend={`+${growth[growth.length-1]?.count || 0} this month`}
           color="indigo" 
         />
         <StatCard 
           icon={BanknotesIcon} 
           label="Est. Monthly Revenue" 
-          value={`ETB ${totalMRR.toLocaleString()}`} 
-          trend="+5.4% growth"
+          value={`ETB ${Math.round(totalMRR).toLocaleString()}`} 
+          trend="Real-time MRR"
           color="emerald" 
         />
         <StatCard 
           icon={UserGroupIcon} 
           label="Total System Users" 
-          value={(totalTenants * 12).toLocaleString()} 
+          value={totalUsers.toLocaleString()} 
           trend="Across all branches"
           color="amber" 
         />
         <StatCard 
           icon={BoltIcon} 
-          label="API Performance" 
-          value="42ms" 
-          trend="99.99% Uptime"
+          label="System Status" 
+          value={health.database === 'Healthy' ? 'Online' : 'Warning'} 
+          trend="99.9% Peak Uptime"
           color="rose" 
         />
       </div>
@@ -98,29 +98,30 @@ export default function SuperAdminDashboard() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <ArrowTrendingUpIcon className="h-6 w-6 text-indigo-500" />
-              Growth Analytics
+              Onboarding Analytics
             </h3>
-            <select className="bg-gray-50 border-none rounded-xl text-xs font-bold py-2 px-4 outline-none">
-              <option>Last 6 Months</option>
-              <option>Last Year</option>
-            </select>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last 6 Months</div>
           </div>
           <div className="h-64 flex items-end justify-between gap-4 px-4">
-            {[45, 62, 58, 84, 92, 110].map((height, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center group">
-                <div 
-                  style={{ height: `${height}%` }} 
-                  className="w-full bg-indigo-500/10 rounded-t-xl group-hover:bg-indigo-500 transition-all cursor-pointer relative"
-                >
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                    ETB {(height * 1000).toLocaleString()}
+            {growth.map((g: any, i: number) => {
+              const maxHeight = Math.max(...growth.map((item: any) => item.count), 1);
+              const heightPercent = (g.count / maxHeight) * 100;
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center group">
+                  <div 
+                    style={{ height: `${Math.max(heightPercent, 5)}%` }} 
+                    className="w-full bg-indigo-500/10 rounded-t-xl group-hover:bg-indigo-500 transition-all cursor-pointer relative"
+                  >
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      {g.count} New Nodes
+                    </div>
                   </div>
+                  <span className="text-[10px] font-semibold text-gray-600 mt-4 uppercase">
+                    {g.month}
+                  </span>
                 </div>
-                <span className="text-[10px] font-semibold text-gray-600 mt-4 uppercase">
-                  {['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'][i]}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -131,10 +132,10 @@ export default function SuperAdminDashboard() {
             System Health
           </h3>
           <div className="space-y-6">
-            <HealthItem label="Database Engine" value="Healthy" color="emerald" />
-            <HealthItem label="File Storage (S3)" value="Active" color="emerald" />
-            <HealthItem label="Auth Services" value="99.9%" color="emerald" />
-            <HealthItem label="Background Jobs" value="Processing" color="indigo" />
+            <HealthItem label="Database Engine" value={health.database} color={health.database === 'Healthy' ? 'emerald' : 'rose'} />
+            <HealthItem label="File Storage (S3)" value={health.storage} color="emerald" />
+            <HealthItem label="Auth Services" value={health.auth} color="emerald" />
+            <HealthItem label="Background Jobs" value={health.backgroundJobs} color="indigo" />
             
             <div className="pt-6 border-t border-white/10 mt-6">
               <div className="bg-white/10 rounded-2xl p-4">
@@ -150,7 +151,7 @@ export default function SuperAdminDashboard() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <h3 className="text-sm font-bold text-gray-900">Recently Onboarded Pharmacies</h3>
-          <button className="text-indigo-600 text-[10px] font-bold hover:underline">View All Tenants</button>
+          <Link to="/super-admin/tenants" className="text-indigo-600 text-[10px] font-bold hover:underline">View All Tenants</Link>
         </div>
         <div className="overflow-x-auto px-4 pb-4">
           <table className="min-w-full divide-y divide-gray-200">
@@ -163,17 +164,17 @@ export default function SuperAdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {tenants.slice(0, 5).map(tenant => (
-                <tr key={tenant.id} className="hover:bg-gray-50 transition-colors cursor-pointer">
+              {recentTenants.map((tenant: any) => (
+                <tr key={tenant.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/super-admin/tenants/${tenant.id}`)}>
                   <td className="px-6 py-2 whitespace-nowrap">
                     <div className="font-bold text-gray-900 text-xs">{tenant.name}</div>
-                    <div className="text-[9px] text-gray-600 font-medium uppercase">{tenant.id.slice(0, 8)}...</div>
+                    <div className="text-[9px] text-gray-600 font-medium uppercase">{tenant.id.split('-')[0]}</div>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap">
                     <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase ${
-                      tenant.subscription_plan === 'GOLD' ? 'bg-amber-100 text-amber-600' : (tenant.subscription_plan === 'SILVER' ? 'bg-gray-100 text-gray-600' : 'bg-orange-100 text-orange-600')
+                      tenant.subscription_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'
                     }`}>
-                      {tenant.subscription_plan || 'BASIC'}
+                      {tenant.subscription_plan_name || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap">
@@ -183,13 +184,13 @@ export default function SuperAdminDashboard() {
                     </div>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap text-[10px] text-gray-500 font-medium">
-                    {tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'N/A'}
+                    {new Date(tenant.created_at).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {tenants.length === 0 && (
+          {recentTenants.length === 0 && (
             <div className="py-12 text-center text-gray-400 text-sm">No pharmacies onboarded yet.</div>
           )}
         </div>

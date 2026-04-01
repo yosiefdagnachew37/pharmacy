@@ -23,6 +23,11 @@ export const getTenants = async (): Promise<Tenant[]> => {
     return response.data;
 };
 
+export const getPlatformStats = async (): Promise<any> => {
+    const response = await client.get('/admin/organizations/stats');
+    return response.data;
+};
+
 export const getTenant = async (id: string): Promise<Tenant> => {
     const response = await client.get(`/admin/organizations/${id}`);
     return response.data;
