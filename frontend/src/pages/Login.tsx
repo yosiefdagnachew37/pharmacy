@@ -54,14 +54,18 @@ const Login = () => {
         setError('Multiple pharmacies found with these credentials. Please enter your Pharmacy name below.');
       } else if (status === 403) {
         // Organization suspended or subscription issue
-        const isSuspended = message.includes('ORGANIZATION_SUSPENDED');
-        const isExpired = message.includes('SUBSCRIPTION_EXPIRED');
+        const messageStr = typeof message === 'string' ? message : JSON.stringify(message || '');
+        const isSuspended = messageStr.includes('ORGANIZATION_SUSPENDED');
+        const isExpired = messageStr.includes('SUBSCRIPTION_EXPIRED');
+        const isDeactivated = messageStr.includes('USER_DEACTIVATED');
         if (isSuspended) {
           setError('Your organization has been suspended. Please contact the system administrator to restore access.');
         } else if (isExpired) {
           setError('Your pharmacy subscription has expired. Please contact the system administrator to renew.');
+        } else if (isDeactivated) {
+          setError('Your account has been deactivated. Please contact your system administrator.');
         } else {
-          setError('Access denied. Please contact your system administrator.');
+          setError(messageStr.includes('Forbidden') ? 'Access denied. Please contact your system administrator.' : messageStr);
         }
       } else if (status === 401) {
         setError('Incorrect username or password. Please try again.');

@@ -32,6 +32,10 @@ export class AuthService {
             );
             if (!exactMatch) return null;
 
+            if (exactMatch.is_active === false) {
+                throw new ForbiddenException('USER_DEACTIVATED');
+            }
+
             // Check if organization is suspended
             if (exactMatch.organization && exactMatch.organization.is_active === false) {
                 throw new ForbiddenException('ORGANIZATION_SUSPENDED');
@@ -48,6 +52,11 @@ export class AuthService {
 
         // Single match found — check org suspension
         const singleMatch = matches[0];
+        
+        if (singleMatch.is_active === false) {
+            throw new ForbiddenException('USER_DEACTIVATED');
+        }
+
         if (singleMatch.organization && singleMatch.organization.is_active === false) {
             throw new ForbiddenException('ORGANIZATION_SUSPENDED');
         }

@@ -66,7 +66,7 @@ export default function TenantDetails() {
   }, [id]);
 
   const handlePlanUpdate = async (plan: any) => {
-    if (!id || plan.name === tenant.subscription_plan) return;
+    if (!id || plan.name === (tenant?.subscription_plan_name || tenant?.subscription_plan)) return;
     setUpdating(true);
     try {
       const nextMonth = new Date();
@@ -77,8 +77,11 @@ export default function TenantDetails() {
         subscription_status: 'ACTIVE',
         subscription_expiry_date: nextMonth.toISOString()
       });
-      // Legacy fallback
-      await updateTenant(id, { subscription_plan: plan.name });
+      // Legacy explicit fallback array routing around postgres enum
+      await updateTenant(id, { 
+        subscription_plan: 'BASIC',
+        subscription_plan_name: plan.name
+      });
       
       toastSuccess('Tier Upgraded', `Pharmacy node has been transitioned to the ${plan.name} plan.`);
       setIsSubModalOpen(false);
@@ -232,7 +235,7 @@ export default function TenantDetails() {
             <div className="space-y-4">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Current Plan</span>
-                <span className="font-bold text-indigo-600">{tenant.subscription_plan}</span>
+                <span className="font-bold text-indigo-600">{tenant.subscription_plan_name || tenant.subscription_plan}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Billing Cycle</span>

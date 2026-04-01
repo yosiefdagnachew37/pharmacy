@@ -185,6 +185,17 @@ const System = () => {
     }
   };
 
+  const handleReactivate = async (id: string) => {
+    if (!confirm('Are you sure you want to reactivate this user?')) return;
+    try {
+      await client.patch(`/users/${id}`, { is_active: true });
+      toastSuccess('User reactivated', 'Access successfully restored for this user.');
+      fetchData();
+    } catch (err) {
+      toastError('Failed', 'Could not reactivate user.');
+    }
+  };
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -433,28 +444,41 @@ const System = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button 
-                            onClick={() => {
-                              setEditingUser(u);
-                              setUserFormData({
-                                username: u.username,
-                                password: '',
-                                role: u.role,
-                                manager_pin: u.manager_pin || ''
-                              });
-                              setShowUserModal(true);
-                            }}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          {u.username !== 'admin' && (
+                          {u.role !== 'SUPER_ADMIN' && (
                             <button 
-                              onClick={() => handleDeactivate(u.id)}
-                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              onClick={() => {
+                                setEditingUser(u);
+                                setUserFormData({
+                                  username: u.username,
+                                  password: '',
+                                  role: u.role,
+                                  manager_pin: u.manager_pin || ''
+                                });
+                                setShowUserModal(true);
+                              }}
+                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Edit className="w-4 h-4" />
                             </button>
+                          )}
+                          {u.username !== 'admin' && u.role !== 'SUPER_ADMIN' && (
+                            u.is_active ? (
+                              <button 
+                                onClick={() => handleDeactivate(u.id)}
+                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                title="Deactivate User"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleReactivate(u.id)}
+                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                title="Reactivate User"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+                            )
                           )}
                         </div>
                       </td>
