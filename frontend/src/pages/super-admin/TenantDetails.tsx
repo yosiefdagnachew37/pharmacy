@@ -281,8 +281,8 @@ export default function TenantDetails() {
                       {plan.name}
                     </div>
                     <div className="flex items-baseline gap-1 mb-4">
-                      <span className="text-xl font-black text-gray-900">ETB {plan.monthly_price}</span>
-                      <span className="text-[10px] text-gray-400 font-medium">/mo</span>
+                      <span className="text-xl font-black text-gray-900">ETB {plan.costs}</span>
+                      <span className="text-[10px] text-gray-400 font-medium">/ {plan.duration_months === 12 ? 'year' : plan.duration_months === 1 ? 'month' : `${plan.duration_months}mo`}</span>
                     </div>
                     <ul className="space-y-2 mb-6">
                       {(plan.features || []).map((f: string, i: number) => (

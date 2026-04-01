@@ -57,8 +57,12 @@ export class AuthService {
             if (targetedUser.organization.subscription_status) {
                 subStatus = targetedUser.organization.subscription_status;
             }
-            if (targetedUser.organization.subscription_expiry_date && new Date(targetedUser.organization.subscription_expiry_date) < new Date()) {
-                subStatus = 'EXPIRED';
+            
+            // Zero-tolerance expiry lockout (skip for SUPER_ADMIN)
+            if (targetedUser.role !== 'SUPER_ADMIN' &&
+                targetedUser.organization.subscription_expiry_date && 
+                new Date(targetedUser.organization.subscription_expiry_date) < new Date()) {
+                throw new ForbiddenException('SUBSCRIPTION_EXPIRED');
             }
             
             // Look up plan features
@@ -75,7 +79,12 @@ export class AuthService {
                 }
             }
         }
-        return { ...result, subscription_status: subStatus, subscription_features: subFeatures };
+        return { 
+            ...result, 
+            subscription_status: subStatus, 
+            subscription_features: subFeatures,
+            subscription_expiry_date: targetedUser.organization?.subscription_expiry_date || null
+        };
     }
 
     async login(user: any) {
@@ -85,14 +94,16 @@ export class AuthService {
             role: user.role, 
             organizationId: user.organization_id,
             subscription_status: user.subscription_status,
-            subscription_features: user.subscription_features || []
+            subscription_features: user.subscription_features || [],
+            subscription_expiry_date: user.subscription_expiry_date || null
         };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 ...user,
                 subscription_status: user.subscription_status,
-                subscription_features: user.subscription_features || []
+                subscription_features: user.subscription_features || [],
+                subscription_expiry_date: user.subscription_expiry_date || null
             },
         };
     }

@@ -11,7 +11,7 @@ export class SubscriptionPlansService {
   ) {}
 
   async findAll() {
-    return this.repo.find({ order: { monthly_price: 'ASC' } });
+    return this.repo.find({ order: { costs: 'ASC' } });
   }
 
   async findOne(id: string) {

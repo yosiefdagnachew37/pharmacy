@@ -10,6 +10,7 @@ interface AuthUser {
   organizationName: string;
   subscription_status?: string;
   subscription_features?: string[];
+  subscription_expiry_date?: string;
 }
 
 interface AuthContextType {

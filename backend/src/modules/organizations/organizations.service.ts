@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrgSubscriptionStatus } from './entities/organization.entity';
 import { UsersService } from '../users/users.service';
+import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -13,6 +14,7 @@ export class OrganizationsService {
         @InjectRepository(Organization)
         private organizationsRepository: Repository<Organization>,
         private usersService: UsersService,
+        private plansService: SubscriptionPlansService,
     ) { }
 
     findAll() {
@@ -88,6 +90,22 @@ export class OrganizationsService {
 
         if (data.subscription_plan_name !== undefined) {
             org.subscription_plan_name = data.subscription_plan_name;
+
+            // Auto-calculate expiry date from the plan's duration_months
+            try {
+                const allPlans = await this.plansService.findAll();
+                const matchedPlan = allPlans.find(p => p.name === data.subscription_plan_name);
+                if (matchedPlan && matchedPlan.duration_months) {
+                    const startDate = new Date();
+                    const expiryDate = new Date(startDate);
+                    expiryDate.setMonth(expiryDate.getMonth() + matchedPlan.duration_months);
+                    org.subscription_expiry_date = expiryDate;
+                    // Auto-activate when subscribing to a new plan
+                    org.subscription_status = OrgSubscriptionStatus.ACTIVE;
+                }
+            } catch (e) {
+                console.error('Failed to look up plan duration', e);
+            }
         }
         if (data.subscription_status !== undefined) {
             org.subscription_status = data.subscription_status as OrgSubscriptionStatus;

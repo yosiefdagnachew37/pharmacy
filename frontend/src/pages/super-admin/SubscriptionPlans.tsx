@@ -4,12 +4,34 @@ import {
   PlusIcon,
   PencilSquareIcon,
   TrashIcon,
-  CheckBadgeIcon
+  CheckBadgeIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { getSubscriptionPlans, createSubscriptionPlan, updateSubscriptionPlan, deleteSubscriptionPlan } from '../../api/superAdminService';
 import Modal from '../../components/Modal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { toastSuccess, toastError } from '../../components/Toast';
+
+const DURATION_OPTIONS = [
+  { value: 1, label: '1 Month' },
+  { value: 3, label: '3 Months' },
+  { value: 6, label: '6 Months' },
+  { value: 12, label: '1 Year' },
+];
+
+const getDurationLabel = (months: number) => {
+  const opt = DURATION_OPTIONS.find(o => o.value === months);
+  if (opt) return opt.label;
+  return `${months} Month${months > 1 ? 's' : ''}`;
+};
+
+const getDurationShortLabel = (months: number) => {
+  if (months === 1) return '/ month';
+  if (months === 3) return '/ quarter';
+  if (months === 6) return '/ 6 months';
+  if (months === 12) return '/ year';
+  return `/ ${months}mo`;
+};
 
 export default function SubscriptionPlans() {
   const [plans, setPlans] = useState<any[]>([]);
@@ -30,7 +52,8 @@ export default function SubscriptionPlans() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    monthly_price: '',
+    costs: '',
+    duration_months: 1,
     features: [] as string[],
     is_active: true
   });
@@ -52,7 +75,7 @@ export default function SubscriptionPlans() {
 
   const openAddModal = () => {
     setEditingPlan(null);
-    setFormData({ name: '', description: '', monthly_price: '', features: [], is_active: true });
+    setFormData({ name: '', description: '', costs: '', duration_months: 1, features: [], is_active: true });
     setIsModalOpen(true);
   };
 
@@ -61,7 +84,8 @@ export default function SubscriptionPlans() {
     setFormData({
       name: plan.name,
       description: plan.description || '',
-      monthly_price: plan.monthly_price,
+      costs: plan.costs,
+      duration_months: plan.duration_months || 1,
       features: plan.features || [],
       is_active: plan.is_active
     });
@@ -73,7 +97,8 @@ export default function SubscriptionPlans() {
     try {
       const payload = {
         ...formData,
-        monthly_price: Number(formData.monthly_price),
+        costs: Number(formData.costs),
+        duration_months: Number(formData.duration_months),
         features: formData.features
       };
 
@@ -111,7 +136,7 @@ export default function SubscriptionPlans() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-gray-100 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscription Plans</h1>
-          <p className="text-gray-500 text-[10px] font-medium uppercase tracking-tight">Manage billing tiers and features</p>
+          <p className="text-gray-500 text-[10px] font-medium uppercase tracking-tight">Manage billing tiers, durations, and features</p>
         </div>
         <button 
           onClick={openAddModal}
@@ -134,11 +159,20 @@ export default function SubscriptionPlans() {
               </div>
               <div>
                 <h3 className="text-xl font-black text-gray-900">{plan.name}</h3>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">ETB {Number(plan.monthly_price).toLocaleString()} / mo</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  ETB {Number(plan.costs).toLocaleString()} {getDurationShortLabel(plan.duration_months || 1)}
+                </p>
               </div>
             </div>
-            {plan.description && <p className="text-sm text-gray-500 mb-6 italic">{plan.description}</p>}
+            {plan.description && <p className="text-sm text-gray-500 mb-4 italic">{plan.description}</p>}
             
+            <div className="flex items-center gap-2 mb-4 bg-indigo-50/50 rounded-xl px-3 py-2">
+              <ClockIcon className="h-4 w-4 text-indigo-500" />
+              <span className="text-xs font-bold text-indigo-700">
+                Duration: {getDurationLabel(plan.duration_months || 1)}
+              </span>
+            </div>
+
             <div className="flex-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Included Features</span>
               <ul className="space-y-2 mb-6">
@@ -186,19 +220,43 @@ export default function SubscriptionPlans() {
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="e.g. BASIC"
+              placeholder="e.g. Pro Plus"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Monthly Cost (ETB)</label>
+               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Plan Cost (ETB)</label>
                <input
                  type="number"
                  step="0.01"
                  required
-                 value={formData.monthly_price}
-                 onChange={e => setFormData({ ...formData, monthly_price: e.target.value })}
+                 value={formData.costs}
+                 onChange={e => setFormData({ ...formData, costs: e.target.value })}
                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+               />
+            </div>
+            <div>
+               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Plan Duration</label>
+               <select 
+                 value={formData.duration_months}
+                 onChange={e => setFormData({ ...formData, duration_months: Number(e.target.value) })}
+                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+               >
+                 {DURATION_OPTIONS.map(opt => (
+                   <option key={opt.value} value={opt.value}>{opt.label}</option>
+                 ))}
+               </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Description</label>
+               <input
+                 type="text"
+                 value={formData.description}
+                 onChange={e => setFormData({ ...formData, description: e.target.value })}
+                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                 placeholder="Optional description"
                />
             </div>
             <div>

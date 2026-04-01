@@ -417,7 +417,7 @@ export default function TenantList() {
                 className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
               >
                 {plans.map(p => (
-                  <option key={p.id} value={p.name}>{p.name} - ETB {p.monthly_price}/mo</option>
+                  <option key={p.id} value={p.name}>{p.name} - ETB {p.costs} / {p.duration_months === 12 ? 'year' : p.duration_months === 1 ? 'month' : `${p.duration_months}mo`}</option>
                 ))}
               </select>
             </div>

@@ -24,7 +24,8 @@ import {
   Barcode,
   Search as SearchIcon,
   Pill as MedicineIcon,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
@@ -123,6 +124,19 @@ const DashboardLayout = () => {
     if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
     return true;
   });
+
+  // Subscription expiry warning (7-day countdown)
+  const expiryWarning = (() => {
+    if (!user || role === 'SUPER_ADMIN') return null;
+    const expiryStr = user.subscription_expiry_date;
+    if (!expiryStr) return null;
+    const expiry = new Date(expiryStr);
+    const now = new Date();
+    const diffMs = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0 || diffDays > 7) return null;
+    return diffDays;
+  })();
 
   if (user && role !== 'SUPER_ADMIN' && ['EXPIRED', 'SUSPENDED'].includes(user.subscription_status || '')) {
     return (
@@ -339,6 +353,19 @@ const DashboardLayout = () => {
             )}
           </div>
         </header>
+
+        {/* Subscription Expiry Warning Banner */}
+        {expiryWarning !== null && (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 lg:px-12 py-3 flex items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-bold">
+                ⚠️ Your subscription expires in <span className="underline decoration-2">{expiryWarning} day{expiryWarning !== 1 ? 's' : ''}</span>. 
+                Please contact your system administrator to renew your plan.
+              </p>
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-8">
           <Outlet />
