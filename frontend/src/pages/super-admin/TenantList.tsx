@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import ColumnFilter from '../../components/ColumnFilter';
 import { getTenants, suspendTenant, activateTenant, createTenant, updateTenant, deleteTenant, getSubscriptionPlans, type Tenant } from '../../api/superAdminService';
-import { 
-  BuildingOffice2Icon, 
-  PlusIcon, 
+import {
+  BuildingOffice2Icon,
+  PlusIcon,
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
   ShieldCheckIcon,
@@ -21,8 +21,8 @@ export default function TenantList() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTenant, setNewTenant] = useState({ 
-    name: '', 
+  const [newTenant, setNewTenant] = useState({
+    name: '',
     subscription_plan: 'BASIC' as const,
     admin_username: '',
     admin_password: '',
@@ -36,12 +36,12 @@ export default function TenantList() {
   const [plans, setPlans] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [suspendConfirmId, setSuspendConfirmId] = useState<string | null>(null);
-  
+
   // Edit & Delete State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Partial<Tenant> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  
+
   // Advanced Column Filters
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
     name: [],
@@ -64,7 +64,7 @@ export default function TenantList() {
       ]);
       setTenants(tenantsData);
       setPlans(plansData.filter((p: any) => p.is_active));
-      
+
       if (plansData.length > 0 && !newTenant.subscription_plan) {
         setNewTenant(prev => ({ ...prev, subscription_plan: plansData[0].name }));
       }
@@ -91,8 +91,8 @@ export default function TenantList() {
       await createTenant(payload);
       toastSuccess('Organization Deployed', `${newTenant.name} is now live on the platform.`);
       setIsModalOpen(false);
-      setNewTenant({ 
-        name: '', 
+      setNewTenant({
+        name: '',
         subscription_plan: 'BASIC',
         admin_username: '',
         admin_password: '',
@@ -120,8 +120,8 @@ export default function TenantList() {
       const { id, ...dataToUpdate } = editingTenant;
       // Remap subscription plan to bypass postgres
       if (dataToUpdate.subscription_plan) {
-         dataToUpdate.subscription_plan_name = dataToUpdate.subscription_plan as string;
-         dataToUpdate.subscription_plan = 'BASIC';
+        dataToUpdate.subscription_plan_name = dataToUpdate.subscription_plan as string;
+        dataToUpdate.subscription_plan = 'BASIC';
       }
       await updateTenant(id, dataToUpdate);
       toastSuccess('Organization Updated', `${dataToUpdate.name || 'Tenant'} information has been securely updated.`);
@@ -140,7 +140,7 @@ export default function TenantList() {
       setSuspendConfirmId(id);
       return;
     }
-    
+
     try {
       await activateTenant(id);
       toastSuccess('Node Activated', 'The pharmacy node is now healthy and operational.');
@@ -253,7 +253,7 @@ export default function TenantList() {
             <span>{filteredTenants.length} Nodes Found</span>
           </div>
           {activeFilterCount > 0 && (
-            <button 
+            <button
               onClick={() => setColumnFilters({ name: [], id: [], plan: [], status: [] })}
               className="flex items-center gap-2 text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors bg-red-50 px-3 py-1.5 rounded-xl shadow-sm"
             >
@@ -266,122 +266,120 @@ export default function TenantList() {
         <div className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto custom-scrollbar pb-48">
           <div className="overflow-x-auto relative">
             <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
-              <tr className="border-b border-gray-100">
-                <ColumnFilter
-                  label="Pharmacy Name"
-                  options={uniqueNames}
-                  selectedValues={columnFilters.name}
-                  onFilterChange={(v) => updateFilter('name', v)}
-                  className="px-8 py-4"
-                />
-                <th className="px-6 py-4 text-left text-[10px] font-semibold text-gray-700 uppercase tracking-wider">Internal ID</th>
-                <ColumnFilter
-                  label="Subscription Plan"
-                  options={planOptions}
-                  selectedValues={columnFilters.plan}
-                  onFilterChange={(v) => updateFilter('plan', v)}
-                  className="px-6 py-4"
-                />
-                <ColumnFilter
-                  label="Health Status"
-                  options={statusOptions}
-                  selectedValues={columnFilters.status}
-                  onFilterChange={(v) => updateFilter('status', v)}
-                  className="px-6 py-4"
-                />
-                <th className="px-8 py-4 text-right text-[10px] font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {filteredTenants.length > 0 ? filteredTenants.map((tenant) => (
-                <tr key={tenant.id} className="hover:bg-indigo-50/40 transition-colors group">
-                  <td className="px-8 py-1.5 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mr-4 group-hover:scale-110 transition-transform">
-                        <BuildingOffice2Icon className="h-4 w-4" />
+              <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
+                <tr className="border-b border-gray-100">
+                  <ColumnFilter
+                    label="Pharmacy Name"
+                    options={uniqueNames}
+                    selectedValues={columnFilters.name}
+                    onFilterChange={(v) => updateFilter('name', v)}
+                    className="px-8 py-4"
+                  />
+                  <th className="px-6 py-4 text-left text-[10px] font-semibold text-gray-700 uppercase tracking-wider">Internal ID</th>
+                  <ColumnFilter
+                    label="Subscription Plan"
+                    options={planOptions}
+                    selectedValues={columnFilters.plan}
+                    onFilterChange={(v) => updateFilter('plan', v)}
+                    className="px-6 py-4"
+                  />
+                  <ColumnFilter
+                    label="Health Status"
+                    options={statusOptions}
+                    selectedValues={columnFilters.status}
+                    onFilterChange={(v) => updateFilter('status', v)}
+                    className="px-6 py-4"
+                  />
+                  <th className="px-8 py-4 text-right text-[10px] font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {filteredTenants.length > 0 ? filteredTenants.map((tenant) => (
+                  <tr key={tenant.id} className="hover:bg-indigo-50/40 transition-colors group">
+                    <td className="px-8 py-1.5 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mr-4 group-hover:scale-110 transition-transform">
+                          <BuildingOffice2Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 text-xs group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tenant.name}</div>
+                          <div className="text-[9px] text-gray-400 font-medium">Platform Node {tenant.id.slice(0, 8)}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-xs group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{tenant.name}</div>
-                        <div className="text-[9px] text-gray-400 font-medium">Platform Node {tenant.id.slice(0, 8)}</div>
+                    </td>
+                    <td className="px-6 py-2 whitespace-nowrap">
+                      <code className="text-[10px] bg-gray-50 px-2 py-0.5 rounded border border-gray-100 text-gray-600 font-mono">
+                        {tenant.id.slice(0, 12)}
+                      </code>
+                    </td>
+                    <td className="px-6 py-2 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg uppercase tracking-tighter ${tenant.subscription_plan === 'GOLD' ? 'bg-amber-100 text-amber-600' :
+                        tenant.subscription_plan === 'SILVER' ? 'bg-gray-100 text-gray-600' :
+                          'bg-indigo-100 text-indigo-600'
+                        }`}>
+                        {tenant.subscription_plan}
+                      </span>
+                    </td>
+                    <td className="px-6 py-2 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${tenant.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        <span className={`text-[9px] font-bold uppercase ${tenant.is_active ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {tenant.is_active ? 'Healthy' : 'Suspended'}
+                        </span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-2 whitespace-nowrap">
-                    <code className="text-[10px] bg-gray-50 px-2 py-0.5 rounded border border-gray-100 text-gray-600 font-mono">
-                      {tenant.id.slice(0, 12)}
-                    </code>
-                  </td>
-                  <td className="px-6 py-2 whitespace-nowrap">
-                    <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg uppercase tracking-tighter ${
-                      tenant.subscription_plan === 'GOLD' ? 'bg-amber-100 text-amber-600' :
-                      tenant.subscription_plan === 'SILVER' ? 'bg-gray-100 text-gray-600' :
-                      'bg-indigo-100 text-indigo-600'
-                    }`}>
-                      {tenant.subscription_plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-2 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                       <div className={`w-2 h-2 rounded-full ${tenant.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                       <span className={`text-[9px] font-bold uppercase ${tenant.is_active ? 'text-emerald-600' : 'text-rose-600'}`}>
-                         {tenant.is_active ? 'Healthy' : 'Suspended'}
-                       </span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-2 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-2 transition-all">
-                      <button
-                        onClick={() => toggleStatus(tenant.id, tenant.is_active)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold uppercase tracking-wider transition-all ${
-                          tenant.is_active 
-                            ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white' 
+                    </td>
+                    <td className="px-8 py-2 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2 transition-all">
+                        <button
+                          onClick={() => toggleStatus(tenant.id, tenant.is_active)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold uppercase tracking-wider transition-all ${tenant.is_active
+                            ? 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white'
                             : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'
-                        }`}
-                      >
-                        {tenant.is_active ? 'Suspend' : 'Activate'}
-                      </button>
-                      <div className="flex bg-gray-50 border border-gray-100 rounded-lg p-0.5">
-                        <button
-                          onClick={() => {
-                            setEditingTenant(tenant);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-l-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
-                          title="Edit Tenant"
+                            }`}
                         >
-                          <PencilSquareIcon className="h-4 w-4" />
+                          {tenant.is_active ? 'Suspend' : 'Activate'}
                         </button>
-                        <div className="w-px bg-gray-200 my-1"></div>
-                        <button
-                          onClick={() => setDeleteConfirmId(tenant.id)}
-                          className="p-1.5 text-gray-500 hover:bg-white hover:text-rose-600 hover:shadow-sm transition-all"
-                          title="Delete Tenant"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                        <div className="w-px bg-gray-200 my-1"></div>
-                        <Link 
-                           to={`/super-admin/tenants/${tenant.id}`}
-                           className="p-1.5 rounded-r-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
-                           title="Tenant Details"
-                        >
-                           <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                        </Link>
+                        <div className="flex bg-gray-50 border border-gray-100 rounded-lg p-0.5">
+                          <button
+                            onClick={() => {
+                              setEditingTenant(tenant);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-l-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
+                            title="Edit Tenant"
+                          >
+                            <PencilSquareIcon className="h-4 w-4" />
+                          </button>
+                          <div className="w-px bg-gray-200 my-1"></div>
+                          <button
+                            onClick={() => setDeleteConfirmId(tenant.id)}
+                            className="p-1.5 text-gray-500 hover:bg-white hover:text-rose-600 hover:shadow-sm transition-all"
+                            title="Delete Tenant"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                          <div className="w-px bg-gray-200 my-1"></div>
+                          <Link
+                            to={`/super-admin/tenants/${tenant.id}`}
+                            className="p-1.5 rounded-r-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
+                            title="Tenant Details"
+                          >
+                            <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center">
-                    <MagnifyingGlassIcon className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                    <p className="text-gray-400 font-medium">No organizations found matching your filters.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <MagnifyingGlassIcon className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+                      <p className="text-gray-400 font-medium">No organizations found matching your filters.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -398,7 +396,7 @@ export default function TenantList() {
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Pharmacy Name</label>
+            <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Pharmacy Name</label>
             <input
               type="text"
               required
@@ -410,7 +408,7 @@ export default function TenantList() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier</label>
+              <label className="block text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1.5">Service Tier</label>
               <select
                 value={newTenant.subscription_plan}
                 onChange={(e) => setNewTenant({ ...newTenant, subscription_plan: e.target.value as any })}
@@ -422,20 +420,20 @@ export default function TenantList() {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">License Number (Optional)</label>
-              <input 
-                type="text" 
+              <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1.5">License Number (Optional)</label>
+              <input
+                type="text"
                 value={newTenant.license_number || ''}
-                onChange={(e) => setNewTenant({...newTenant, license_number: e.target.value})}
+                onChange={(e) => setNewTenant({ ...newTenant, license_number: e.target.value })}
                 placeholder="e.g. MOH-12345"
-                className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner" 
+                className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Contact Person</label>
+              <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Contact Person</label>
               <input
                 type="text"
                 value={newTenant.contact_person}
@@ -445,7 +443,7 @@ export default function TenantList() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Phone Number</label>
+              <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Phone Number</label>
               <input
                 type="text"
                 value={newTenant.phone}
@@ -458,7 +456,7 @@ export default function TenantList() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Official Email</label>
+              <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Official Email</label>
               <input
                 type="email"
                 value={newTenant.email}
@@ -468,7 +466,7 @@ export default function TenantList() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">City</label>
+              <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">City</label>
               <input
                 type="text"
                 value={newTenant.city}
@@ -480,7 +478,7 @@ export default function TenantList() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Detailed Address</label>
+            <label className="block text-[10px] font-black text-gray-700 uppercase tracking-wider mb-1.5">Detailed Address</label>
             <input
               type="text"
               value={newTenant.address}
@@ -494,7 +492,7 @@ export default function TenantList() {
             <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Initial Administrator Account</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Admin Username/Email</label>
+                <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Admin Username/Email</label>
                 <input
                   type="text"
                   required
@@ -505,7 +503,7 @@ export default function TenantList() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Initial Password</label>
+                <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1.5">Initial Password</label>
                 <input
                   type="password"
                   required
@@ -516,12 +514,12 @@ export default function TenantList() {
                 />
               </div>
             </div>
-            <p className="text-[9px] text-gray-400 italic">User will be assigned the 'ADMIN' role automatically upon deployment.</p>
+            <p className="text-[9px] text-black italic">User will be assigned the 'ADMIN' role automatically upon deployment.</p>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={actionLoading}
               className={`flex-[2] px-4 py-4 -mb-1 text-sm font-bold text-white rounded-2xl shadow-lg transition-all font-black text-sm tracking-widest uppercase flex justify-center items-center
                 ${actionLoading ? 'bg-indigo-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}
@@ -564,21 +562,21 @@ export default function TenantList() {
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Pharmacy Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   value={editingTenant.name || ''}
-                  onChange={(e) => setEditingTenant({...editingTenant, name: e.target.value})}
-                  className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner" 
+                  onChange={(e) => setEditingTenant({ ...editingTenant, name: e.target.value })}
+                  className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier (Plan)</label>
-                  <select 
+                  <select
                     value={editingTenant.subscription_plan_name || editingTenant.subscription_plan || ''}
-                    onChange={(e) => setEditingTenant({...editingTenant, subscription_plan: e.target.value as any})}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, subscription_plan: e.target.value as any })}
                     className="block w-full bg-indigo-50/50 border-indigo-100 text-indigo-900 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
                   >
                     {plans.map(p => (
@@ -588,9 +586,9 @@ export default function TenantList() {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Subscription Status</label>
-                  <select 
+                  <select
                     value={editingTenant.subscription_status || 'TRIAL'}
-                    onChange={(e) => setEditingTenant({...editingTenant, subscription_status: e.target.value as any})}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, subscription_status: e.target.value as any })}
                     className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
                   >
                     <option value="TRIAL">TRIAL</option>
@@ -635,8 +633,8 @@ export default function TenantList() {
           )}
 
           <div className="flex gap-3 pt-4">
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={actionLoading}
               className="w-full px-4 py-4 text-sm font-bold text-white rounded-2xl shadow-lg transition-all font-black text-sm tracking-widest uppercase bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
             >
