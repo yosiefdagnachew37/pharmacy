@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import ColumnFilter from '../../components/ColumnFilter';
-import { getTenants, suspendTenant, activateTenant, createTenant, getSubscriptionPlans, type Tenant } from '../../api/superAdminService';
+import { getTenants, suspendTenant, activateTenant, createTenant, updateTenant, deleteTenant, getSubscriptionPlans, type Tenant } from '../../api/superAdminService';
 import { 
   BuildingOffice2Icon, 
   PlusIcon, 
@@ -10,7 +10,9 @@ import {
   AdjustmentsHorizontalIcon,
   ShieldCheckIcon,
   NoSymbolIcon,
-  FunnelIcon
+  FunnelIcon,
+  PencilSquareIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import ConfirmModal from '../../components/ConfirmModal';
 import { toastSuccess, toastError } from '../../components/Toast';
@@ -34,6 +36,11 @@ export default function TenantList() {
   const [plans, setPlans] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [suspendConfirmId, setSuspendConfirmId] = useState<string | null>(null);
+  
+  // Edit & Delete State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Partial<Tenant> | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   // Advanced Column Filters
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
@@ -105,6 +112,29 @@ export default function TenantList() {
     }
   };
 
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant || !editingTenant.id) return;
+    setActionLoading(true);
+    try {
+      const { id, ...dataToUpdate } = editingTenant;
+      // Remap subscription plan to bypass postgres
+      if (dataToUpdate.subscription_plan) {
+         dataToUpdate.subscription_plan_name = dataToUpdate.subscription_plan as string;
+         dataToUpdate.subscription_plan = 'BASIC';
+      }
+      await updateTenant(id, dataToUpdate);
+      toastSuccess('Organization Updated', `${dataToUpdate.name || 'Tenant'} information has been securely updated.`);
+      setIsEditModalOpen(false);
+      setEditingTenant(null);
+      fetchData();
+    } catch (err: any) {
+      toastError('Update Failed', err?.response?.data?.message || 'Could not update tenant information.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const toggleStatus = async (id: string, current: boolean) => {
     if (current) {
       setSuspendConfirmId(id);
@@ -130,6 +160,19 @@ export default function TenantList() {
       toastError('Suspension Error', 'Failed to suspend the node.');
     } finally {
       setSuspendConfirmId(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteTenant(deleteConfirmId);
+      toastSuccess('Tenant Erased', 'The organization and its entire namespace have been permanently removed.');
+      fetchData();
+    } catch (err) {
+      toastError('Deletion Failed', 'Could not delete the tenant node. Contact support.');
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -298,12 +341,34 @@ export default function TenantList() {
                       >
                         {tenant.is_active ? 'Suspend' : 'Activate'}
                       </button>
-                      <Link 
-                         to={`/super-admin/tenants/${tenant.id}`}
-                         className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"
-                      >
-                         <AdjustmentsHorizontalIcon className="h-4 w-4" />
-                      </Link>
+                      <div className="flex bg-gray-50 border border-gray-100 rounded-lg p-0.5">
+                        <button
+                          onClick={() => {
+                            setEditingTenant(tenant);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-1.5 rounded-l-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
+                          title="Edit Tenant"
+                        >
+                          <PencilSquareIcon className="h-4 w-4" />
+                        </button>
+                        <div className="w-px bg-gray-200 my-1"></div>
+                        <button
+                          onClick={() => setDeleteConfirmId(tenant.id)}
+                          className="p-1.5 text-gray-500 hover:bg-white hover:text-rose-600 hover:shadow-sm transition-all"
+                          title="Delete Tenant"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                        <div className="w-px bg-gray-200 my-1"></div>
+                        <Link 
+                           to={`/super-admin/tenants/${tenant.id}`}
+                           className="p-1.5 rounded-r-md text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"
+                           title="Tenant Details"
+                        >
+                           <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -475,6 +540,111 @@ export default function TenantList() {
         title="Suspend Organization"
         message="Are you sure you want to suspend this node? All staff access will be immediately revoked across the pharmaceutical network."
       />
+
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Organization"
+        message="Are you explicitly sure? This permanently erases the organization, their inventory, and all metadata. This action cannot be reversed."
+      />
+
+      {/* Edit Tenant Modal */}
+      <Modal title="Edit Platform Node" isOpen={isEditModalOpen} onClose={() => {
+        setIsEditModalOpen(false);
+        setEditingTenant(null);
+      }}>
+        <form onSubmit={handleUpdate} className="p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Edit Platform Node</h2>
+            <p className="mt-1 text-[10px] text-gray-500 uppercase tracking-widest font-black">Configure core organizational settings.</p>
+          </div>
+
+          {editingTenant && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Pharmacy Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editingTenant.name || ''}
+                  onChange={(e) => setEditingTenant({...editingTenant, name: e.target.value})}
+                  className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier (Plan)</label>
+                  <select 
+                    value={editingTenant.subscription_plan_name || editingTenant.subscription_plan || ''}
+                    onChange={(e) => setEditingTenant({...editingTenant, subscription_plan: e.target.value as any})}
+                    className="block w-full bg-indigo-50/50 border-indigo-100 text-indigo-900 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                  >
+                    {plans.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Subscription Status</label>
+                  <select 
+                    value={editingTenant.subscription_status || 'TRIAL'}
+                    onChange={(e) => setEditingTenant({...editingTenant, subscription_status: e.target.value as any})}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="TRIAL">TRIAL</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="EXPIRED">EXPIRED</option>
+                    <option value="SUSPENDED">SUSPENDED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Contact Method</label>
+                  <input
+                    type="text"
+                    value={editingTenant.phone || ''}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, phone: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">License Number</label>
+                  <input
+                    type="text"
+                    value={editingTenant.license_number || ''}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, license_number: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Detailed Address</label>
+                <input
+                  type="text"
+                  value={editingTenant.address || ''}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, address: e.target.value })}
+                  className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button 
+              type="submit" 
+              disabled={actionLoading}
+              className="w-full px-4 py-4 text-sm font-bold text-white rounded-2xl shadow-lg transition-all font-black text-sm tracking-widest uppercase bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
+            >
+              {actionLoading ? 'Saving...' : 'Confirm Update'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
