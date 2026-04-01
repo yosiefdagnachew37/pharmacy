@@ -14,9 +14,6 @@ export class SubscriptionPlan {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   monthly_price: number;
 
-  @Column({ type: 'int', default: 1 })
-  duration_months: number;
-
   @Column({ type: 'json' })
   features: string[];
 

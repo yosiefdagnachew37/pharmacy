@@ -5,9 +5,12 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
+import { FeatureGuard } from '../../common/guards/feature.guard';
 
 @Controller('forecasting')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
+@RequireFeature('Intelligent Forecasting')
 export class ForecastingController {
     constructor(private readonly forecastingService: ForecastingService) { }
 

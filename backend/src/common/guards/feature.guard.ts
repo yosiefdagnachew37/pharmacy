@@ -1,35 +1,38 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { REQUIRE_FEATURE_KEY } from '../decorators/require-feature.decorator';
-import { SystemFeature } from '../enums/system-feature.enum';
-import { UserRole } from '../enums/user-role.enum';
+import { REQUIRE_FEATURE_KEY } from '../decorators/feature.decorator';
 
 @Injectable()
 export class FeatureGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredFeatures = this.reflector.getAllAndOverride<SystemFeature[]>(REQUIRE_FEATURE_KEY, [
+    const requiredFeature = this.reflector.getAllAndOverride<string>(REQUIRE_FEATURE_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!requiredFeatures || requiredFeatures.length === 0) {
-      return true; // No features required
+
+    if (!requiredFeature) {
+      return true; // No specific feature required
     }
 
     const { user } = context.switchToHttp().getRequest();
-    
-    // Super Admins bypass feature restrictions
-    if (user?.role === UserRole.SUPER_ADMIN) return true;
+    if (!user) return false;
 
-    // Check if user's organization has the required features
-    const allowed = user?.allowed_features || [];
-    
-    // If the endpoint requires multiple features, they must have ALL of them
-    const hasAccess = requiredFeatures.every(feature => allowed.includes(feature));
+    // Super Admins bypass all feature locks
+    if (user.role === 'SUPER_ADMIN') {
+        return true;
+    }
 
-    if (!hasAccess) {
-      throw new ForbiddenException(`Your current subscription plan does not include access to these features: ${requiredFeatures.join(', ')}`);
+    if (!user.organizationId) {
+        throw new ForbiddenException('User lacks organization association');
+    }
+
+    // Verify feature using the JWT-injected feature set
+    const features = user.subscription_features || [];
+    
+    if (!features.includes(requiredFeature)) {
+        throw new ForbiddenException(`Your organization's active subscription plan lacks the required feature: ${requiredFeature}`);
     }
 
     return true;

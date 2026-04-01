@@ -10,7 +10,7 @@ export class AuthService {
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
-        private subscriptionPlansService: SubscriptionPlansService,
+        private plansService: SubscriptionPlansService
     ) { }
 
     async validateUser(username: string, pass: string, orgName?: string): Promise<any> {
@@ -53,9 +53,9 @@ export class AuthService {
         }
 
         const { password_hash, ...result } = singleMatch;
-        // Attach the effective subscription status and allowed features to the user object
+        // Attach the effective subscription status to the user object
         let subStatus = 'TRIAL';
-        let allowedFeatures: string[] = [];
+        let subFeatures: string[] = [];
 
         if (singleMatch.organization) {
             if (singleMatch.organization.subscription_status) {
@@ -64,18 +64,22 @@ export class AuthService {
             if (singleMatch.organization.subscription_expiry_date && new Date(singleMatch.organization.subscription_expiry_date) < new Date()) {
                 subStatus = 'EXPIRED';
             }
-            if (singleMatch.organization.subscription_plan_name) {
+            
+            // Look up plan features
+            const planName = singleMatch.organization.subscription_plan;
+            if (planName) {
                 try {
-                    const plan = await this.subscriptionPlansService.findByName(singleMatch.organization.subscription_plan_name);
-                    if (plan) {
-                        allowedFeatures = plan.features || [];
+                    const allPlans = await this.plansService.findAll();
+                    const activePlan = allPlans.find(p => p.name === planName);
+                    if (activePlan && activePlan.is_active && activePlan.features) {
+                        subFeatures = activePlan.features;
                     }
                 } catch (e) {
-                    // Ignore missing plans
+                    console.error('Failed to fetch plan features', e);
                 }
             }
         }
-        return { ...result, subscription_status: subStatus, allowed_features: allowedFeatures };
+        return { ...result, subscription_status: subStatus, subscription_features: subFeatures };
     }
 
     async login(user: any) {
@@ -85,14 +89,14 @@ export class AuthService {
             role: user.role, 
             organizationId: user.organization_id,
             subscription_status: user.subscription_status,
-            allowed_features: user.allowed_features
+            subscription_features: user.subscription_features || []
         };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
                 ...user,
                 subscription_status: user.subscription_status,
-                allowed_features: user.allowed_features
+                subscription_features: user.subscription_features || []
             },
         };
     }

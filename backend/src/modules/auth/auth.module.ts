@@ -12,7 +12,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
     imports: [
         UsersModule,
-        SubscriptionPlansModule,
         PassportModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
@@ -22,6 +21,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             }),
             inject: [ConfigService],
         }),
+        SubscriptionPlansModule,
     ],
     providers: [AuthService, LocalStrategy, JwtStrategy],
     controllers: [AuthController],

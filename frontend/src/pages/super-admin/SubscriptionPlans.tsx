@@ -11,20 +11,6 @@ import Modal from '../../components/Modal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { toastSuccess, toastError } from '../../components/Toast';
 
-const AVAILABLE_FEATURES = [
-  { id: 'REPORTING', label: 'Advanced Reporting' },
-  { id: 'INVENTORY_MANAGEMENT', label: 'Inventory Management' },
-  { id: 'SALES_POS', label: 'Sales & POS' },
-  { id: 'USER_MANAGEMENT', label: 'User Management' },
-  { id: 'STOCK_AUDIT', label: 'Stock Auditing' },
-  { id: 'SUPPLIERS', label: 'Supplier Management' },
-  { id: 'PURCHASES', label: 'Purchases' },
-  { id: 'EXPENSES', label: 'Expense Tracking' },
-  { id: 'FORECASTING', label: 'Demand Forecasting' },
-  { id: 'CREDIT_MANAGEMENT', label: 'Credit Management' },
-  { id: 'PRESCRIPTIONS', label: 'Prescription Parsing' }
-];
-
 export default function SubscriptionPlans() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +18,19 @@ export default function SubscriptionPlans() {
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const systemFeatures = [
+    'Suppliers',
+    'Purchases',
+    'Intelligent Forecasting',
+    'Inventory',
+    'Expenses',
+    'Credit'
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     monthly_price: '',
-    duration_months: 1,
     features: [] as string[],
     is_active: true
   });
@@ -58,7 +52,7 @@ export default function SubscriptionPlans() {
 
   const openAddModal = () => {
     setEditingPlan(null);
-    setFormData({ name: '', description: '', monthly_price: '', duration_months: 1, features: [], is_active: true });
+    setFormData({ name: '', description: '', monthly_price: '', features: [], is_active: true });
     setIsModalOpen(true);
   };
 
@@ -68,7 +62,6 @@ export default function SubscriptionPlans() {
       name: plan.name,
       description: plan.description || '',
       monthly_price: plan.monthly_price,
-      duration_months: plan.duration_months || 1,
       features: plan.features || [],
       is_active: plan.is_active
     });
@@ -81,7 +74,7 @@ export default function SubscriptionPlans() {
       const payload = {
         ...formData,
         monthly_price: Number(formData.monthly_price),
-        duration_months: Number(formData.duration_months)
+        features: formData.features
       };
 
       if (editingPlan) {
@@ -152,7 +145,7 @@ export default function SubscriptionPlans() {
                 {(plan.features || []).map((feat: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
                     <CheckBadgeIcon className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                    <span>{AVAILABLE_FEATURES.find(f => f.id === feat)?.label || feat}</span>
+                    <span>{feat}</span>
                   </li>
                 ))}
               </ul>
@@ -208,7 +201,7 @@ export default function SubscriptionPlans() {
                  className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                />
             </div>
-             <div>
+            <div>
                <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Status</label>
                <select 
                  value={formData.is_active ? 'active' : 'inactive'}
@@ -218,48 +211,26 @@ export default function SubscriptionPlans() {
                  <option value="active">Active</option>
                  <option value="inactive">Inactive</option>
                </select>
-             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Duration (Months)</label>
-               <input
-                 type="number"
-                 min="1"
-                 required
-                 value={formData.duration_months}
-                 onChange={e => setFormData({ ...formData, duration_months: parseInt(e.target.value) || 1 })}
-                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-               />
-             </div>
-             <div>
-               <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1">Description (Optional)</label>
-               <input
-                 type="text"
-                 value={formData.description}
-                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                 className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-               />
-             </div>
+            </div>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">Available Features</label>
-            <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto bg-gray-50 p-4 rounded-xl border border-gray-100 custom-scrollbar">
-              {AVAILABLE_FEATURES.map((feature) => (
-                <label key={feature.id} className="flex items-center gap-2 cursor-pointer">
+            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Included Modules & Features</label>
+            <div className="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-100 rounded-xl p-4">
+              {systemFeatures.map(feat => (
+                <label key={feat} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
-                    checked={formData.features.includes(feature.id)}
+                    checked={formData.features.includes(feat)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setFormData({ ...formData, features: [...formData.features, feature.id] });
+                        setFormData({ ...formData, features: [...formData.features, feat] });
                       } else {
-                        setFormData({ ...formData, features: formData.features.filter(f => f !== feature.id) });
+                        setFormData({ ...formData, features: formData.features.filter(f => f !== feat) });
                       }
                     }}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
-                  <span className="text-sm text-gray-700 font-medium">{feature.label}</span>
+                  <span className="text-sm font-semibold text-gray-700">{feat}</span>
                 </label>
               ))}
             </div>

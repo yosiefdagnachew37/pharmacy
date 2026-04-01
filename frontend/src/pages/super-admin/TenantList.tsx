@@ -21,20 +21,19 @@ export default function TenantList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTenant, setNewTenant] = useState({ 
     name: '', 
-    license_number: '',
-    subscription_plan: 'BASIC',
+    subscription_plan: 'BASIC' as const,
     admin_username: '',
     admin_password: '',
     phone: '',
     email: '',
     contact_person: '',
     city: '',
-    address: ''
+    address: '',
+    license_number: ''
   });
+  const [plans, setPlans] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [suspendConfirmId, setSuspendConfirmId] = useState<string | null>(null);
-  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
-  const [agreedTerms, setAgreedTerms] = useState(false);
   
   // Advanced Column Filters
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
@@ -50,14 +49,15 @@ export default function TenantList() {
 
   const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
-  const fetchTenants = async () => {
+  const fetchData = async () => {
     try {
       const [tenantsData, plansData] = await Promise.all([
         getTenants(),
-        getSubscriptionPlans().catch(() => [])
+        getSubscriptionPlans()
       ]);
       setTenants(tenantsData);
-      setSubscriptionPlans(plansData.filter((p: any) => p.is_active));
+      setPlans(plansData.filter((p: any) => p.is_active));
+      
       if (plansData.length > 0 && !newTenant.subscription_plan) {
         setNewTenant(prev => ({ ...prev, subscription_plan: plansData[0].name }));
       }
@@ -69,29 +69,34 @@ export default function TenantList() {
   };
 
   useEffect(() => {
-    fetchTenants();
+    fetchData();
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
     try {
-      await createTenant(newTenant);
+      const payload = {
+        ...newTenant,
+        subscription_plan: 'BASIC', // satisfy rigid postgres enum schema
+        subscription_plan_name: newTenant.subscription_plan // pass actual dynamic plan
+      };
+      await createTenant(payload);
       toastSuccess('Organization Deployed', `${newTenant.name} is now live on the platform.`);
       setIsModalOpen(false);
       setNewTenant({ 
         name: '', 
-        license_number: '',
-        subscription_plan: subscriptionPlans.length > 0 ? subscriptionPlans[0].name : 'BASIC',
+        subscription_plan: 'BASIC',
         admin_username: '',
         admin_password: '',
         phone: '',
         email: '',
         contact_person: '',
         city: '',
-        address: ''
+        address: '',
+        license_number: ''
       });
-      fetchTenants();
+      fetchData();
     } catch (err: any) {
       console.error('Failed to create tenant', err);
       toastError('Deployment Failed', err?.response?.data?.message || 'Could not provision new tenant.');
@@ -109,7 +114,7 @@ export default function TenantList() {
     try {
       await activateTenant(id);
       toastSuccess('Node Activated', 'The pharmacy node is now healthy and operational.');
-      fetchTenants();
+      fetchData();
     } catch (err) {
       toastError('Activation Error', 'Could not reactivate the pharmacy node.');
     }
@@ -120,7 +125,7 @@ export default function TenantList() {
     try {
       await suspendTenant(suspendConfirmId);
       toastSuccess('Node Suspended', 'Access has been revoked for this organizational node.');
-      fetchTenants();
+      fetchData();
     } catch (err) {
       toastError('Suspension Error', 'Failed to suspend the node.');
     } finally {
@@ -129,7 +134,7 @@ export default function TenantList() {
   };
 
   const uniqueNames = useMemo(() => [...new Set(tenants.map(t => t.name))].sort(), [tenants]);
-  const planOptions = ['BASIC', 'SILVER', 'GOLD'];
+  const planOptions = useMemo(() => plans.map(p => p.name), [plans]);
   const statusOptions = ['Healthy', 'Suspended'];
 
   const filteredTenants = useMemo(() => {
@@ -338,32 +343,29 @@ export default function TenantList() {
               placeholder="e.g. HealthFirst Pharmacy"
             />
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">License Number (Optional)</label>
-            <input
-              type="text"
-              value={newTenant.license_number}
-              onChange={(e) => setNewTenant({ ...newTenant, license_number: e.target.value })}
-              className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
-              placeholder="e.g. MOH/123/456"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier</label>
-            <select
-              required
-              value={newTenant.subscription_plan}
-              onChange={(e) => setNewTenant({ ...newTenant, subscription_plan: e.target.value })}
-              className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
-            >
-              {subscriptionPlans.length > 0 ? (
-                subscriptionPlans.map(plan => (
-                  <option key={plan.id} value={plan.name}>{plan.name} TIER</option>
-                ))
-              ) : (
-                <option value="BASIC">BASIC TIER</option>
-              )}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier</label>
+              <select
+                value={newTenant.subscription_plan}
+                onChange={(e) => setNewTenant({ ...newTenant, subscription_plan: e.target.value as any })}
+                className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+              >
+                {plans.map(p => (
+                  <option key={p.id} value={p.name}>{p.name} - ETB {p.monthly_price}/mo</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">License Number (Optional)</label>
+              <input 
+                type="text" 
+                value={newTenant.license_number || ''}
+                onChange={(e) => setNewTenant({...newTenant, license_number: e.target.value})}
+                placeholder="e.g. MOH-12345"
+                className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner" 
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -452,25 +454,13 @@ export default function TenantList() {
             <p className="text-[9px] text-gray-400 italic">User will be assigned the 'ADMIN' role automatically upon deployment.</p>
           </div>
 
-          <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-6">
-            <input
-              type="checkbox"
-              id="agreed_terms"
-              required
-              checked={agreedTerms}
-              onChange={(e) => setAgreedTerms(e.target.checked)}
-              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
-            />
-            <label htmlFor="agreed_terms" className="text-xs text-gray-600 font-medium cursor-pointer">
-              I confirm that the organization has legally signed and sealed the Service Level Agreement (SLA) with us.
-            </label>
-          </div>
-
           <div className="flex gap-3 pt-4">
             <button 
               type="submit" 
               disabled={actionLoading}
-              className="flex-[2] px-4 py-4 text-sm font-bold text-white bg-indigo-600 rounded-2xl shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all font-black text-sm tracking-widest uppercase disabled:cursor-not-allowed"
+              className={`flex-[2] px-4 py-4 -mb-1 text-sm font-bold text-white rounded-2xl shadow-lg transition-all font-black text-sm tracking-widest uppercase flex justify-center items-center
+                ${actionLoading ? 'bg-indigo-400 cursor-not-allowed shadow-none' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'}
+              `}
             >
               {actionLoading ? 'Deploying...' : 'Deploy Organization'}
             </button>

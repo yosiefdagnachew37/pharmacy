@@ -58,6 +58,11 @@ export const activateTenant = async (id: string): Promise<Tenant> => {
     return response.data;
 };
 
+export const deleteTenant = async (id: string): Promise<any> => {
+    const response = await client.delete(`/admin/organizations/${id}`);
+    return response.data;
+};
+
 export const createTenantUser = async (data: any, tenantId?: string): Promise<any> => {
     const config = tenantId ? { headers: { 'x-organization-id': tenantId } } : {};
     const response = await client.post('/users', data, config);

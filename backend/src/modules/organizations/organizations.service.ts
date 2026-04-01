@@ -2,9 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrgSubscriptionStatus } from './entities/organization.entity';
+import { UsersService } from '../users/users.service';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
-import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -13,7 +13,6 @@ export class OrganizationsService {
         @InjectRepository(Organization)
         private organizationsRepository: Repository<Organization>,
         private usersService: UsersService,
-        private subscriptionPlansService: SubscriptionPlansService,
     ) { }
 
     findAll() {
@@ -35,26 +34,6 @@ export class OrganizationsService {
         
         return this.organizationsRepository.manager.transaction(async (manager) => {
             const org = manager.create(Organization, orgData);
-            
-            // Set initial subscription details (Duration calculated from plan)
-            if (org.subscription_plan_name) {
-                try {
-                    const plan = await this.subscriptionPlansService.findByName(org.subscription_plan_name);
-                    if (plan) {
-                        const expiry = new Date();
-                        expiry.setMonth(expiry.getMonth() + plan.duration_months);
-                        org.subscription_expiry_date = expiry;
-                        org.subscription_status = OrgSubscriptionStatus.ACTIVE;
-                    }
-                } catch (e) {}
-            }
-            if (!org.subscription_expiry_date) {
-                const trialEnd = new Date();
-                trialEnd.setDate(trialEnd.getDate() + 30);
-                org.subscription_status = OrgSubscriptionStatus.ACTIVE;
-                org.subscription_expiry_date = trialEnd;
-            }
-
             const savedOrg = await manager.save(org);
 
             if (admin_username && admin_password) {
@@ -109,25 +88,13 @@ export class OrganizationsService {
 
         if (data.subscription_plan_name !== undefined) {
             org.subscription_plan_name = data.subscription_plan_name;
-            try {
-                const plan = await this.subscriptionPlansService.findByName(data.subscription_plan_name);
-                if (plan) {
-                    const expiry = new Date();
-                    expiry.setMonth(expiry.getMonth() + plan.duration_months);
-                    // Override the incoming expiry if calculating from plan
-                    data.subscription_expiry_date = expiry.toISOString();
-                }
-            } catch (e) { }
         }
-        
         if (data.subscription_status !== undefined) {
             org.subscription_status = data.subscription_status as OrgSubscriptionStatus;
         }
-        
         if (data.subscription_expiry_date !== undefined) {
             org.subscription_expiry_date = new Date(data.subscription_expiry_date);
         }
-        
         if (data.extend_days !== undefined && data.extend_days > 0) {
             const base = org.subscription_expiry_date && org.subscription_expiry_date > new Date()
                 ? new Date(org.subscription_expiry_date)
@@ -153,5 +120,14 @@ export class OrganizationsService {
             return OrgSubscriptionStatus.EXPIRED;
         }
         return org.subscription_status;
+    }
+
+    async remove(id: string) {
+        const org = await this.findOne(id);
+        if (!org) {
+            throw new NotFoundException(`Organization with ID ${id} not found`);
+        }
+        await this.organizationsRepository.remove(org);
+        return { message: 'Organization successfully deleted' };
     }
 }

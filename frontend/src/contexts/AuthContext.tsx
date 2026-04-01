@@ -9,7 +9,7 @@ interface AuthUser {
   role: UserRole;
   organizationName: string;
   subscription_status?: string;
-  allowed_features?: string[];
+  subscription_features?: string[];
 }
 
 interface AuthContextType {
@@ -17,11 +17,12 @@ interface AuthContextType {
   role: UserRole | null;
   /** Check if user has one of the given roles */
   hasRole: (...roles: UserRole[]) => boolean;
-  hasFeature: (feature: string) => boolean;
   /** Check if user can perform a specific action */
   canCreate: (entity: string) => boolean;
   canDelete: (entity: string) => boolean;
   canUpdate: (entity: string) => boolean;
+  /** Check if the tenant's exact plan allows access to a module */
+  hasFeature: (featureName: string) => boolean;
   logout: () => void;
   selectedOrganization: { id: string; name: string } | null;
   setSelectedOrganization: (org: { id: string; name: string } | null) => void;
@@ -31,10 +32,10 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
   hasRole: () => false,
-  hasFeature: () => false,
   canCreate: () => false,
   canDelete: () => false,
   canUpdate: () => false,
+  hasFeature: () => false,
   logout: () => { },
   selectedOrganization: null,
   setSelectedOrganization: () => { },
@@ -145,10 +146,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions[entity]?.update?.includes(role) ?? false;
   };
 
-  const hasFeature = (feature: string) => {
+  const hasFeature = (featureName: string) => {
+    // SUPER_ADMIN always has full access
     if (role === 'SUPER_ADMIN') return true;
-    if (!user || !user.allowed_features) return false; // Strict check
-    return user.allowed_features.includes(feature);
+    
+    // Check if the exact features array includes this feature
+    if (user?.subscription_features) {
+      return user.subscription_features.includes(featureName);
+    }
+    return false;
   };
 
   const logout = () => {
@@ -164,10 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       role, 
       hasRole, 
-      hasFeature,
       canCreate, 
       canDelete, 
       canUpdate, 
+      hasFeature,
       logout,
       selectedOrganization,
       setSelectedOrganization

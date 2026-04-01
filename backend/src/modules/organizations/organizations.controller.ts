@@ -62,6 +62,11 @@ export class OrganizationsController {
     }) {
         return this.organizationsService.updateSubscription(id, data);
     }
+
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return this.organizationsService.remove(id);
+    }
 }
 
 // Separate controller for non-admin org access (any authenticated user)

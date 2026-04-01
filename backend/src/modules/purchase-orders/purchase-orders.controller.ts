@@ -5,9 +5,12 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { POStatus } from './entities/purchase-order.entity';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
+import { FeatureGuard } from '../../common/guards/feature.guard';
 
 @Controller('purchase-orders')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
+@RequireFeature('Purchases')
 export class PurchaseOrdersController {
     constructor(private readonly poService: PurchaseOrdersService) { }
 

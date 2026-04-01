@@ -35,27 +35,26 @@ interface MenuItem {
   icon: any;
   label: string;
   path: string;
-  path: string;
   roles: UserRole[]; // which roles can see this item
-  feature?: string; // which subscription feature unlocks this
+  requiredFeature?: string; // which subscription plan feature is required
 }
 
 const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
-  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'INVENTORY_MANAGEMENT' },
-  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'INVENTORY_MANAGEMENT' },
-  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'SALES_POS' },
-  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'], feature: 'SALES_POS' },
-  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], feature: 'REPORTING' },
-  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'USER_MANAGEMENT' },
+  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'], feature: 'STOCK_AUDIT' },
-  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'], feature: 'SUPPLIERS' },
-  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'PURCHASES' },
-  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'FORECASTING' },
-  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'STOCK_AUDIT' },
-  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], feature: 'EXPENSES' },
-  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], feature: 'CREDIT_MANAGEMENT' },
+  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Suppliers' },
+  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], requiredFeature: 'Purchases' },
+  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], requiredFeature: 'Intelligent Forecasting' },
+  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
+  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Expenses' },
+  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], requiredFeature: 'Credit' },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: Shield, label: 'Super Admin Panel', path: '/super-admin', roles: ['SUPER_ADMIN'] },
 ];
@@ -118,11 +117,10 @@ const DashboardLayout = () => {
     navigate('/login');
   };
 
-  // Filter menu items based on user role and features
+  // Filter menu items based on user role and plan features
   const visibleMenuItems = allMenuItems.filter(item => {
-    if (item.roles && role && !item.roles.includes(role)) return false;
-    if (role === 'SUPER_ADMIN' && item.path !== '/super-admin' && !selectedOrganization) return false;
-    if (item.feature && !hasFeature(item.feature)) return false;
+    if (!role || !item.roles.includes(role)) return false;
+    if (item.requiredFeature && !hasFeature(item.requiredFeature)) return false;
     return true;
   });
 

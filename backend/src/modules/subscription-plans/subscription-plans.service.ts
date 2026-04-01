@@ -14,10 +14,6 @@ export class SubscriptionPlansService {
     return this.repo.find({ order: { monthly_price: 'ASC' } });
   }
 
-  async findByName(name: string) {
-    return this.repo.findOne({ where: { name } });
-  }
-
   async findOne(id: string) {
     const plan = await this.repo.findOne({ where: { id } });
     if (!plan) throw new NotFoundException('Plan not found');

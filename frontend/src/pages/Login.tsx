@@ -10,6 +10,13 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAmbiguous, setIsAmbiguous] = useState(false);
+  
+  // Terms and Conditions State
+  const [agreedToTerms, setAgreedToTerms] = useState(
+    localStorage.getItem('hasAcceptedTerms') === 'true'
+  );
+  const [showTerms, setShowTerms] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -25,6 +32,11 @@ const Login = () => {
       });
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      if (agreedToTerms) {
+        localStorage.setItem('hasAcceptedTerms', 'true');
+      }
+
       window.dispatchEvent(new Event('storage'));
       
       const user = response.data.user;
@@ -129,10 +141,26 @@ const Login = () => {
             </div>
           )}
 
+          {(!localStorage.getItem('hasAcceptedTerms')) && (
+            <div className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+              <input 
+                type="checkbox" 
+                id="terms"
+                required
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-indigo-600 rounded cursor-pointer border-gray-300 focus:ring-indigo-500 shadow-sm"
+              />
+              <label htmlFor="terms" className="text-xs text-gray-600 leading-tight">
+                I have read and agree to the <button type="button" onClick={() => setShowTerms(true)} className="text-indigo-600 font-bold hover:underline">System Terms and Conditions</button> for organizational usage.
+              </label>
+            </div>
+          )}
+
           <button 
             type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-[0.98] transition-all disabled:opacity-50"
+            disabled={loading || (!agreedToTerms && !localStorage.getItem('hasAcceptedTerms'))}
+            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Authenticating...' : 'Sign In'}
           </button>
@@ -144,6 +172,37 @@ const Login = () => {
           </div>
         </form>
       </div>
+      {/* Terms Modal overlay */}
+      {showTerms && (
+        <div className="fixed inset-0 bg-indigo-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl relative">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-black text-gray-900">System End-User License Agreement</h3>
+            </div>
+            <div className="p-6 text-sm text-gray-600 overflow-y-auto max-h-[60vh] space-y-4 font-medium leading-relaxed">
+              <p>By accessing and utilizing this Pharmacy Enterprise Resource Planning application ("The System"), you enter into a binding agreement summarizing the terms of service.</p>
+              
+              <p className="font-bold text-gray-900 mb-1">1. Licensing & Usage Limitations</p>
+              <p>This software is provided specifically for the authorized organizational node under a designated subscription tier. You may not reverse-engineer, decompile, bypass internal module locks, or duplicate the deployment binaries without explicit platform administration consent.</p>
+
+              <p className="font-bold text-gray-900 mb-1">2. Audit & Data Policy</p>
+              <p>All stock tracking, financial auditing, and usage logs recorded within The System belong strictly to the managing entity. The platform administrators reserve the right to temporarily suspend, block, or limit access to specific modules if an organization fails to maintain an active subscription or violates proper usage policies.</p>
+            </div>
+            <div className="p-4 bg-gray-50 flex justify-end">
+              <button 
+                type="button"
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setShowTerms(false);
+                }}
+                className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow hover:bg-indigo-700"
+              >
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
