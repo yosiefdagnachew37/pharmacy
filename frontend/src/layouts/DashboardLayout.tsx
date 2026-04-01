@@ -35,25 +35,27 @@ interface MenuItem {
   icon: any;
   label: string;
   path: string;
+  path: string;
   roles: UserRole[]; // which roles can see this item
+  feature?: string; // which subscription feature unlocks this
 }
 
 const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
-  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
-  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
-  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
-  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'] },
-  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'INVENTORY_MANAGEMENT' },
+  { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'INVENTORY_MANAGEMENT' },
+  { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'SALES_POS' },
+  { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'], feature: 'SALES_POS' },
+  { icon: BarChart3, label: 'Reports', path: '/reports', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], feature: 'REPORTING' },
+  { icon: Users, label: 'Patients', path: '/patients', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], feature: 'USER_MANAGEMENT' },
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'] },
-  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'] },
-  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
-  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'] },
-  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'] },
+  { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'], feature: 'STOCK_AUDIT' },
+  { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'], feature: 'SUPPLIERS' },
+  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'PURCHASES' },
+  { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'FORECASTING' },
+  { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], feature: 'STOCK_AUDIT' },
+  { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], feature: 'EXPENSES' },
+  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], feature: 'CREDIT_MANAGEMENT' },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: Shield, label: 'Super Admin Panel', path: '/super-admin', roles: ['SUPER_ADMIN'] },
 ];
@@ -69,7 +71,7 @@ const roleBadgeColors: Record<UserRole, string> = {
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, logout, selectedOrganization } = useAuth();
+  const { user, role, logout, selectedOrganization, hasFeature } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Barcode Lookup State
@@ -116,10 +118,44 @@ const DashboardLayout = () => {
     navigate('/login');
   };
 
-  // Filter menu items based on user role
-  const visibleMenuItems = allMenuItems.filter(item =>
-    role ? item.roles.includes(role) : false
-  );
+  // Filter menu items based on user role and features
+  const visibleMenuItems = allMenuItems.filter(item => {
+    if (item.roles && role && !item.roles.includes(role)) return false;
+    if (role === 'SUPER_ADMIN' && item.path !== '/super-admin' && !selectedOrganization) return false;
+    if (item.feature && !hasFeature(item.feature)) return false;
+    return true;
+  });
+
+  if (user && role !== 'SUPER_ADMIN' && ['EXPIRED', 'SUSPENDED'].includes(user.subscription_status || '')) {
+    return (
+      <div className="flex h-screen bg-gray-50 items-center justify-center p-4">
+        <div className="bg-white p-8 max-w-md w-full rounded-3xl shadow-xl border border-rose-100 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-rose-500"></div>
+          <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
+          <h2 className="text-2xl font-black text-gray-900 mb-2">Access Blocked</h2>
+          <p className="text-gray-500 mb-8 font-medium">
+            {user.subscription_status === 'SUSPENDED' 
+              ? 'Your organization has been suspended. Please contact the platform administration to restore service.' 
+              : 'Your pharmacy subscription has expired. Please contact the platform administration to renew your plan.'}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button 
+              className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 transition"
+              onClick={() => window.open('mailto:support@pharmacy-erp.com')}
+            >
+              Contact Support Support
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100 relative">

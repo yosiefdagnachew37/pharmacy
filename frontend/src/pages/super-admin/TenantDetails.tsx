@@ -16,7 +16,9 @@ import {
   getTenantUsers,
   createTenantUser,
   updateTenantUser,
-  deleteTenantUser 
+  deleteTenantUser,
+  getSubscriptionPlans,
+  updateTenantSubscription
 } from '../../api/superAdminService';
 import { CheckIcon, PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/solid';
 import { toastSuccess, toastError } from '../../components/Toast';
@@ -27,6 +29,7 @@ export default function TenantDetails() {
   const { id } = useParams<{ id: string }>();
   const [tenant, setTenant] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
@@ -47,10 +50,12 @@ export default function TenantDetails() {
       setLoading(true);
       Promise.all([
         getTenant(id),
-        getTenantUsers(id)
-      ]).then(([tenantRes, usersRes]) => {
+        getTenantUsers(id),
+        getSubscriptionPlans()
+      ]).then(([tenantRes, usersRes, plansRes]) => {
         setTenant(tenantRes);
         setUsers(usersRes);
+        setPlans(plansRes.filter((p: any) => p.is_active));
         setLoading(false);
       });
     }
@@ -60,12 +65,22 @@ export default function TenantDetails() {
     fetchTenant();
   }, [id]);
 
-  const handlePlanUpdate = async (newPlan: 'BASIC' | 'SILVER' | 'GOLD') => {
-    if (!id || newPlan === tenant.subscription_plan) return;
+  const handlePlanUpdate = async (plan: any) => {
+    if (!id || plan.name === tenant.subscription_plan) return;
     setUpdating(true);
     try {
-      await updateTenant(id, { subscription_plan: newPlan });
-      toastSuccess('Tier Upgraded', `Pharmacy node has been transitioned to the ${newPlan} plan.`);
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      await updateTenantSubscription(id, { 
+        subscription_plan_name: plan.name,
+        subscription_status: 'ACTIVE',
+        subscription_expiry_date: nextMonth.toISOString()
+      });
+      // Legacy fallback
+      await updateTenant(id, { subscription_plan: plan.name });
+      
+      toastSuccess('Tier Upgraded', `Pharmacy node has been transitioned to the ${plan.name} plan.`);
       setIsSubModalOpen(false);
       fetchTenant();
     } catch (err) {
@@ -128,30 +143,6 @@ export default function TenantDetails() {
     }
   };
 
-  const PLANS = [
-    { 
-      id: 'BASIC', 
-      name: 'Basic Node', 
-      price: '1,500', 
-      features: ['Standard Inventory', 'Single Branch', 'Basic Reporting'],
-      color: 'indigo'
-    },
-    { 
-      id: 'SILVER', 
-      name: 'Silver Growth', 
-      price: '3,500', 
-      features: ['Pro Inventory', 'Up to 3 Branches', 'Advanced Analytics', 'SMS Notifications'],
-      color: 'purple'
-    },
-    { 
-      id: 'GOLD', 
-      name: 'Gold Enterprise', 
-      price: '7,500', 
-      features: ['Unlimited Branches', 'Full API Access', '24/7 Priority Support', 'Dedicated Account Manager'],
-      color: 'amber'
-    }
-  ];
-
   if (loading) return <div className="p-8 text-center">Loading pharmacy profile...</div>;
   if (!tenant) return <div className="p-8 text-center text-red-500 font-bold">Pharmacy not found.</div>;
 
@@ -206,11 +197,30 @@ export default function TenantDetails() {
             </div>
           </div>
 
-          {/* Activity Over Time */}
-          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm min-h-[300px] flex items-center justify-center">
-            <div className="text-center">
-              <ChartBarIcon className="h-12 w-12 text-gray-100 mx-auto mb-2" />
-              <p className="text-gray-400 font-medium">Activity graph for {tenant.name} will appear here.</p>
+          {/* Contact Information */}
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <h3 className="font-bold text-gray-900 mb-4">Contact Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Contact Person</span>
+                <div className="font-medium text-gray-800">{tenant.contact_person || 'Not provided'}</div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Phone Number</span>
+                <div className="font-medium text-gray-800">{tenant.phone || 'Not provided'}</div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Email Address</span>
+                <div className="font-medium text-gray-800">{tenant.email || 'Not provided'}</div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">City</span>
+                <div className="font-medium text-gray-800">{tenant.city || 'Not provided'}</div>
+              </div>
+              <div className="md:col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Detailed Address</span>
+                <div className="font-medium text-gray-800">{tenant.address || 'Not provided'}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -248,45 +258,43 @@ export default function TenantDetails() {
           >
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {PLANS.map((plan) => (
+                {plans.map((plan) => (
                   <button
                     key={plan.id}
-                    onClick={() => handlePlanUpdate(plan.id as any)}
-                    disabled={updating || tenant.subscription_plan === plan.id}
+                    onClick={() => handlePlanUpdate(plan)}
+                    disabled={updating || tenant.subscription_plan === plan.name}
                     className={`relative p-5 rounded-2xl border-2 text-left transition-all group ${
-                      tenant.subscription_plan === plan.id 
+                      tenant.subscription_plan === plan.name 
                         ? 'border-indigo-600 bg-indigo-50/30 ring-4 ring-indigo-50' 
                         : 'border-gray-100 hover:border-indigo-200 bg-white'
                     }`}
                   >
-                    {tenant.subscription_plan === plan.id && (
+                    {tenant.subscription_plan === plan.name && (
                       <div className="absolute -top-3 -right-3 bg-indigo-600 text-white p-1 rounded-full shadow-lg">
                         <CheckIcon className="h-4 w-4" />
                       </div>
                     )}
-                    <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
-                      plan.id === 'GOLD' ? 'text-amber-600' : 'text-gray-500'
-                    }`}>
+                    <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-500`}>
                       {plan.name}
                     </div>
                     <div className="flex items-baseline gap-1 mb-4">
-                      <span className="text-xl font-black text-gray-900">ETB {plan.price}</span>
+                      <span className="text-xl font-black text-gray-900">ETB {plan.monthly_price}</span>
                       <span className="text-[10px] text-gray-400 font-medium">/mo</span>
                     </div>
                     <ul className="space-y-2 mb-6">
-                      {plan.features.map(f => (
-                        <li key={f} className="flex items-start gap-2 text-[10px] text-gray-600 font-medium">
+                      {(plan.features || []).map((f: string, i: number) => (
+                        <li key={i} className="flex items-start gap-2 text-[10px] text-gray-600 font-medium">
                           <CheckCircleIcon className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
                           <span>{f}</span>
                         </li>
                       ))}
                     </ul>
                     <div className={`w-full py-2 rounded-xl text-center text-xs font-bold transition-all ${
-                      tenant.subscription_plan === plan.id
+                      tenant.subscription_plan === plan.name
                         ? 'bg-transparent text-indigo-600'
                         : 'bg-gray-900 text-white group-hover:bg-indigo-600 shadow-md'
                     }`}>
-                      {tenant.subscription_plan === plan.id ? 'Current Plan' : `Switch to ${plan.id}`}
+                      {tenant.subscription_plan === plan.name ? 'Current Plan' : `Switch Plan`}
                     </div>
                   </button>
                 ))}

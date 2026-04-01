@@ -1,14 +1,16 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
+import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
+        private subscriptionPlansService: SubscriptionPlansService,
     ) { }
 
     async validateUser(username: string, pass: string, orgName?: string): Promise<any> {
@@ -28,11 +30,15 @@ export class AuthService {
             const exactMatch = matches.find(u => 
                 u.organization?.name?.toLowerCase() === orgName.toLowerCase()
             );
-            if (exactMatch) {
-                const { password_hash, ...result } = exactMatch;
-                return result;
+            if (!exactMatch) return null;
+
+            // Check if organization is suspended
+            if (exactMatch.organization && exactMatch.organization.is_active === false) {
+                throw new ForbiddenException('ORGANIZATION_SUSPENDED');
             }
-            return null;
+
+            const { password_hash, ...result } = exactMatch;
+            return result;
         }
 
         // If no organization name provided and multiple matches found -> CONFLICT
@@ -40,9 +46,36 @@ export class AuthService {
             throw new ConflictException('Ambiguous login. Multiple organizations found with these credentials. Please specify your Pharmacy name.');
         }
 
-        // Single match found
-        const { password_hash, ...result } = matches[0];
-        return result;
+        // Single match found — check org suspension
+        const singleMatch = matches[0];
+        if (singleMatch.organization && singleMatch.organization.is_active === false) {
+            throw new ForbiddenException('ORGANIZATION_SUSPENDED');
+        }
+
+        const { password_hash, ...result } = singleMatch;
+        // Attach the effective subscription status and allowed features to the user object
+        let subStatus = 'TRIAL';
+        let allowedFeatures: string[] = [];
+
+        if (singleMatch.organization) {
+            if (singleMatch.organization.subscription_status) {
+                subStatus = singleMatch.organization.subscription_status;
+            }
+            if (singleMatch.organization.subscription_expiry_date && new Date(singleMatch.organization.subscription_expiry_date) < new Date()) {
+                subStatus = 'EXPIRED';
+            }
+            if (singleMatch.organization.subscription_plan_name) {
+                try {
+                    const plan = await this.subscriptionPlansService.findByName(singleMatch.organization.subscription_plan_name);
+                    if (plan) {
+                        allowedFeatures = plan.features || [];
+                    }
+                } catch (e) {
+                    // Ignore missing plans
+                }
+            }
+        }
+        return { ...result, subscription_status: subStatus, allowed_features: allowedFeatures };
     }
 
     async login(user: any) {
@@ -51,16 +84,15 @@ export class AuthService {
             sub: user.id, 
             role: user.role, 
             organizationId: user.organization_id,
-            organizationName: user.organization?.name || 'N/A'
+            subscription_status: user.subscription_status,
+            allowed_features: user.allowed_features
         };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
-                id: user.id,
-                username: user.username,
-                role: user.role,
-                organizationId: user.organization_id,
-                organizationName: user.organization?.name || 'N/A'
+                ...user,
+                subscription_status: user.subscription_status,
+                allowed_features: user.allowed_features
             },
         };
     }

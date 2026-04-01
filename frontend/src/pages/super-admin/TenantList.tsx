@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import ColumnFilter from '../../components/ColumnFilter';
-import { getTenants, suspendTenant, activateTenant, createTenant, type Tenant } from '../../api/superAdminService';
+import { getTenants, suspendTenant, activateTenant, createTenant, getSubscriptionPlans, type Tenant } from '../../api/superAdminService';
 import { 
   BuildingOffice2Icon, 
   PlusIcon, 
@@ -21,12 +21,20 @@ export default function TenantList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTenant, setNewTenant] = useState({ 
     name: '', 
-    subscription_plan: 'BASIC' as const,
+    license_number: '',
+    subscription_plan: 'BASIC',
     admin_username: '',
-    admin_password: ''
+    admin_password: '',
+    phone: '',
+    email: '',
+    contact_person: '',
+    city: '',
+    address: ''
   });
   const [actionLoading, setActionLoading] = useState(false);
   const [suspendConfirmId, setSuspendConfirmId] = useState<string | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([]);
+  const [agreedTerms, setAgreedTerms] = useState(false);
   
   // Advanced Column Filters
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
@@ -44,10 +52,17 @@ export default function TenantList() {
 
   const fetchTenants = async () => {
     try {
-      const data = await getTenants();
-      setTenants(data);
+      const [tenantsData, plansData] = await Promise.all([
+        getTenants(),
+        getSubscriptionPlans().catch(() => [])
+      ]);
+      setTenants(tenantsData);
+      setSubscriptionPlans(plansData.filter((p: any) => p.is_active));
+      if (plansData.length > 0 && !newTenant.subscription_plan) {
+        setNewTenant(prev => ({ ...prev, subscription_plan: plansData[0].name }));
+      }
     } catch (err) {
-      console.error('Failed to fetch tenants', err);
+      console.error('Failed to fetch data', err);
     } finally {
       setLoading(false);
     }
@@ -66,9 +81,15 @@ export default function TenantList() {
       setIsModalOpen(false);
       setNewTenant({ 
         name: '', 
-        subscription_plan: 'BASIC',
+        license_number: '',
+        subscription_plan: subscriptionPlans.length > 0 ? subscriptionPlans[0].name : 'BASIC',
         admin_username: '',
-        admin_password: ''
+        admin_password: '',
+        phone: '',
+        email: '',
+        contact_person: '',
+        city: '',
+        address: ''
       });
       fetchTenants();
     } catch (err: any) {
@@ -195,7 +216,8 @@ export default function TenantList() {
         </div>
 
         <div className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto custom-scrollbar pb-48">
-          <table className="min-w-full divide-y divide-gray-100">
+          <div className="overflow-x-auto relative">
+            <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
               <tr className="border-b border-gray-100">
                 <ColumnFilter
@@ -290,6 +312,7 @@ export default function TenantList() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -316,16 +339,88 @@ export default function TenantList() {
             />
           </div>
           <div>
+            <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">License Number (Optional)</label>
+            <input
+              type="text"
+              value={newTenant.license_number}
+              onChange={(e) => setNewTenant({ ...newTenant, license_number: e.target.value })}
+              className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+              placeholder="e.g. MOH/123/456"
+            />
+          </div>
+          <div>
             <label className="block text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Service Tier</label>
             <select
+              required
               value={newTenant.subscription_plan}
-              onChange={(e) => setNewTenant({ ...newTenant, subscription_plan: e.target.value as any })}
+              onChange={(e) => setNewTenant({ ...newTenant, subscription_plan: e.target.value })}
               className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
             >
-              <option value="BASIC">BASIC TIER</option>
-              <option value="SILVER">SILVER TIER</option>
-              <option value="GOLD">GOLD TIER</option>
+              {subscriptionPlans.length > 0 ? (
+                subscriptionPlans.map(plan => (
+                  <option key={plan.id} value={plan.name}>{plan.name} TIER</option>
+                ))
+              ) : (
+                <option value="BASIC">BASIC TIER</option>
+              )}
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Contact Person</label>
+              <input
+                type="text"
+                value={newTenant.contact_person}
+                onChange={(e) => setNewTenant({ ...newTenant, contact_person: e.target.value })}
+                className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                placeholder="Manager Name"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Phone Number</label>
+              <input
+                type="text"
+                value={newTenant.phone}
+                onChange={(e) => setNewTenant({ ...newTenant, phone: e.target.value })}
+                className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                placeholder="+251 911..."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Official Email</label>
+              <input
+                type="email"
+                value={newTenant.email}
+                onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })}
+                className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                placeholder="contact@pharmacy.com"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">City</label>
+              <input
+                type="text"
+                value={newTenant.city}
+                onChange={(e) => setNewTenant({ ...newTenant, city: e.target.value })}
+                className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                placeholder="Addis Ababa"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Detailed Address</label>
+            <input
+              type="text"
+              value={newTenant.address}
+              onChange={(e) => setNewTenant({ ...newTenant, address: e.target.value })}
+              className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="Sub-city, Woreda, Specific location..."
+            />
           </div>
 
           <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 space-y-4">
@@ -357,11 +452,25 @@ export default function TenantList() {
             <p className="text-[9px] text-gray-400 italic">User will be assigned the 'ADMIN' role automatically upon deployment.</p>
           </div>
 
+          <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100 mt-6">
+            <input
+              type="checkbox"
+              id="agreed_terms"
+              required
+              checked={agreedTerms}
+              onChange={(e) => setAgreedTerms(e.target.checked)}
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="agreed_terms" className="text-xs text-gray-600 font-medium cursor-pointer">
+              I confirm that the organization has legally signed and sealed the Service Level Agreement (SLA) with us.
+            </label>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button 
               type="submit" 
               disabled={actionLoading}
-              className="flex-[2] px-4 py-4 text-sm font-bold text-white bg-indigo-600 rounded-2xl shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all font-black text-sm tracking-widest uppercase"
+              className="flex-[2] px-4 py-4 text-sm font-bold text-white bg-indigo-600 rounded-2xl shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all font-black text-sm tracking-widest uppercase disabled:cursor-not-allowed"
             >
               {actionLoading ? 'Deploying...' : 'Deploy Organization'}
             </button>

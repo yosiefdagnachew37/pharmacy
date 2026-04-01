@@ -27,6 +27,7 @@ import SuperAdminDashboard from './pages/super-admin/Dashboard';
 import TenantList from './pages/super-admin/TenantList';
 import SuperAdminBilling from './pages/super-admin/Billing';
 import SuperAdminAudit from './pages/super-admin/AuditLogs';
+import SubscriptionPlans from './pages/super-admin/SubscriptionPlans';
 import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
@@ -189,6 +190,7 @@ function App() {
             <Route path="billing" element={<SuperAdminBilling />} />
             <Route path="audit" element={<SuperAdminAudit />} />
             <Route path="system" element={<System />} />
+            <Route path="subscription-plans" element={<SubscriptionPlans />} />
           </Route>
 
           <Route path="/login" element={<Login />} />

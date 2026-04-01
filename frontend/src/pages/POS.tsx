@@ -63,6 +63,9 @@ const POS = () => {
   const [cartDiscount, setCartDiscount] = useState<number | undefined>(0);
   const [splitAmounts, setSplitAmounts] = useState<{ cash: number | undefined, card: number }>({ cash: 0, card: 0 });
 
+  // Organization Info for Receipt
+  const [orgInfo, setOrgInfo] = useState<any>(null);
+
   // Quick Add Patient
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [newPatient, setNewPatient] = useState({ name: '', phone: '', address: '' });
@@ -71,11 +74,16 @@ const POS = () => {
 
   const fetchData = async () => {
     try {
-      const [medRes, patientRes, custRes] = await Promise.all([
+      const [medRes, patientRes, custRes, orgRes] = await Promise.all([
         client.get('/medicines'),
         client.get('/patients').catch(() => ({ data: [] })),
-        client.get('/credit/customers').catch(() => ({ data: [] }))
+        client.get('/credit/customers').catch(() => ({ data: [] })),
+        client.get('/organizations/my-org').catch(() => ({ data: null }))
       ]);
+
+      if (orgRes?.data) {
+        setOrgInfo(orgRes.data);
+      }
 
       if (medRes?.data) {
         const formattedMeds = medRes.data.map((m: any) => ({
@@ -343,10 +351,10 @@ const POS = () => {
               </style>
               </head><body>
                 <div class="header text-center border-bottom">
-                  <h2>PHARMACY RECEIPT</h2>
-                  <p>123 Health Ave, Pharma City</p>
-                  <p>Tel: +1 234 567 8900</p>
-                  <p>License No. PHAR-2026</p>
+                  <h2>${orgInfo?.name || 'PHARMACY RECEIPT'}</h2>
+                  <p>${orgInfo?.address || 'Local Pharmacy'}${orgInfo?.city ? ', ' + orgInfo.city : ''}</p>
+                  <p>Tel: ${orgInfo?.phone || 'N/A'}</p>
+                  ${orgInfo?.license_number ? `<p>License No. ${orgInfo.license_number}</p>` : ''}
                 </div>
                 <div><b>Receipt No:</b> ${fullReceipt.receipt_number}</div>
                 <div><b>Date:</b> ${new Date(fullReceipt.date).toLocaleString()}</div>

@@ -160,7 +160,8 @@ export default function SuperAdminBilling() {
         </div>
 
         <div className="max-h-[calc(100vh-350px)] min-h-[420px] overflow-y-auto custom-scrollbar px-4 pb-48">
-          <table className="min-w-full divide-y divide-gray-100">
+          <div className="overflow-x-auto relative">
+            <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
               <tr className="border-b border-gray-100">
                 <ColumnFilter
@@ -229,6 +230,7 @@ export default function SuperAdminBilling() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 

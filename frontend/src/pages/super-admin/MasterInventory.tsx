@@ -122,7 +122,7 @@ export default function MasterInventory() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
             <ArchiveBoxIcon className="h-6 w-6" />
@@ -163,7 +163,8 @@ export default function MasterInventory() {
 
         {/* Scrollable Table Container */}
         <div className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto custom-scrollbar pb-48">
-          <table className="min-w-full divide-y divide-gray-100">
+          <div className="overflow-x-auto relative">
+            <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
               <tr className="border-b border-gray-100">
                 <ColumnFilter
@@ -249,6 +250,7 @@ export default function MasterInventory() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -340,7 +342,7 @@ export default function MasterInventory() {
               )}
             </div>
           </div>
-          <div className="flex gap-3 pt-6">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6">
             <button type="button" onClick={closeModal} className="flex-1 py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold hover:bg-gray-200 transition-colors">
               Cancel
             </button>

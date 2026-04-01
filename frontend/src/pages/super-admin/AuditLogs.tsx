@@ -87,7 +87,8 @@ export default function SuperAdminAudit() {
 
         {/* Scrollable Table Container */}
         <div className="max-h-[calc(100vh-240px)] min-h-[420px] overflow-y-auto custom-scrollbar pb-48">
-          <table className="min-w-full divide-y divide-gray-100">
+          <div className="overflow-x-auto relative">
+            <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80 sticky top-0 z-30 backdrop-blur-md">
               <tr className="border-b border-gray-100">
                 <th className="px-8 py-3 text-left text-[10px] font-semibold text-gray-700 uppercase tracking-wider">Timestamp</th>
@@ -158,6 +159,7 @@ export default function SuperAdminAudit() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
         
         <div className="p-6 bg-gray-50 border-t border-gray-100 text-center">

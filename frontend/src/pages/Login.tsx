@@ -34,11 +34,27 @@ const Login = () => {
         navigate('/');
       }
     } catch (err: any) {
-      if (err.response?.status === 409) {
+      const status = err.response?.status;
+      const message = err.response?.data?.message || '';
+
+      if (status === 409) {
         setIsAmbiguous(true);
-        setError('Ambiguous Login: Multiple pharmacies found with these credentials. Please enter your Pharmacy name.');
+        setError('Multiple pharmacies found with these credentials. Please enter your Pharmacy name below.');
+      } else if (status === 403) {
+        // Organization suspended or subscription issue
+        const isSuspended = message.includes('ORGANIZATION_SUSPENDED');
+        const isExpired = message.includes('SUBSCRIPTION_EXPIRED');
+        if (isSuspended) {
+          setError('Your organization has been suspended. Please contact the system administrator to restore access.');
+        } else if (isExpired) {
+          setError('Your pharmacy subscription has expired. Please contact the system administrator to renew.');
+        } else {
+          setError('Access denied. Please contact your system administrator.');
+        }
+      } else if (status === 401) {
+        setError('Incorrect username or password. Please try again.');
       } else {
-        setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+        setError('Login failed. Please check your credentials and try again.');
       }
     } finally {
       setLoading(false);

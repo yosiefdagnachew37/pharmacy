@@ -31,6 +31,7 @@ import { ForecastingModule } from './modules/forecasting/forecasting.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { SubscriptionPlansModule } from './modules/subscription-plans/subscription-plans.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     ReceiptsModule,
     BranchesModule,
     OrganizationsModule,
+    SubscriptionPlansModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,6 +8,8 @@ interface AuthUser {
   username: string;
   role: UserRole;
   organizationName: string;
+  subscription_status?: string;
+  allowed_features?: string[];
 }
 
 interface AuthContextType {
@@ -15,6 +17,7 @@ interface AuthContextType {
   role: UserRole | null;
   /** Check if user has one of the given roles */
   hasRole: (...roles: UserRole[]) => boolean;
+  hasFeature: (feature: string) => boolean;
   /** Check if user can perform a specific action */
   canCreate: (entity: string) => boolean;
   canDelete: (entity: string) => boolean;
@@ -28,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
   hasRole: () => false,
+  hasFeature: () => false,
   canCreate: () => false,
   canDelete: () => false,
   canUpdate: () => false,
@@ -141,6 +145,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return permissions[entity]?.update?.includes(role) ?? false;
   };
 
+  const hasFeature = (feature: string) => {
+    if (role === 'SUPER_ADMIN') return true;
+    if (!user || !user.allowed_features) return false; // Strict check
+    return user.allowed_features.includes(feature);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -154,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user, 
       role, 
       hasRole, 
+      hasFeature,
       canCreate, 
       canDelete, 
       canUpdate, 

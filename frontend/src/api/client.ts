@@ -42,11 +42,13 @@ client.interceptors.request.use((config) => {
     return config;
 });
 
-// Handle 401 errors globally
+// Handle 401 errors globally — but NOT for the login endpoint itself
+// (a failed login returns 401, and redirecting to /login on the /login page causes a white screen)
 client.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+        if (error.response?.status === 401 && !isLoginRequest) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             // Dispatch storage event so AuthProvider picks it up immediately
