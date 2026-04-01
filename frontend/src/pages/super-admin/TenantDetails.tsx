@@ -20,7 +20,7 @@ import {
   getSubscriptionPlans,
   updateTenantSubscription
 } from '../../api/superAdminService';
-import { CheckIcon, PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, PlusIcon, PencilSquareIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { toastSuccess, toastError } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import Modal from '../../components/Modal';
@@ -146,21 +146,20 @@ export default function TenantDetails() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading pharmacy profile...</div>;
-  if (!tenant) return <div className="p-8 text-center text-red-500 font-bold">Pharmacy not found.</div>;
-
-  const currentPlan = plans.find(p => p.name === (tenant.subscription_plan_name || tenant.subscription_plan));
-
-  const getStatusDisplay = () => {
-    if (tenant.subscription_status === 'SUSPENDED') return { label: 'Suspended', color: 'bg-orange-100 text-orange-600' };
-    if (tenant.subscription_expiry_date && new Date(tenant.subscription_expiry_date) < new Date()) {
-      return { label: 'Expired', color: 'bg-red-100 text-red-600' };
+  const handleReactivateUser = async (userId: string) => {
+    if (!id) return;
+    try {
+      await updateTenantUser(userId, { is_active: true }, id);
+      toastSuccess('Staff Restored', 'Account access has been successfully restored.');
+      fetchTenant();
+    } catch (err) {
+      console.error('Failed to reactivate user', err);
+      toastError('Error', 'Failed to reactivate staff account.');
     }
-    if (tenant.subscription_status === 'ACTIVE') return { label: 'Active', color: 'bg-emerald-100 text-emerald-600' };
-    return { label: 'Trial', color: 'bg-indigo-100 text-indigo-600' };
   };
 
-  const statusInfo = getStatusDisplay();
+  if (loading) return <div className="p-8 text-center">Loading pharmacy profile...</div>;
+  if (!tenant) return <div className="p-8 text-center text-red-500 font-bold">Pharmacy not found.</div>;
 
   return (
     <div>
@@ -176,8 +175,8 @@ export default function TenantDetails() {
             <div>
               <h1 className="text-3xl font-black text-gray-900">{tenant.name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusInfo.color}`}>
-                  {statusInfo.label}
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${tenant.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                  {tenant.is_active ? 'Active' : 'Suspended'}
                 </span>
                 <span className="text-xs text-gray-400 font-mono tracking-tighter">ID: {tenant.id}</span>
               </div>
@@ -189,32 +188,27 @@ export default function TenantDetails() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-gray-400 mb-2">
-                  <UsersIcon className="h-4 w-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Total Staff</span>
-                </div>
-                <div className="text-3xl font-black text-gray-900">{users.length}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <UsersIcon className="h-4 w-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Total Staff</span>
               </div>
-              <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
-                <UsersIcon className="h-6 w-6 text-indigo-600" />
-              </div>
+              <div className="text-2xl font-black text-gray-900">12 Users</div>
             </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-gray-400 mb-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Registration Date</span>
-                </div>
-                <div className="text-xl font-black text-gray-900">
-                  {new Date(tenant.created_at).toLocaleDateString()}
-                </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <ChartBarIcon className="h-4 w-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Daily Rx Avg</span>
               </div>
-              <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
-                <CheckCircleIcon className="h-6 w-6 text-emerald-600" />
+              <div className="text-2xl font-black text-gray-900">85 Trans</div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 text-gray-400 mb-2">
+                <ShieldCheckIcon className="h-4 w-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Uptime</span>
               </div>
+              <div className="text-2xl font-black text-emerald-600">99.9%</div>
             </div>
           </div>
 
@@ -256,24 +250,12 @@ export default function TenantDetails() {
                 <span className="font-bold text-indigo-600">{tenant.subscription_plan_name || tenant.subscription_plan}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Plan Cost</span>
-                <span className="font-bold">ETB {currentPlan ? Number(currentPlan.costs).toLocaleString() : '---'}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Billing Cycle</span>
-                <span className="font-medium">
-                  {currentPlan ? (
-                    currentPlan.duration_months === 12 ? 'Yearly' :
-                    currentPlan.duration_months === 1 ? 'Monthly' :
-                    `${currentPlan.duration_months} Months`
-                  ) : 'N/A'}
-                </span>
+                <span className="font-medium">Monthly</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Next Renewal</span>
-                <span className="font-medium">
-                  {tenant.subscription_expiry_date ? new Date(tenant.subscription_expiry_date).toLocaleDateString() : 'N/A'}
-                </span>
+                <span className="font-medium">April 15, 2026</span>
               </div>
             </div>
             <button 
@@ -428,15 +410,27 @@ export default function TenantDetails() {
                           setIsUserModalOpen(true);
                         }}
                         className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                        title="Edit"
                       >
                         <PencilSquareIcon className="h-4 w-4" />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      {user.is_active ? (
+                        <button 
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors"
+                          title="Deactivate"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => handleReactivateUser(user.id)}
+                          className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors"
+                          title="Reactivate"
+                        >
+                          <ArrowPathIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

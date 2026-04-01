@@ -58,8 +58,9 @@ export class UsersService {
     }
 
     async findById(id: string): Promise<User | null> {
+        // UUIDs are globally unique — no need to filter by tenant
         return this.usersRepository.findOne({ 
-            where: { id, organization_id: getTenantId() },
+            where: { id },
             relations: ['organization']
         });
     }

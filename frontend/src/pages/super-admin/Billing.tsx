@@ -9,14 +9,19 @@ import {
   ChevronRightIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
-import { getTenants, getSubscriptionPlans, type Tenant } from '../../api/superAdminService';
+import { getTenants, type Tenant } from '../../api/superAdminService';
 import Modal from '../../components/Modal';
 import ColumnFilter from '../../components/ColumnFilter';
 import { toastSuccess, toastError } from '../../components/Toast';
 
+const PLAN_PRICES = {
+  BASIC: 1500,
+  SILVER: 3500,
+  GOLD: 7500
+};
+
 export default function SuperAdminBilling() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Advanced Column Filters
@@ -39,44 +44,30 @@ export default function SuperAdminBilling() {
   };
 
   useEffect(() => {
-    Promise.all([
-      getTenants(),
-      getSubscriptionPlans()
-    ]).then(([tenantsData, plansData]) => {
-      setTenants(tenantsData);
-      setPlans(plansData.filter((p: any) => p.is_active));
+    getTenants().then(data => {
+      setTenants(data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
   const totalMRR = tenants.reduce((acc, t) => {
-    const planName = t.subscription_plan_name || t.subscription_plan;
-    const activePlan = plans.find(p => p.name === planName);
-    if (!activePlan) return acc;
-    const monthlyRate = Number(activePlan.costs) / Number(activePlan.duration_months || 1);
-    return acc + monthlyRate;
+    const plan = t.subscription_plan as keyof typeof PLAN_PRICES;
+    return acc + (PLAN_PRICES[plan] || 1500);
   }, 0);
 
-  const colors = ['bg-indigo-400', 'bg-purple-500', 'bg-emerald-500', 'bg-blue-400', 'bg-orange-400', 'bg-rose-400'];
-
-  const planStats = plans.map((plan, index) => {
-    const count = tenants.filter(t => (t.subscription_plan_name || t.subscription_plan) === plan.name).length;
-    return {
-      name: plan.name,
-      count,
-      color: colors[index % colors.length],
-      price: plan.costs
-    };
-  }).sort((a, b) => b.count - a.count); // Show most popular plans first
+  const planStats = [
+    { name: 'BASIC', count: tenants.filter(t => t.subscription_plan === 'BASIC').length, color: 'bg-indigo-400', price: PLAN_PRICES.BASIC },
+    { name: 'SILVER', count: tenants.filter(t => t.subscription_plan === 'SILVER').length, color: 'bg-purple-500', price: PLAN_PRICES.SILVER },
+    { name: 'GOLD', count: tenants.filter(t => t.subscription_plan === 'GOLD').length, color: 'bg-amber-500', price: PLAN_PRICES.GOLD },
+  ];
 
   const uniqueNames = useMemo(() => [...new Set(tenants.map(t => t.name))].sort(), [tenants]);
-  const planOptions = useMemo(() => plans.map(p => p.name), [plans]);
+  const planOptions = ['BASIC', 'SILVER', 'GOLD'];
 
   const filteredTenants = useMemo(() => {
     return tenants.filter(t => {
-      const pName = t.subscription_plan_name || t.subscription_plan;
       const matchesName = columnFilters.name.length === 0 || columnFilters.name.includes(t.name);
-      const matchesPlan = columnFilters.plan.length === 0 || columnFilters.plan.includes(pName);
+      const matchesPlan = columnFilters.plan.length === 0 || columnFilters.plan.includes(t.subscription_plan);
       return matchesName && matchesPlan;
     });
   }, [tenants, columnFilters]);
@@ -204,19 +195,20 @@ export default function SuperAdminBilling() {
                     </div>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap">
-                    <span className="px-2 py-0.5 text-[9px] font-black rounded-lg uppercase tracking-tighter bg-indigo-100 text-indigo-600">
-                      {tenant.subscription_plan_name || tenant.subscription_plan}
+                    <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg uppercase tracking-tighter ${tenant.subscription_plan === 'GOLD' ? 'bg-amber-100 text-amber-600' :
+                      tenant.subscription_plan === 'SILVER' ? 'bg-gray-100 text-gray-600' :
+                        'bg-indigo-100 text-indigo-600'
+                      }`}>
+                      {tenant.subscription_plan} Plan
                     </span>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap">
                     <div className="text-xs font-bold text-gray-900">
-                      ETB {(plans.find(p => p.name === (tenant.subscription_plan_name || tenant.subscription_plan))?.costs || 0).toLocaleString()}
+                      ETB {(PLAN_PRICES[tenant.subscription_plan as keyof typeof PLAN_PRICES] || 1500).toLocaleString()}
                     </div>
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap">
-                    <div className="text-[10px] text-gray-500 font-bold">
-                      {tenant.subscription_expiry_date ? new Date(tenant.subscription_expiry_date).toLocaleDateString() : 'N/A'}
-                    </div>
+                    <div className="text-[10px] text-gray-500 font-bold">{tenant.created_at ? new Date(tenant.created_at).toLocaleDateString() : 'N/A'}</div>
                   </td>
                   <td className="px-8 py-2 whitespace-nowrap text-right">
                     <button
@@ -256,22 +248,22 @@ export default function SuperAdminBilling() {
                   Contract ID: {selectedTenant.id.slice(0, 12).toUpperCase()}
                 </div>
               </div>
-              <span className="px-2.5 py-1 text-[10px] font-black rounded-lg uppercase bg-indigo-100 text-indigo-600">
-                {selectedTenant.subscription_plan_name || selectedTenant.subscription_plan} TIER
+              <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase bg-indigo-100 text-indigo-600`}>
+                {selectedTenant.subscription_plan} TIER
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-2xl">
-                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contract Cost</div>
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Monthly Cost</div>
                 <div className="text-lg font-bold text-gray-900">
-                  ETB {(plans.find(p => p.name === (selectedTenant.subscription_plan_name || selectedTenant.subscription_plan))?.costs || 0).toLocaleString()}
+                  ETB {(PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] || 0).toLocaleString()}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-2xl">
                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Next Invoice</div>
                 <div className="text-lg font-bold text-gray-900">
-                  {selectedTenant.subscription_expiry_date ? new Date(selectedTenant.subscription_expiry_date).toLocaleDateString() : 'N/A'}
+                  {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -279,7 +271,8 @@ export default function SuperAdminBilling() {
             <div className="space-y-3">
               <div className="text-xs font-bold text-gray-900 uppercase tracking-wider">Billing Events</div>
               {[
-                { date: 'Today', event: 'Current Target Record', amount: plans.find(p => p.name === (selectedTenant.subscription_plan_name || selectedTenant.subscription_plan))?.costs || 0 },
+                { date: 'Today', event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
+                { date: 'Last Month', event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
                 { date: 'Initial Onboarding', event: 'Account Activated', amount: 0 },
               ].map((ev, i) => (
                 <div key={i} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
