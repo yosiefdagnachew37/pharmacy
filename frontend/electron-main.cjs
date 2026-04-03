@@ -223,6 +223,8 @@ function startBackend(nodeBin) {
             JWT_SECRET: 'pharmacy-local-offline-jwt-secret-change-in-production',
             NODE_ENV: 'production',
             NODE_PATH: path.join(backendDir, 'node_modules'),
+            // CRITICAL: Tells the backend to enforce the Hardware License lock
+            IS_DESKTOP_OFFLINE: 'true'
         };
 
         console.log('[Backend] Spawning:', nodeBin, backendMain);
