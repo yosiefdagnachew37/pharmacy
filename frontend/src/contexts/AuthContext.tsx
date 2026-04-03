@@ -70,23 +70,24 @@ const permissions: Record<string, Record<string, UserRole[]>> = {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [selectedOrganization, setSelectedOrganizationState] = useState<{ id: string; name: string } | null>(null);
-
-  useEffect(() => {
+  const [user, setUser] = useState<AuthUser | null>(() => {
     const stored = localStorage.getItem('user');
     if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch { /* ignore bad data */ }
+      try { return JSON.parse(stored); } catch { return null; }
     }
+    return null;
+  });
 
+  const [selectedOrganization, setSelectedOrganizationState] = useState<{ id: string; name: string } | null>(() => {
     const storedOrg = localStorage.getItem('selectedOrganization');
     if (storedOrg) {
-      try {
-        setSelectedOrganizationState(JSON.parse(storedOrg));
-      } catch { /* ignore bad data */ }
+      try { return JSON.parse(storedOrg); } catch { return null; }
     }
+    return null;
+  });
+
+  useEffect(() => {
+    // Intentionally empty or used for other effects. User state is loaded eagerly.
   }, []);
 
   const setSelectedOrganization = (org: { id: string; name: string } | null) => {

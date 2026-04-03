@@ -193,7 +193,7 @@ function App() {
             <Route path="tenants" element={<TenantList />} />
             <Route path="tenants/:id" element={<TenantDetails />} />
             <Route path="billing" element={<SuperAdminBilling />} />
-            <Route path="plans" element={<SubscriptionPlans />} />
+            <Route path="subscription-plans" element={<SubscriptionPlans />} />
             <Route path="audit-logs" element={<SuperAdminAudit />} />
             <Route path="system" element={<System />} />
             <Route path="inventory" element={<MasterInventory />} />

@@ -86,7 +86,7 @@ export default function SubscriptionPlans() {
       description: plan.description || '',
       costs: plan.costs,
       duration_months: plan.duration_months || 1,
-      features: plan.features || [],
+      features: typeof plan.features === 'string' ? JSON.parse(plan.features || '[]') : (plan.features || []),
       is_active: plan.is_active
     });
     setIsModalOpen(true);
@@ -176,7 +176,7 @@ export default function SubscriptionPlans() {
             <div className="flex-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Included Features</span>
               <ul className="space-y-2 mb-6">
-                {(plan.features || []).map((feat: string, i: number) => (
+                {(typeof plan.features === 'string' ? JSON.parse(plan.features || '[]') : (plan.features || [])).map((feat: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
                     <CheckBadgeIcon className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
                     <span>{feat}</span>
