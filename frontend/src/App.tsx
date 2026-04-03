@@ -30,6 +30,7 @@ import SuperAdminAudit from './pages/super-admin/AuditLogs';
 import SubscriptionPlans from './pages/super-admin/SubscriptionPlans';
 import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
+import LicenseGenerator from './pages/super-admin/LicenseGenerator';
 import LicenseLock from './pages/LicenseLock';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
 // System is already imported above
@@ -180,19 +181,23 @@ function App() {
             />
           </Route>
           
-          <Route path="/super-admin" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <SuperAdminLayout />
-            </ProtectedRoute>
-          }>
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SuperAdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<SuperAdminDashboard />} />
             <Route path="tenants" element={<TenantList />} />
             <Route path="tenants/:id" element={<TenantDetails />} />
-            <Route path="inventory" element={<MasterInventory />} />
             <Route path="billing" element={<SuperAdminBilling />} />
-            <Route path="audit" element={<SuperAdminAudit />} />
+            <Route path="plans" element={<SubscriptionPlans />} />
+            <Route path="audit-logs" element={<SuperAdminAudit />} />
             <Route path="system" element={<System />} />
-            <Route path="subscription-plans" element={<SubscriptionPlans />} />
+            <Route path="inventory" element={<MasterInventory />} />
+            <Route path="license-generator" element={<LicenseGenerator />} />
           </Route>
 
           <Route path="/login" element={<Login />} />

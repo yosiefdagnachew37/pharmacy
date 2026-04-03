@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, Body } from '@nestjs/common';
 import { SystemService } from './system.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -34,5 +34,11 @@ export class SystemController {
     @Roles(UserRole.SUPER_ADMIN)
     restoreBackup(@Param('filename') filename: string) {
         return this.systemService.restoreBackup(filename);
+    }
+
+    @Post('generate-license')
+    @Roles(UserRole.SUPER_ADMIN)
+    generateLicense(@Body() body: { hwid: string, expiry?: string, plan?: string }) {
+        return this.systemService.generateLicense(body.hwid, body.expiry, body.plan);
     }
 }

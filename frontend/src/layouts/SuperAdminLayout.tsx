@@ -25,8 +25,9 @@ const navigation = [
   { name: 'Master Inventory', href: '/super-admin/inventory', icon: InboxStackIcon },
   { name: 'Billing', href: '/super-admin/billing', icon: CreditCardIcon },
   { name: 'Plans', href: '/super-admin/subscription-plans', icon: TicketIcon },
-  { name: 'Audit Logs', href: '/super-admin/audit', icon: ClipboardDocumentListIcon },
+  { name: 'Audit Logs', href: '/super-admin/audit-logs', icon: ClipboardDocumentListIcon },
   { name: 'System', href: '/super-admin/system', icon: CogIcon },
+  { name: 'License Generator', href: '/super-admin/license-generator', icon: TicketIcon },
   { name: 'Pharmacy View', href: '/', icon: ShieldCheckIcon },
 ];
 

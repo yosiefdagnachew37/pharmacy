@@ -5,6 +5,7 @@ import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
+import * as cryptoOriginal from 'crypto';
 
 const execPromise = promisify(exec);
 
@@ -91,6 +92,42 @@ export class SystemService implements OnModuleInit {
             nodeVersion: process.version,
             platform: process.platform,
             backupCount: (await this.listBackups()).length,
+        };
+    }
+
+    generateLicense(hwid: string, expiry?: string, plan?: string) {
+        if (process.env.IS_DESKTOP_OFFLINE === 'true') {
+            throw new Error('License generation is strictly disabled on offline nodes.');
+        }
+
+        const privateKey = process.env.LICENSE_PRIVATE_KEY;
+        if (!privateKey) {
+            throw new Error('Server misconfiguration: No private key found.');
+        }
+
+        const payload: any = {
+            hwid: hwid.trim(),
+        };
+
+        if (expiry && expiry.trim()) {
+            payload.expiry = new Date(expiry.trim()).toISOString();
+        }
+
+        if (plan && plan.trim()) {
+            payload.plan = plan.trim();
+        }
+
+        const dataString = JSON.stringify(payload, Object.keys(payload).sort());
+
+        const signer = cryptoOriginal.createSign('SHA256');
+        signer.update(dataString);
+        signer.end();
+
+        const signature = signer.sign(privateKey, 'base64');
+
+        return {
+            ...payload,
+            signature
         };
     }
 }
