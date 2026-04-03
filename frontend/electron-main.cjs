@@ -386,66 +386,10 @@ function createMainWindow() {
 // App lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
-// Anti-Piracy / Installation Validation
+// App lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
-function validateInstallation() {
-    if (isDev || process.platform !== 'win32') return true;
-
-    try {
-        // 1. Path Verification
-        const execPath = process.execPath.toLowerCase();
-        // NSIS installs to localized 'Program Files' or 'AppData\Local\Programs' by default
-        const containsValidPath = execPath.includes('program files') || 
-                                  execPath.includes('appdata\\local\\programs');
-        
-        // 2. Registry Verification (Checking the NSIS Uninstall Key for the AppId)
-        // electron-builder appId is com.pharmacy.system
-        let registryValid = false;
-        try {
-            // Check HKEY_CURRENT_USER (perUser install default)
-            const hkcuCheck = child_process.execSync(
-                `reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\com.pharmacy.system"`, 
-                { stdio: 'pipe' }
-            ).toString();
-            registryValid = hkcuCheck.includes('com.pharmacy.system');
-        } catch(e) { /* Missing in HKCU */ }
-
-        if (!registryValid) {
-            try {
-                // Check HKEY_LOCAL_MACHINE (perMachine install)
-                const hklmCheck = child_process.execSync(
-                    `reg query "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\com.pharmacy.system"`, 
-                    { stdio: 'pipe' }
-                ).toString();
-                registryValid = hklmCheck.includes('com.pharmacy.system');
-            } catch(e) { /* Missing in HKLM */ }
-        }
-
-        if (!containsValidPath || !registryValid) {
-            dialog.showErrorBox(
-                'Installation Validation Failed',
-                'Application not properly installed.\n\nRunning copied files is restricted. Please install the application using the official setup file.'
-            );
-            return false;
-        }
-        return true;
-
-    } catch (err) {
-        console.error('Validation check failed', err);
-        // Fail-open or hard fail? The requirement is strict enforcement.
-        // If reg command catastrophically fails (e.g., cmd missing), fallback to false.
-        dialog.showErrorBox('Security Error', 'Failed to validate system state.');
-        return false;
-    }
-}
 
 app.whenReady().then(async () => {
-    // ── Enforce Official Installation Check ────────────────────────────────────
-    if (!validateInstallation()) {
-        app.quit();
-        return;
-    }
-
     // In dev mode: Vite server + backend are started separately — just open the window
     if (isDev) {
         createMainWindow();
