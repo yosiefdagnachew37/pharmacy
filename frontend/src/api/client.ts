@@ -54,10 +54,27 @@ client.interceptors.response.use(
             // Dispatch storage event so AuthProvider picks it up immediately
             window.dispatchEvent(new Event('storage'));
             
-            if (isElectron) {
-                window.location.hash = '#/login';
-            } else {
-                window.location.href = '/login';
+            const currentPath = window.location.pathname;
+            const currentHash = window.location.hash;
+            if (!currentPath.includes('/login') && !currentHash.includes('/login')) {
+                if (isElectron) {
+                    window.location.hash = '#/login';
+                } else {
+                    window.location.href = '/login';
+                }
+            }
+        }
+        
+        // Handle 402 License Required globally for the desktop version 
+        if (error.response?.status === 402) {
+            const currentPath = window.location.pathname;
+            const currentHash = window.location.hash;
+            if (!currentPath.includes('/license-lock') && !currentHash.includes('/license-lock')) {
+                if (isElectron) {
+                    window.location.hash = '#/license-lock';
+                } else {
+                    window.location.href = '/license-lock';
+                }
             }
         }
         return Promise.reject(error);

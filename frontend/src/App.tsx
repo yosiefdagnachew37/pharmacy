@@ -30,6 +30,7 @@ import SuperAdminAudit from './pages/super-admin/AuditLogs';
 import SubscriptionPlans from './pages/super-admin/SubscriptionPlans';
 import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
+import LicenseLock from './pages/LicenseLock';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
 // System is already imported above
 
@@ -46,6 +47,7 @@ function App() {
         <ToastContainer />
         <OfflineBanner />
         <Routes>
+          <Route path="/license-lock" element={<LicenseLock />} />
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route

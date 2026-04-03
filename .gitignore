@@ -4,6 +4,10 @@ dist
 dist-electron
 build
 coverage
+private.pem
+public.pem
+generated_license.key
+license.key
 
 # Backend
 backend/dist

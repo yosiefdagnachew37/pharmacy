@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -32,6 +32,8 @@ import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SubscriptionPlansModule } from './modules/subscription-plans/subscription-plans.module';
+import { LicenseModule } from './common/security/license.module';
+import { LicenseMiddleware } from './common/middlewares/license.middleware';
 
 @Module({
   imports: [
@@ -71,6 +73,7 @@ import { SubscriptionPlansModule } from './modules/subscription-plans/subscripti
     BranchesModule,
     OrganizationsModule,
     SubscriptionPlansModule,
+    LicenseModule,
   ],
   controllers: [AppController],
   providers: [
@@ -81,4 +84,10 @@ import { SubscriptionPlansModule } from './modules/subscription-plans/subscripti
     },
   ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(LicenseMiddleware)
+      .forRoutes('*');
+  }
+}
