@@ -1,6 +1,6 @@
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 
 @Injectable()
@@ -18,12 +18,12 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
             }
             return user;
         } catch (error) {
-            // Re-throw ForbiddenException (e.g. suspended org) so it reaches the client as 403
-            if (error instanceof ForbiddenException) {
-                throw error;
-            }
-            // All other errors (including UnauthorizedException) become 401
-            if (error instanceof UnauthorizedException) {
+            // Re-throw specified exceptions so they reach the client with proper status codes
+            if (
+                error instanceof ForbiddenException || 
+                error instanceof ConflictException || 
+                error instanceof UnauthorizedException
+            ) {
                 throw error;
             }
             throw new UnauthorizedException('Invalid credentials');
