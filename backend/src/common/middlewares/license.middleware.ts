@@ -13,8 +13,12 @@ export class LicenseMiddleware implements NestMiddleware {
       return next();
     }
 
-    // Allow the license application endpoint to bypass
-    if (req.originalUrl.includes('/license/apply') || req.originalUrl.includes('/license/status')) {
+    // Allow the license application and health check endpoints to bypass
+    if (
+      req.originalUrl.includes('/license/apply') || 
+      req.originalUrl.includes('/license/status') ||
+      req.originalUrl.includes('/users/status/health')
+    ) {
       return next();
     }
 

@@ -72,7 +72,9 @@ export class AuthService {
                     const allPlans = await this.plansService.findAll();
                     const activePlan = allPlans.find(p => p.name === planName);
                     if (activePlan && activePlan.is_active && activePlan.features) {
-                        subFeatures = activePlan.features;
+                        subFeatures = typeof activePlan.features === 'string' 
+                            ? JSON.parse(activePlan.features) 
+                            : activePlan.features;
                     }
                 } catch (e) {
                     console.error('Failed to fetch plan features', e);

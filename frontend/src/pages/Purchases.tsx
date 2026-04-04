@@ -54,15 +54,15 @@ const Purchases = () => {
     const fetchData = async () => {
         try {
             const [poRes, suppRes, medRes] = await Promise.all([
-                client.get('/purchase-orders'),
-                client.get('/suppliers'),
-                client.get('/medicines')
+                client.get('/purchase-orders').catch(e => { console.error('PO load failed', e); return { data: [] }; }),
+                client.get('/suppliers').catch(e => { console.error('Suppliers load failed', e); return { data: [] }; }),
+                client.get('/medicines').catch(e => { console.error('Medicines load failed', e); return { data: [] }; })
             ]);
-            setPurchases(poRes.data);
-            setSuppliers(suppRes.data);
-            setMedicines(medRes.data);
+            setPurchases(poRes.data || []);
+            setSuppliers(suppRes.data || []);
+            setMedicines(medRes.data || []);
         } catch (err) {
-            console.error('Failed to load purchases data', err);
+            console.error('Unexpected failure in Purchases.fetchData', err);
         } finally {
             setLoading(false);
         }

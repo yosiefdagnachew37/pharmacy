@@ -31,7 +31,9 @@ export class FeatureGuard implements CanActivate {
     // Verify feature using the JWT-injected feature set
     const features = user.subscription_features || [];
     
+    // Check if the exact features array includes this feature
     if (!features.includes(requiredFeature)) {
+        console.error(`[FEATURE_DENIED] user: ${user.username}, org: ${user.organizationId}, required: ${requiredFeature}, present: ${JSON.stringify(features)}`);
         throw new ForbiddenException(`Your organization's active subscription plan lacks the required feature: ${requiredFeature}`);
     }
 

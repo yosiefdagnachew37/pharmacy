@@ -35,18 +35,47 @@ import LicenseLock from './pages/LicenseLock';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
 // System is already imported above
 
+import { useState, useEffect } from 'react';
+import client from './api/client';
+
 const isElectron = 
   (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
   (typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron'));
 
 const Router = isElectron ? HashRouter : BrowserRouter;
 
+// Handles proactive license status checking on startup
+const LicenseManager = ({ children }: { children: React.ReactNode }) => {
+  useEffect(() => {
+    if (!isElectron) return;
+
+    const checkLicense = async () => {
+      try {
+        const res = await client.get('/license/status');
+        if (res.data && res.data.isValid === false) {
+           // Redirect via hash if electron
+           window.location.hash = '#/license-lock';
+        }
+      } catch (err: any) {
+        if (err.response?.status === 402) {
+          window.location.hash = '#/license-lock';
+        }
+      }
+    };
+    
+    checkLicense();
+  }, []);
+
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <ToastContainer />
-        <OfflineBanner />
+        <LicenseManager>
+          <ToastContainer />
+          <OfflineBanner />
         <Routes>
           <Route path="/license-lock" element={<LicenseLock />} />
           <Route path="/" element={<DashboardLayout />}>
@@ -202,6 +231,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
         </Routes>
+        </LicenseManager>
       </Router>
     </AuthProvider>
   );

@@ -15,6 +15,7 @@ export class PurchaseOrdersController {
     constructor(private readonly poService: PurchaseOrdersService) { }
 
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findAll(@Query('status') status?: POStatus) {
         return this.poService.findAll(status);
     }

@@ -15,6 +15,7 @@ export class SuppliersController {
 
     // ─── Supplier CRUD ─────────────────────────────────
     @Get()
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     findAll() {
         return this.suppliersService.findAll();
     }
