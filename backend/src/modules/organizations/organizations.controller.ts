@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, NotFoundException } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -130,5 +130,24 @@ export class MyOrganizationController {
         const orgId = req.user?.organizationId;
         if (!orgId) return [];
         return await this.organizationsService.findMyRequests(orgId);
+    }
+
+    @Patch('my-org')
+    @Roles(UserRole.ADMIN)
+    async updateMyOrg(@Request() req: any, @Body() data: Partial<Organization>) {
+        const orgId = req.user?.organizationId;
+        if (!orgId) throw new NotFoundException('Organization not associated with user');
+        
+        // Security: Prevent tenant admins from changing their own subscription status or internal notes
+        const safeData = { ...data };
+        delete safeData.subscription_status;
+        delete safeData.subscription_plan;
+        delete safeData.subscription_plan_name;
+        delete safeData.subscription_expiry_date;
+        delete safeData.is_active;
+        delete safeData.internal_notes;
+        delete safeData.feature_overrides;
+
+        return await this.organizationsService.update(orgId, safeData);
     }
 }

@@ -32,6 +32,7 @@ import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
 import LicenseGenerator from './pages/super-admin/LicenseGenerator';
 import LicenseLock from './pages/LicenseLock';
+import Settings from './pages/Settings';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
 // System is already imported above
 
@@ -205,6 +206,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <StockAudit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

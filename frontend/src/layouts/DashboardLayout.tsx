@@ -25,7 +25,8 @@ import {
   Search as SearchIcon,
   Pill as MedicineIcon,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
@@ -148,18 +149,18 @@ const DashboardLayout = () => {
           <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
           <h2 className="text-2xl font-black text-gray-900 mb-2">Access Blocked</h2>
           <p className="text-gray-500 mb-8 font-medium">
-            {user.subscription_status === 'SUSPENDED' 
-              ? 'Your organization has been suspended. Please contact the platform administration to restore service.' 
+            {user.subscription_status === 'SUSPENDED'
+              ? 'Your organization has been suspended. Please contact the platform administration to restore service.'
               : 'Your pharmacy subscription has expired. Please contact the platform administration to renew your plan.'}
           </p>
           <div className="flex flex-col gap-3">
-            <button 
+            <button
               className="w-full py-4 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 transition"
               onClick={() => window.open('mailto:support@pharmacy-erp.com')}
             >
               Contact Support Support
             </button>
-            <button 
+            <button
               onClick={handleLogout}
               className="w-full py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition"
             >
@@ -340,14 +341,14 @@ const DashboardLayout = () => {
                     </span>
                   </div>
                   <div className="text-[10px] font-black text-indigo-600 uppercase tracking-tight mt-0.5">
-                    {role === 'SUPER_ADMIN' && selectedOrganization 
-                      ? `Viewing: ${selectedOrganization.name}` 
+                    {role === 'SUPER_ADMIN' && selectedOrganization
+                      ? `Viewing: ${selectedOrganization.name}`
                       : user?.organizationName || 'Pharmacy'}
                   </div>
                 </div>
-                
+
                 <NotificationBell />
-                
+
                 <button
                   onClick={() => setIsSubscriptionOpen(true)}
                   className="p-2 lg:p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all active:scale-95 group relative flex items-center justify-center shrink-0"
@@ -358,10 +359,18 @@ const DashboardLayout = () => {
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
                   )}
                 </button>
-                
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white shrink-0">
+
+                <Link
+                  to="/settings"
+                  className="p-2 lg:p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-95 group relative flex items-center justify-center shrink-0"
+                  title="Pharmacy Settings"
+                >
+                  <Settings className="w-5 h-5 group-hover:rotate-45 transition-transform" />
+                </Link>
+
+                {/* <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white shrink-0">
                   <span className="text-sm lg:text-base font-black uppercase tracking-widest">{user?.username.charAt(0)}</span>
-                </div>
+                </div> */}
               </>
             )}
           </div>
@@ -373,7 +382,7 @@ const DashboardLayout = () => {
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 flex-shrink-0" />
               <p className="text-sm font-bold">
-                ⚠️ Your subscription expires in <span className="underline decoration-2">{expiryWarning} day{expiryWarning !== 1 ? 's' : ''}</span>. 
+                ⚠️ Your subscription expires in <span className="underline decoration-2">{expiryWarning} day{expiryWarning !== 1 ? 's' : ''}</span>.
                 Please contact your system administrator to renew your plan.
               </p>
             </div>
@@ -385,9 +394,9 @@ const DashboardLayout = () => {
         </main>
       </div>
 
-      <SubscriptionModal 
-        isOpen={isSubscriptionOpen} 
-        onClose={() => setIsSubscriptionOpen(false)} 
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
       />
     </div>
   );

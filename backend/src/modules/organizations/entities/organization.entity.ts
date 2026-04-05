@@ -70,9 +70,13 @@ export class Organization {
     @Column({ type: 'text', nullable: true })
     internal_notes: string;
 
+    @Column({ type: 'json', nullable: true })
+    preferences: Record<string, any>;
+
     @CreateDateColumn()
     created_at: Date;
 
     @UpdateDateColumn()
     updated_at: Date;
 }
+ Riverside:1-79
