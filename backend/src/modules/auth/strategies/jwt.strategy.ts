@@ -20,6 +20,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             role: payload.role, 
             organization_id: payload.organizationId,  // snake_case for consistency with controllers
             organizationId: payload.organizationId,   // keep camelCase alias for backwards compat
+            subscription_status: payload.subscription_status,
+            subscription_features: payload.subscription_features || [],
+            subscription_expiry_date: payload.subscription_expiry_date,
         };
     }
 }

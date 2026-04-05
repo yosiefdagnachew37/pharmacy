@@ -43,7 +43,7 @@ export class AuthService {
             throw new ForbiddenException('USER_DEACTIVATED');
         }
 
-        if (targetedUser.organization && targetedUser.organization.is_active === false) {
+        if (targetedUser.role !== 'SUPER_ADMIN' && targetedUser.organization && targetedUser.organization.is_active === false) {
             throw new ForbiddenException('ORGANIZATION_SUSPENDED');
         }
 
@@ -82,7 +82,8 @@ export class AuthService {
             }
         }
         return { 
-            ...result, 
+            ...result,
+            organizationName: targetedUser.organization?.name || 'Pharmacy',
             subscription_status: subStatus, 
             subscription_features: subFeatures,
             subscription_expiry_date: targetedUser.organization?.subscription_expiry_date || null
@@ -95,6 +96,7 @@ export class AuthService {
             sub: user.id, 
             role: user.role, 
             organizationId: user.organization_id,
+            organizationName: user.organizationName,
             subscription_status: user.subscription_status,
             subscription_features: user.subscription_features || [],
             subscription_expiry_date: user.subscription_expiry_date || null
@@ -103,6 +105,7 @@ export class AuthService {
             access_token: this.jwtService.sign(payload),
             user: {
                 ...user,
+                organizationName: user.organizationName,
                 subscription_status: user.subscription_status,
                 subscription_features: user.subscription_features || [],
                 subscription_expiry_date: user.subscription_expiry_date || null
