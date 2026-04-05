@@ -132,7 +132,7 @@ const NotificationBell = () => {
 
             {/* Dropdown Panel */}
             {isOpen && (
-                <div className="fixed sm:absolute top-[80px] sm:top-full right-4 sm:right-0 left-auto w-[calc(100vw-32px)] xs:w-[320px] sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                <div className="fixed sm:absolute top-[80px] sm:top-full right-4 sm:right-0 left-auto w-[calc(100vw-32px)] xs:w-[320px] sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
                         <div className="flex items-center gap-2">
