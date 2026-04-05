@@ -14,6 +14,11 @@ export interface Tenant {
     subscription_status?: 'TRIAL' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
     subscription_expiry_date?: string;
     subscription_plan_name?: string;
+    internal_notes?: string;
+    // Metrics (Calculated on backend)
+    staff_count?: number;
+    daily_rx_avg?: number;
+    uptime?: string;
     created_at: string;
     updated_at: string;
 }

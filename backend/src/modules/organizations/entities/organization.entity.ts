@@ -67,6 +67,9 @@ export class Organization {
     @Column({ type: 'json', nullable: true })
     feature_overrides: string[];
 
+    @Column({ type: 'text', nullable: true })
+    internal_notes: string;
+
     @CreateDateColumn()
     created_at: Date;
 

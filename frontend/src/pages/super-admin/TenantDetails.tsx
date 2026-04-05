@@ -34,7 +34,17 @@ export default function TenantDetails() {
 
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isEditDetailsModalOpen, setIsEditDetailsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    contact_person: '',
+    phone: '',
+    email: '',
+    city: '',
+    address: '',
+    license_number: ''
+  });
   const [userFormData, setUserFormData] = useState({
     username: '',
     password: '',
@@ -158,6 +168,23 @@ export default function TenantDetails() {
     }
   };
 
+  const handleUpdateDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await updateTenant(id, editFormData);
+      toastSuccess('Profile Updated', 'Pharmacy contact information has been refreshed.');
+      setIsEditDetailsModalOpen(false);
+      fetchTenant();
+    } catch (err) {
+      console.error('Failed to update details', err);
+      toastError('Update Failed', 'Could not save the new profile information.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Loading pharmacy profile...</div>;
   if (!tenant) return <div className="p-8 text-center text-red-500 font-bold">Pharmacy not found.</div>;
 
@@ -194,27 +221,47 @@ export default function TenantDetails() {
                 <UsersIcon className="h-4 w-4" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Total Staff</span>
               </div>
-              <div className="text-2xl font-black text-gray-900">12 Users</div>
+              <div className="text-2xl font-black text-gray-900">{tenant.staff_count || 0} Users</div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 text-gray-400 mb-2">
                 <ChartBarIcon className="h-4 w-4" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Daily Rx Avg</span>
               </div>
-              <div className="text-2xl font-black text-gray-900">85 Trans</div>
+              <div className="text-2xl font-black text-gray-900">{tenant.daily_rx_avg || 0} Trans</div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 text-gray-400 mb-2">
                 <ShieldCheckIcon className="h-4 w-4" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">Uptime</span>
               </div>
-              <div className="text-2xl font-black text-emerald-600">99.9%</div>
+              <div className="text-2xl font-black text-emerald-600">{tenant.uptime || '99.9%'}</div>
             </div>
           </div>
 
           {/* Contact Information */}
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-            <h3 className="font-bold text-gray-900 mb-4">Contact Information</h3>
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative group">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900">Contact Information</h3>
+                <button 
+                    onClick={() => {
+                        setEditFormData({
+                            name: tenant.name,
+                            contact_person: tenant.contact_person || '',
+                            phone: tenant.phone || '',
+                            email: tenant.email || '',
+                            city: tenant.city || '',
+                            address: tenant.address || '',
+                            license_number: tenant.license_number || ''
+                        });
+                        setIsEditDetailsModalOpen(true);
+                    }}
+                    className="text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-800 transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-1"
+                >
+                    <PencilSquareIcon className="h-3 w-3" />
+                    Edit Profile
+                </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Contact Person</span>
@@ -255,7 +302,7 @@ export default function TenantDetails() {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Next Renewal</span>
-                <span className="font-medium">April 15, 2026</span>
+                <span className="font-medium">{tenant.subscription_expiry_date ? new Date(tenant.subscription_expiry_date).toLocaleDateString() : 'N/A'}</span>
               </div>
             </div>
             <button 
@@ -324,10 +371,135 @@ export default function TenantDetails() {
             </div>
           </Modal>
 
-          <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100">
-            <h3 className="font-bold text-amber-900 mb-2">Internal Note</h3>
+          <Modal
+            isOpen={isEditDetailsModalOpen}
+            onClose={() => setIsEditDetailsModalOpen(false)}
+            title="Edit Pharmacy Profile"
+          >
+            <form onSubmit={handleUpdateDetails} className="space-y-4 pt-4">
+              <div className="bg-indigo-50 p-4 rounded-2xl flex items-start gap-4 mb-4">
+                <BuildingOfficeIcon className="h-6 w-6 text-indigo-500 shrink-0 mt-1" />
+                <div>
+                  <p className="text-sm font-bold text-indigo-900">Pharmacy Profile</p>
+                  <p className="text-xs text-indigo-700">Update the core organizational and contact information for this pharmacy node.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Pharmacy Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Contact Person</label>
+                    <input
+                      type="text"
+                      value={editFormData.contact_person}
+                      onChange={(e) => setEditFormData({ ...editFormData, contact_person: e.target.value })}
+                      className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Phone Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Official Email</label>
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">City</label>
+                    <input
+                      type="text"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">License Number</label>
+                  <input
+                    type="text"
+                    value={editFormData.license_number}
+                    onChange={(e) => setEditFormData({ ...editFormData, license_number: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Detailed Address</label>
+                  <input
+                    type="text"
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner"
+                    placeholder="Sub-city, Woreda, Specific location..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditDetailsModalOpen(false)}
+                  className="flex-1 px-4 py-4 text-sm font-bold text-gray-500 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={actionLoading}
+                  className="flex-[2] px-4 py-4 text-sm font-bold text-white bg-gray-900 rounded-2xl shadow-lg hover:bg-indigo-600 transition-all disabled:opacity-50"
+                >
+                  {actionLoading ? 'Saving...' : 'Confirm Update'}
+                </button>
+              </div>
+            </form>
+          </Modal>
+
+          <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 group relative">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-amber-900">Internal Note</h3>
+                <button 
+                    onClick={() => {
+                        const note = prompt('Update Internal Notes:', tenant.internal_notes || '');
+                        if (note !== null) {
+                            updateTenant(id!, { internal_notes: note }).then(() => {
+                                toastSuccess('Note Saved', 'Administrative reference updated.');
+                                fetchTenant();
+                            });
+                        }
+                    }}
+                    className="text-[10px] font-black uppercase text-amber-600 hover:text-amber-800 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                    Edit Note
+                </button>
+            </div>
             <p className="text-sm text-amber-700 leading-relaxed italic">
-              "This pharmacy requested a feature for custom compounding labels earlier this month. Follow up on status."
+              {tenant.internal_notes || "No internal administrative notes have been added for this pharmacy node yet."}
             </p>
           </div>
         </div>

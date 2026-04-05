@@ -8,10 +8,12 @@ import { SubscriptionPlansModule } from '../subscription-plans/subscription-plan
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SubscriptionPlan } from '../subscription-plans/entities/subscription-plan.entity';
 import { SubscriptionRequest } from '../subscription-plans/entities/subscription-request.entity';
+import { User } from '../users/entities/user.entity';
+import { Sale } from '../sales/entities/sale.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Organization, SubscriptionPlan, SubscriptionRequest]),
+        TypeOrmModule.forFeature([Organization, SubscriptionPlan, SubscriptionRequest, Sale]),
         UsersModule,
         SubscriptionPlansModule,
         NotificationsModule,

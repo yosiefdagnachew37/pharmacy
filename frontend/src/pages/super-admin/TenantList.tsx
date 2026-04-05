@@ -601,7 +601,16 @@ export default function TenantList() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Contact Method</label>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Contact Person</label>
+                  <input
+                    type="text"
+                    value={editingTenant.contact_person || ''}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, contact_person: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Phone Number</label>
                   <input
                     type="text"
                     value={editingTenant.phone || ''}
@@ -609,7 +618,31 @@ export default function TenantList() {
                     className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Official Email</label>
+                  <input
+                    type="email"
+                    value={editingTenant.email || ''}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, email: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">City</label>
+                  <input
+                    type="text"
+                    value={editingTenant.city || ''}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, city: e.target.value })}
+                    className="block w-full bg-gray-50 border-gray-100 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
                   <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wider mb-1.5">License Number</label>
                   <input
                     type="text"
