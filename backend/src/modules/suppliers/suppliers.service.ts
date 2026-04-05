@@ -209,12 +209,12 @@ export class SuppliersService {
 
     // ─── Supplier Payments ─────────────────────────────
     async getPayments(supplierId?: string, poId?: string) {
-        const query: any = { organization_id: getTenantId() };
-        if (supplierId) query.purchase_order = { supplier_id: supplierId };
-        if (poId) query.purchase_order_id = poId;
-
         return this.paymentRepo.find({
-            where: query,
+            where: {
+                organization_id: getTenantId(),
+                ...(supplierId ? { purchase_order: { supplier_id: supplierId } } : {}),
+                ...(poId ? { purchase_order_id: poId } : {}),
+            },
             relations: ['purchase_order', 'purchase_order.supplier', 'created_by_user'],
             order: { created_at: 'DESC' },
         });

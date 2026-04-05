@@ -6,6 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from '../../common/enums/user-role.enum';
 import * as bcrypt from 'bcrypt';
 import { getTenantId } from '../../common/utils/tenant-query';
+import { tenantStorage } from '../../common/context/tenant.context';
 
 @Injectable()
 export class UsersService {
@@ -69,13 +70,17 @@ export class UsersService {
         const query = this.usersRepository.createQueryBuilder('user')
             .leftJoinAndSelect('user.organization', 'organization');
 
+        const store = tenantStorage.getStore();
         if (requestingUser) {
-            if (requestingUser.role === UserRole.SUPER_ADMIN) {
-                // Super Admin can see everyone except maybe other super admins if we want total isolation
-                // For now, let them see all, but they are the only ones.
+            const isEffectiveSuperAdmin = store?.isSuperAdmin ?? (requestingUser.role === UserRole.SUPER_ADMIN);
+            const effectiveOrgId = store?.organizationId || requestingUser.organization_id;
+
+            if (isEffectiveSuperAdmin) {
+                // Real Super Admin (not impersonating) can see everyone.
             } else {
-                // REGULAR ADMIN: Only see users in their organization AND hide SUPER_ADMINS
-                query.where('user.organization_id = :orgId', { orgId: requestingUser.organization_id })
+                // REGULAR ADMIN OR IMPERSONATING SUPER ADMIN:
+                // Only see users in their organization AND hide SUPER_ADMINS
+                query.where('user.organization_id = :orgId', { orgId: effectiveOrgId })
                      .andWhere('user.role != :role', { role: UserRole.SUPER_ADMIN });
             }
         } else {

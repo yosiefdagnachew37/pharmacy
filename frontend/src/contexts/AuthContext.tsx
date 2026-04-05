@@ -71,7 +71,7 @@ const permissions: Record<string, Record<string, UserRole[]>> = {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const stored = localStorage.getItem('user');
+    const stored = sessionStorage.getItem('user');
     if (stored) {
       try { return JSON.parse(stored); } catch { return null; }
     }
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const [selectedOrganization, setSelectedOrganizationState] = useState<{ id: string; name: string } | null>(() => {
-    const storedOrg = localStorage.getItem('selectedOrganization');
+    const storedOrg = sessionStorage.getItem('selectedOrganization');
     if (storedOrg) {
       try { return JSON.parse(storedOrg); } catch { return null; }
     }
@@ -93,9 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setSelectedOrganization = (org: { id: string; name: string } | null) => {
     setSelectedOrganizationState(org);
     if (org) {
-      localStorage.setItem('selectedOrganization', JSON.stringify(org));
+      sessionStorage.setItem('selectedOrganization', JSON.stringify(org));
     } else {
-      localStorage.removeItem('selectedOrganization');
+      sessionStorage.removeItem('selectedOrganization');
     }
     // Dispatch storage event to notify other tabs/components
     window.dispatchEvent(new Event('storage'));
@@ -104,14 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Listen for storage changes (e.g., login from another component)
   useEffect(() => {
     const onStorage = () => {
-      const stored = localStorage.getItem('user');
+      const stored = sessionStorage.getItem('user');
       if (stored) {
         try { setUser(JSON.parse(stored)); } catch { setUser(null); }
       } else {
         setUser(null);
       }
 
-      const storedOrg = localStorage.getItem('selectedOrganization');
+      const storedOrg = sessionStorage.getItem('selectedOrganization');
       if (storedOrg) {
         try { setSelectedOrganizationState(JSON.parse(storedOrg)); } catch { setSelectedOrganizationState(null); }
       } else {
@@ -160,9 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('selectedOrganization');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('selectedOrganization');
     setUser(null);
     setSelectedOrganizationState(null);
   };

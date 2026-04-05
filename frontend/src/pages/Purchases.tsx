@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
     Plus, Search, ShoppingBag, Eye, PackageCheck,
-    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign
+    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign, History
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,9 @@ const Purchases = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showReceiveModal, setShowReceiveModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showHistoryModal, setShowHistoryModal] = useState(false); // For payments
+    const [showReceivedHistoryModal, setShowReceivedHistoryModal] = useState(false); // For goods receipt
+    const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
     const [selectedPO, setSelectedPO] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -126,6 +129,17 @@ const Purchases = () => {
         }
     };
 
+    const openReceivedHistoryModal = async (po: any) => {
+        setSelectedPO(po);
+        try {
+            const poItems = await client.get(`/purchase-orders/${po.id}/items`);
+            setReceiveData(poItems.data);
+            setShowReceivedHistoryModal(true);
+        } catch (error) {
+            console.error('Failed to load PO items', error);
+        }
+    };
+
     const submitReceiveGoods = async () => {
         try {
             // Validate
@@ -171,6 +185,18 @@ const Purchases = () => {
             console.error('Failed to record payment', err);
             const msg = extractErrorMessage(err, 'Error recording payment.');
             toastError('Payment failed', msg);
+        }
+    };
+
+    const fetchPaymentHistory = async (po: any) => {
+        setSelectedPO(po);
+        try {
+            const res = await client.get(`/suppliers/payments?poId=${po.id}`);
+            setPaymentHistory(res.data);
+            setShowHistoryModal(true);
+        } catch (err) {
+            console.error('Failed to load payment history', err);
+            toastError('History failed', 'Could not load payment records');
         }
     };
 
@@ -372,10 +398,17 @@ const Purchases = () => {
                                     <td className="px-6 py-4">
                                         <span className="text-xs font-bold text-gray-500">{po.payment_method}</span>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-500 text-xs font-medium">
-                                        {new Date(po.created_at).toLocaleDateString()}
+                                    <td className="px-6 py-4">
+                                        <span className="text-xs font-bold text-gray-500">{new Date(po.created_at).toLocaleDateString()}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-2">
+                                        <button
+                                            onClick={() => fetchPaymentHistory(po)}
+                                            className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                                            title="View Payment History"
+                                        >
+                                            <History className="w-4 h-4" />
+                                        </button>
                                         {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                             <button
                                                 onClick={() => handleUpdateStatus(po.id, 'CONFIRMED')}
@@ -385,18 +418,27 @@ const Purchases = () => {
                                                 <CheckCircle className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED' || po.status === 'COMPLETED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
+                                        {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                             <button
                                                 onClick={() => openReceiveModal(po)}
-                                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100 font-bold text-xs"
+                                                className="px-3 py-1.5 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors border border-emerald-100 font-bold text-xs uppercase"
                                             >
                                                 Receive
+                                            </button>
+                                        )}
+                                        {(po.status === 'COMPLETED' || po.status === 'PARTIALLY_RECEIVED') && (
+                                            <button
+                                                onClick={() => openReceivedHistoryModal(po)}
+                                                className="p-2 text-gray-400 hover:bg-gray-50 rounded-xl transition-colors border border-transparent"
+                                                title="Received Items History"
+                                            >
+                                                <Eye className="w-4 h-4" />
                                             </button>
                                         )}
                                         {po.payment_status !== 'PAID' && (role === 'ADMIN') && (
                                             <button
                                                 onClick={() => { setSelectedPO(po); setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
-                                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100 font-bold text-xs"
+                                                className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-colors shadow-sm font-bold text-xs uppercase"
                                             >
                                                 Pay
                                             </button>
@@ -767,6 +809,140 @@ const Purchases = () => {
                                 disabled={paymentAmount <= 0}
                                 className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50">
                                 Record Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PAYMENT HISTORY MODAL */}
+            {showHistoryModal && selectedPO && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl p-8 w-full max-w-2xl shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <History className="w-5 h-5 text-indigo-600" />
+                                    Payment History
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">PO: {selectedPO.po_number} — {selectedPO.supplier?.name}</p>
+                            </div>
+                            <button onClick={() => setShowHistoryModal(false)} className="p-2 hover:bg-gray-100 rounded-xl">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-2xl p-4 grid grid-cols-3 gap-4 mb-6 text-center border border-gray-100">
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase">Total Invoice</p>
+                                <p className="text-sm font-black text-gray-800">ETB {Number(selectedPO.total_amount).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase">Total Paid</p>
+                                <p className="text-sm font-black text-emerald-600">ETB {Number(selectedPO.total_paid || 0).toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase">Outstanding</p>
+                                <p className="text-sm font-black text-rose-600">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className="max-h-[300px] overflow-y-auto border border-gray-100 rounded-2xl overflow-hidden">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    <tr>
+                                        <th className="px-4 py-3">Date</th>
+                                        <th className="px-4 py-3">Method</th>
+                                        <th className="px-4 py-3">Reference</th>
+                                        <th className="px-4 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {paymentHistory.map((pay) => (
+                                        <tr key={pay.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-4 py-3 text-xs text-gray-600">{new Date(pay.payment_date).toLocaleDateString()}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-[10px] font-bold bg-gray-100 px-2 py-0.5 rounded uppercase">{pay.payment_method}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-xs font-mono text-gray-500">{pay.transaction_reference || '—'}</td>
+                                            <td className="px-4 py-3 text-right font-bold text-gray-800">ETB {Number(pay.amount).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                    {paymentHistory.length === 0 && (
+                                        <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 italic">No payments recorded yet.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-8 flex justify-end">
+                            <button onClick={() => setShowHistoryModal(false)}
+                                className="px-8 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* RECEIVED GOODS HISTORY MODAL */}
+            {showReceivedHistoryModal && selectedPO && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl p-8 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <Eye className="w-6 h-6 text-indigo-600" />
+                                    Goods Received History
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">PO Number: <span className="font-mono text-gray-800 font-bold">{selectedPO.po_number}</span></p>
+                            </div>
+                            <button onClick={() => setShowReceivedHistoryModal(false)} className="p-2 hover:bg-gray-100 rounded-xl">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        <div className="overflow-x-auto border border-gray-100 rounded-2xl flex-1">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500 tracking-wider sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-4">Medicine</th>
+                                        <th className="px-6 py-4">Ordered</th>
+                                        <th className="px-6 py-4">Received</th>
+                                        <th className="px-6 py-4">Batch Number</th>
+                                        <th className="px-6 py-3">Expiry Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {receiveData.map((item, index) => (
+                                        <tr key={index} className="hover:bg-gray-50/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <p className="font-bold text-gray-800">{item.medicine?.name || item.medicine_name}</p>
+                                                <p className="text-[10px] text-gray-400">{item.medicine?.generic_name}</p>
+                                            </td>
+                                            <td className="px-6 py-4 font-bold text-gray-500">{item.quantity_ordered}</td>
+                                            <td className="px-6 py-4 font-black text-emerald-600 bg-emerald-50/30">{item.quantity_received}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded">
+                                                    {item.batch?.batch_number || 'Multiple / Mixed'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs font-medium text-gray-500">
+                                                {item.batch?.expiry_date ? new Date(item.batch.expiry_date).toLocaleDateString() : 'N/A'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {receiveData.length === 0 && (
+                                        <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">No receipt records found for this order.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-8 flex justify-end">
+                            <button onClick={() => setShowReceivedHistoryModal(false)}
+                                className="px-10 py-3 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all border border-gray-200">
+                                Close
                             </button>
                         </div>
                     </div>

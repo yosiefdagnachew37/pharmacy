@@ -23,6 +23,9 @@ export class AuditSession {
     status: AuditSessionStatus;
 
     @Column({ type: 'text', nullable: true })
+    name: string;
+
+    @Column({ type: 'text', nullable: true })
     notes: string;
 
     @CreateDateColumn()

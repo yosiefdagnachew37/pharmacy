@@ -39,6 +39,7 @@ interface Medicine {
 interface AuditSession {
     id: string;
     status: 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+    name: string;
     notes: string;
     created_at: string;
     completed_at: string | null;
@@ -51,8 +52,10 @@ const StockAudit = () => {
     const [finalizeConfirm, setFinalizeConfirm] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showNewModal, setShowNewModal] = useState(false);
+    const [newName, setNewName] = useState('');
     const [newNotes, setNewNotes] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [historySearch, setHistorySearch] = useState('');
     const [medicines, setMedicines] = useState<Medicine[]>([]);
     const [showSummary, setShowSummary] = useState(false);
 
@@ -130,9 +133,12 @@ const StockAudit = () => {
 
     const handleStartAudit = async () => {
         try {
-            const res = await client.post('/stock-audit/sessions', { notes: newNotes });
-            setActiveSession(res.data);
+            const res = await client.post('/stock-audit/sessions', { name: newName, notes: newNotes });
+            // Backend now returns full relations, but still defensive
+            const sessionData = res.data;
+            setActiveSession({ ...sessionData, items: sessionData.items || [] });
             setShowNewModal(false);
+            setNewName('');
             setNewNotes('');
             fetchSessions();
         } catch (err) {
@@ -180,10 +186,16 @@ const StockAudit = () => {
         }
     };
 
-    const filteredItems = activeSession?.items.filter(item =>
+    const filteredItems = activeSession?.items?.filter(item =>
         item.medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.batch.batch_number.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
+
+    const filteredSessions = sessions.filter(s => 
+        (s.name || '').toLowerCase().includes(historySearch.toLowerCase()) ||
+        s.id.toLowerCase().includes(historySearch.toLowerCase()) ||
+        (s.notes || '').toLowerCase().includes(historySearch.toLowerCase())
+    );
 
     if (activeSession && (activeSession.status === 'IN_PROGRESS' || showSummary)) {
         const isSummary = activeSession.status === 'COMPLETED' || showSummary;
@@ -196,7 +208,7 @@ const StockAudit = () => {
                             <button onClick={() => { setActiveSession(null); setShowSummary(false); }} className="text-indigo-600 font-bold hover:underline">Audits</button>
                             <span className="text-gray-400">/</span>
                             <h1 className="text-2xl font-bold text-gray-900 line-clamp-1">
-                                {isSummary ? 'Audit Summary' : 'Active Session'}: {activeSession.id.slice(0, 8)}
+                                {isSummary ? 'Audit Summary' : 'Active Session'}: {activeSession.name || activeSession.id.slice(0, 8)}
                             </h1>
                         </div>
                         <p className="text-sm text-gray-500">{activeSession.notes || 'No notes provided'}</p>
@@ -231,7 +243,7 @@ const StockAudit = () => {
                     <div className="flex items-center justify-around sm:justify-center gap-4 sm:gap-6 px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100">
                         <div className="text-center">
                             <span className="text-[10px] font-bold text-gray-400 uppercase block">Total Items</span>
-                            <span className="text-lg font-black text-indigo-700">{activeSession.items.length}</span>
+                            <span className="text-lg font-black text-indigo-700">{activeSession.items?.length || 0}</span>
                         </div>
                         <div className="w-px h-8 bg-indigo-200"></div>
                         <div className="text-center">
@@ -240,8 +252,8 @@ const StockAudit = () => {
                             </span>
                             <span className={`text-lg font-black ${isSummary ? 'text-rose-600' : 'text-emerald-600'}`}>
                                 {isSummary 
-                                    ? activeSession.items.filter(i => i.variance !== 0).length 
-                                    : activeSession.items.filter(i => i.scanned_quantity > 0).length}
+                                    ? (activeSession.items?.filter(i => i.variance !== 0).length || 0)
+                                    : (activeSession.items?.filter(i => i.scanned_quantity > 0).length || 0)}
                             </span>
                         </div>
                     </div>
@@ -264,12 +276,12 @@ const StockAudit = () => {
                                 {filteredItems.map(item => (
                                     <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 min-w-[200px]">
-                                            <p className="text-sm font-bold text-gray-800">{item.medicine.name}</p>
-                                            <p className="text-[10px] text-gray-500 line-clamp-1">{item.medicine.generic_name}</p>
+                                            <p className="text-sm font-bold text-gray-800">{item.medicine?.name || 'N/A'}</p>
+                                            <p className="text-[10px] text-gray-500 line-clamp-1">{item.medicine?.generic_name || 'N/A'}</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded whitespace-nowrap">
-                                                {item.batch.batch_number}
+                                                {item.batch?.batch_number || 'N/A'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm font-medium text-gray-500">{item.system_quantity}</td>
@@ -330,33 +342,47 @@ const StockAudit = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 mb-2">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search audit history..."
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl outline-none text-sm"
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {loading ? (
-                    [1, 2, 3].map(i => <div key={i} className="h-48 bg-gray-100 animate-pulse rounded-2xl"></div>)
-                ) : sessions.length === 0 ? (
+                    [1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-gray-100 animate-pulse rounded-2xl"></div>)
+                ) : filteredSessions.length === 0 ? (
                     <div className="col-span-full py-20 bg-white rounded-3xl border border-dashed border-gray-200 text-center">
                         <Package className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                        <p className="text-gray-400 font-medium text-lg">No audit history found.</p>
+                        <p className="text-gray-400 font-medium text-lg">No audits found.</p>
                     </div>
-                ) : sessions.map(session => (
-                    <div key={session.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className={`p-3 rounded-xl ${session.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : session.status === 'IN_PROGRESS' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-600'}`}>
-                                {session.status === 'COMPLETED' ? <CheckCircle className="w-6 h-6" /> : <History className="w-6 h-6" />}
+                ) : filteredSessions.map(session => (
+                    <div key={session.id} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group relative">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className={`p-2 rounded-lg ${session.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : session.status === 'IN_PROGRESS' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-600'}`}>
+                                {session.status === 'COMPLETED' ? <CheckCircle className="w-5 h-5" /> : <History className="w-5 h-5" />}
                             </div>
-                            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${session.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : session.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${session.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : session.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
                                 {session.status}
                             </span>
                         </div>
-                        <h3 className="font-bold text-gray-800 text-lg">Audit {session.id.slice(0, 8)}</h3>
-                        <p className="text-xs text-gray-400 mt-1">{new Date(session.created_at).toLocaleString()}</p>
-                        <p className="text-sm text-gray-500 mt-4 line-clamp-1">{session.notes || 'No notes'}</p>
+                        <h3 className="font-bold text-gray-800 text-base truncate pr-2">{session.name || `Audit ${session.id.slice(0, 8)}`}</h3>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{new Date(session.created_at).toLocaleDateString()} {new Date(session.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        
+                        {session.notes && <p className="text-xs text-gray-500 mt-3 line-clamp-2 italic">"{session.notes}"</p>}
 
                         <button
                             onClick={() => handleViewDetails(session.id)}
-                            className="w-full mt-6 py-2.5 bg-gray-50 text-gray-600 text-sm font-bold rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all flex items-center justify-center gap-2"
+                            className="w-full mt-4 py-2 bg-gray-50 text-gray-600 text-xs font-bold rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all flex items-center justify-center gap-2"
                         >
-                            <Info className="w-4 h-4" /> {session.status === 'IN_PROGRESS' ? 'Resume Session' : 'View Summary'}
+                            <Info className="w-3.5 h-3.5" /> {session.status === 'IN_PROGRESS' ? 'Resume' : 'Details'}
                         </button>
                     </div>
                 ))}
@@ -368,12 +394,22 @@ const StockAudit = () => {
                 title="Start New Audit Session"
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-500">Starting an audit session will snapshot current stock levels for all medicines. You can pause and resume the session at any time.</p>
+                    <p className="text-xs text-gray-500 bg-indigo-50 p-3 rounded-xl border border-indigo-100">Starting an audit session will snapshot current stock levels for all active medicines. You can pause and resume the session at any time.</p>
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Session Name *</label>
+                        <input
+                            type="text"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold"
+                            placeholder="e.g., Monthly Audit - April"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                        />
+                    </div>
                     <div>
                         <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Session Notes (Optional)</label>
                         <textarea
                             className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm min-h-[100px]"
-                            placeholder="e.g., Q1 Quarterly Inventory Check"
+                            placeholder="Additional details..."
                             value={newNotes}
                             onChange={(e) => setNewNotes(e.target.value)}
                         />

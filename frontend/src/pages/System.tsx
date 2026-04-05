@@ -46,10 +46,12 @@ interface User {
 }
 
 const System = () => {
-  const { role } = useAuth();
+  const { role, selectedOrganization } = useAuth();
   const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isImpersonating = isSuperAdmin && selectedOrganization !== null;
+  const canSeeSystem = isSuperAdmin && !isImpersonating;
 
-  const [activeTab, setActiveTab] = useState<'system' | 'users'>('system');
+  const [activeTab, setActiveTab] = useState<'system' | 'users'>(canSeeSystem ? 'system' : 'users');
   const [backups, setBackups] = useState<Backup[]>([]);
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -220,7 +222,7 @@ const System = () => {
         </div>
         <div className="flex gap-4">
            {activeTab === 'system' ? (
-              isSuperAdmin ? (
+              isSuperAdmin && !isImpersonating ? (
                 <button 
                   onClick={handleBackup}
                   disabled={actionLoading}
@@ -247,14 +249,16 @@ const System = () => {
       </div>
 
       <div className="flex border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('system')}
-          className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'system' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4" /> System Status &amp; Backups
-          </div>
-        </button>
+        {isSuperAdmin && !isImpersonating && (
+          <button
+            onClick={() => setActiveTab('system')}
+            className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'system' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+          >
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4" /> System Status &amp; Backups
+            </div>
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('users')}
           className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${activeTab === 'users' ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-400 hover:text-gray-600'}`}

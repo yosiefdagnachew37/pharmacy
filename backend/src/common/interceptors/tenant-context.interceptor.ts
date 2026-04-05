@@ -35,7 +35,7 @@ export class TenantContextInterceptor implements NestInterceptor {
             await this.dataSource.query(`SELECT set_config('app.is_super_admin', $1, false)`, [dbIsSuperAdmin.toString()]);
 
             return new Observable(observer => {
-                tenantStorage.run({ organizationId: tenantId, userId: user.userId, isSuperAdmin }, () => {
+                tenantStorage.run({ organizationId: tenantId, userId: user.userId, isSuperAdmin: dbIsSuperAdmin }, () => {
                     next.handle().subscribe(observer);
                 });
             });

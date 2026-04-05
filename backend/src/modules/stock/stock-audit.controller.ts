@@ -12,8 +12,8 @@ export class StockAuditController {
 
     @Post('sessions')
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
-    createSession(@Request() req, @Body('notes') notes: string) {
-        return this.auditService.createSession(req.user.userId, notes);
+    createSession(@Request() req, @Body('name') name: string, @Body('notes') notes: string) {
+        return this.auditService.createSession(req.user.userId, name, notes);
     }
 
     @Get('sessions')

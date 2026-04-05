@@ -30,8 +30,8 @@ const Login = () => {
         password,
         organization_name: organizationName
       });
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      sessionStorage.setItem('token', response.data.access_token);
+      sessionStorage.setItem('user', JSON.stringify(response.data.user));
 
       if (agreedToTerms) {
         localStorage.setItem('hasAcceptedTerms', 'true');

@@ -13,6 +13,7 @@ import { ExpiryIntelligenceService } from '../stock/expiry-intelligence.service'
 import { getTenantId } from '../../common/utils/tenant-query';
 import { tenantStorage } from '../../common/context/tenant.context';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { SuppliersService } from '../suppliers/suppliers.service';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -26,6 +27,7 @@ export class PurchaseOrdersService {
         @InjectRepository(Medicine)
         private readonly medicineRepo: Repository<Medicine>,
         private readonly organizationsService: OrganizationsService,
+        private readonly suppliersService: SuppliersService,
         private forecastingService: ForecastingService,
         private expiryIntelligenceService: ExpiryIntelligenceService,
         private dataSource: DataSource,
@@ -104,6 +106,9 @@ export class PurchaseOrdersService {
             });
             const savedPO = await manager.save(po);
 
+            // Phase 1.5: Expiry Risk Blocking - Pre-fetch risk data for all medicines
+            const riskData = await this.expiryIntelligenceService.calculateExpiryRisk();
+
             // Create PO items
             for (const item of items) {
                 // Rule 3.3: Over-Purchase Prevention
@@ -111,8 +116,7 @@ export class PurchaseOrdersService {
                     where: { id: item.medicine_id, organization_id },
                     relations: ['batches']
                 });
-                // Phase 1.5: Expiry Risk Blocking
-                const riskData = await this.expiryIntelligenceService.calculateExpiryRisk();
+                
                 const medRisk = riskData.find(r => r.medicine_id === item.medicine_id && r.risk_status === 'CRITICAL');
                 if (medRisk) {
                     throw new BadRequestException(`Purchase blocked: ${medicine?.name} is at CRITICAL expiry risk (Score: ${medRisk.risk_score}). Suggest supplier return instead of new purchase.`);
@@ -233,6 +237,14 @@ export class PurchaseOrdersService {
                         organization_id,
                     });
                     await manager.save(tx);
+
+                    // Phase 5: Multi-Supplier Price Comparison Support
+                    // Record price history for analytics
+                    await this.suppliersService.recordPrice(
+                        poItem.medicine_id,
+                        po.supplier_id,
+                        Number(poItem.unit_price)
+                    );
                 }
 
                 // Update PO status based on received quantities

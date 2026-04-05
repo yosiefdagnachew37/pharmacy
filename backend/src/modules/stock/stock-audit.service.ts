@@ -20,12 +20,13 @@ export class StockAuditService {
         private dataSource: DataSource,
     ) { }
 
-    async createSession(userId: string, notes?: string) {
+    async createSession(userId: string, name?: string, notes?: string) {
         return await this.dataSource.transaction(async (manager) => {
             const orgId = getTenantId();
             const session = manager.create(AuditSession, {
                 created_by: { id: userId } as User,
                 status: AuditSessionStatus.IN_PROGRESS,
+                name,
                 notes,
                 organization_id: orgId,
             });
@@ -48,7 +49,12 @@ export class StockAuditService {
             }));
 
             await manager.save(AuditItem, auditItems);
-            return savedSession;
+            
+            // Re-fetch with relations to avoid white-screen in frontend
+            return await manager.findOne(AuditSession, {
+                where: { id: savedSession.id },
+                relations: ['items', 'items.medicine', 'items.batch', 'created_by']
+            });
         });
     }
 

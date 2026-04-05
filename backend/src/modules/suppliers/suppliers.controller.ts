@@ -25,6 +25,39 @@ export class SuppliersController {
         return this.suppliersService.getSupplierRanking(limit ? parseInt(limit) : 5);
     }
 
+    // ─── Price History ─────────────────────────────────
+    @Get('price-history/:medicineId')
+    getPriceHistory(
+        @Param('medicineId') medicineId: string,
+        @Query('supplierId') supplierId?: string,
+    ) {
+        return this.suppliersService.getPriceHistory(medicineId, supplierId);
+    }
+
+    @Post('price-history')
+    @Roles(UserRole.ADMIN)
+    recordPrice(@Body() body: { medicineId: string; supplierId: string; unitPrice: number }) {
+        return this.suppliersService.recordPrice(body.medicineId, body.supplierId, body.unitPrice);
+    }
+
+    // ─── Payments ──────────────────────────────────────
+    @Get('payments')
+    getPayments(
+        @Query('supplierId') supplierId?: string,
+        @Query('poId') poId?: string,
+    ) {
+        return this.suppliersService.getPayments(supplierId, poId);
+    }
+
+    @Post('payments')
+    @Roles(UserRole.ADMIN)
+    recordPayment(@Request() req, @Body() body: any) {
+        return this.suppliersService.recordPayment({
+            ...body,
+            created_by: req.user.userId,
+        });
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.suppliersService.findOne(id);
@@ -78,36 +111,4 @@ export class SuppliersController {
         return this.suppliersService.recordPerformance(id, body);
     }
 
-    // ─── Price History ─────────────────────────────────
-    @Get('price-history/:medicineId')
-    getPriceHistory(
-        @Param('medicineId') medicineId: string,
-        @Query('supplierId') supplierId?: string,
-    ) {
-        return this.suppliersService.getPriceHistory(medicineId, supplierId);
-    }
-
-    @Post('price-history')
-    @Roles(UserRole.ADMIN)
-    recordPrice(@Body() body: { medicineId: string; supplierId: string; unitPrice: number }) {
-        return this.suppliersService.recordPrice(body.medicineId, body.supplierId, body.unitPrice);
-    }
-
-    // ─── Payments ──────────────────────────────────────
-    @Get('payments')
-    getPayments(
-        @Query('supplierId') supplierId?: string,
-        @Query('poId') poId?: string,
-    ) {
-        return this.suppliersService.getPayments(supplierId, poId);
-    }
-
-    @Post('payments')
-    @Roles(UserRole.ADMIN)
-    recordPayment(@Request() req, @Body() body: any) {
-        return this.suppliersService.recordPayment({
-            ...body,
-            created_by: req.user.userId,
-        });
-    }
 }

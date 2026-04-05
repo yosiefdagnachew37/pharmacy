@@ -106,11 +106,17 @@ export class ExpiryIntelligenceService {
             const avgDailySales = await this.getAvgDailySales(batch.medicine_id, 30);
 
             let riskScore = 0;
-            if (avgDailySales > 0) {
+            if (daysUntilExpiry > 365) {
+                // If expiry is far away (> 1 year), it's automatically safe
+                riskScore = 0.1;
+            } else if (avgDailySales > 0) {
                 riskScore = (batch.quantity_remaining / avgDailySales) / daysUntilExpiry;
             } else if (batch.quantity_remaining > 0) {
-                // No sales at all → high risk if stock exists
-                riskScore = 3.0;
+                if (daysUntilExpiry > 180) {
+                    riskScore = 0.6; // MONITOR
+                } else {
+                    riskScore = 3.0; // CRITICAL
+                }
             }
 
             let riskStatus: ExpiryRiskResult['risk_status'] = 'SAFE';
