@@ -15,11 +15,12 @@ export class NotificationsService {
 
     async create(data: {
         user_id?: string;
+        organization_id?: string;
         title: string;
         message: string;
         type: NotificationType;
     }): Promise<Notification> {
-        const organization_id = getTenantId();
+        const organization_id = data.organization_id || getTenantId();
         this.logger.log(`Creating notification: ${data.title} for user: ${data.user_id || 'Broadcast'} in org: ${organization_id}`);
         const notification = this.notificationRepository.create({ ...data, organization_id });
         return this.notificationRepository.save(notification);

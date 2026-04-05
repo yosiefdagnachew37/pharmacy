@@ -107,6 +107,22 @@ export const deleteSubscriptionPlan = async (id: string): Promise<any> => {
     return response.data;
 };
 
+// Subscription Requests API
+export const getSubscriptionRequests = async (status?: string): Promise<any[]> => {
+    const response = await client.get('/admin/billing/upgrade-requests', { params: { status } });
+    return response.data;
+};
+
+export const approveSubscriptionRequest = async (id: string, adminNotes?: string): Promise<any> => {
+    const response = await client.patch(`/admin/billing/upgrade-requests/${id}/approve`, { adminNotes });
+    return response.data;
+};
+
+export const rejectSubscriptionRequest = async (id: string, adminNotes?: string): Promise<any> => {
+    const response = await client.patch(`/admin/billing/upgrade-requests/${id}/reject`, { adminNotes });
+    return response.data;
+};
+
 // Also export as an object for compatibility
 export const superAdminService = {
     getAllTenants: getTenants,

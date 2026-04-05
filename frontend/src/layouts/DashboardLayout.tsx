@@ -30,6 +30,7 @@ import {
 import NotificationBell from '../components/NotificationBell';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import Modal from '../components/Modal';
+import SubscriptionModal from '../components/SubscriptionModal';
 import client from '../api/client';
 
 interface MenuItem {
@@ -73,6 +74,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const { user, role, logout, selectedOrganization, hasFeature } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
 
   // Barcode Lookup State
   const [scannedMed, setScannedMed] = useState<any>(null);
@@ -346,8 +348,19 @@ const DashboardLayout = () => {
                 
                 <NotificationBell />
                 
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white">
-                  <span className="text-sm lg:text-base font-black uppercase">{user?.username.charAt(0)}</span>
+                <button
+                  onClick={() => setIsSubscriptionOpen(true)}
+                  className="p-2 lg:p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all active:scale-95 group relative flex items-center justify-center shrink-0"
+                  title="Subscription Overview"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  {expiryWarning !== null && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
+                  )}
+                </button>
+                
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-white shrink-0">
+                  <span className="text-sm lg:text-base font-black uppercase tracking-widest">{user?.username.charAt(0)}</span>
                 </div>
               </>
             )}
@@ -371,6 +384,11 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      <SubscriptionModal 
+        isOpen={isSubscriptionOpen} 
+        onClose={() => setIsSubscriptionOpen(false)} 
+      />
     </div>
   );
 };

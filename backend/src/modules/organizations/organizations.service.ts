@@ -6,6 +6,9 @@ import { UsersService } from '../users/users.service';
 import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
+import { SubscriptionRequest, SubscriptionRequestStatus } from '../subscription-plans/entities/subscription-request.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -13,8 +16,9 @@ export class OrganizationsService {
     constructor(
         @InjectRepository(Organization)
         private organizationsRepository: Repository<Organization>,
-        private usersService: UsersService,
-        private plansService: SubscriptionPlansService,
+        private readonly usersService: UsersService,
+        private readonly plansService: SubscriptionPlansService,
+        private readonly notificationsService: NotificationsService,
     ) { }
 
     findAll() {
@@ -138,6 +142,139 @@ export class OrganizationsService {
             return OrgSubscriptionStatus.EXPIRED;
         }
         return org.subscription_status;
+    }
+
+    async getSubscriptionDetails(id: string) {
+        const org = await this.findOne(id);
+        const allPlans = await this.plansService.findAll();
+        const currentPlan = allPlans.find(p => p.name === org.subscription_plan_name) || allPlans[0];
+        
+        const manager = this.organizationsRepository.manager;
+        let systemFeatures = await manager.find('SystemFeature', { where: { is_active: true } }) as any[];
+
+        // Fallback for first-run or if table is empty
+        if (systemFeatures.length === 0) {
+            systemFeatures = [
+                { key: 'Suppliers', name: 'Supplier Management', description: 'Manage procurement and vendor relations', icon: 'Building2', created_at: new Date('2024-01-01') },
+                { key: 'Purchases', name: 'Purchase Orders', description: 'Automate stock replenishment', icon: 'ShoppingBag', created_at: new Date('2024-01-01') },
+                { key: 'Intelligent Forecasting', name: 'AI Demand Forecasting', description: 'Predict stock needs using machine learning', icon: 'BarChart2', created_at: new Date() }, // Simulate new
+                { key: 'Inventory', name: 'Inventory Management', description: 'Full batch and expiry tracking', icon: 'Package', created_at: new Date('2024-01-01') },
+                { key: 'Expenses', name: 'Expense Tracking', description: 'Monitor operational costs', icon: 'Wallet2', created_at: new Date('2024-01-01') },
+                { key: 'Credit', name: 'Credit Management', description: 'Manage customer credit and accounts', icon: 'CreditCard', created_at: new Date('2024-01-01') },
+                { key: 'Stock Audit', name: 'Digital Stock Audit', description: 'Modern stock-taking workflow', icon: 'CheckCircle', created_at: new Date() }, // Simulate new
+            ];
+        }
+
+        const includedKeys = new Set([...(currentPlan.features || []), ...(org.feature_overrides || [])]);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const features = systemFeatures.map(f => ({
+            ...f,
+            isIncluded: includedKeys.has(f.key),
+            // A feature is "New" if created within the last 30 days
+            isNew: new Date(f.created_at) > thirtyDaysAgo,
+            canUpgrade: !includedKeys.has(f.key)
+        }));
+
+        const myRequests = await this.findMyRequests(id);
+
+        return {
+            organization: {
+                name: org.name,
+                plan_name: org.subscription_plan_name,
+                status: this.getEffectiveSubscriptionStatus(org),
+                expiry_date: org.subscription_expiry_date,
+            },
+            currentPlan,
+            features,
+            availablePlans: allPlans.filter(p => p.name !== org.subscription_plan_name),
+            myRequests
+        };
+    }
+
+    async requestUpgrade(orgId: string, planId: string, notes?: string) {
+        const manager = this.organizationsRepository.manager;
+        const request = manager.create(SubscriptionRequest, {
+            organization_id: orgId,
+            plan_id: planId,
+            user_notes: notes,
+            status: SubscriptionRequestStatus.PENDING
+        });
+        return manager.save(request);
+    }
+
+    async findAllRequests(status?: string) {
+        const query: any = {
+            relations: ['organization', 'plan'],
+            order: { created_at: 'DESC' }
+        };
+        if (status) query.where = { status: status as any };
+        return this.organizationsRepository.manager.find(SubscriptionRequest, query);
+    }
+
+    async findMyRequests(orgId: string) {
+        return this.organizationsRepository.manager.find(SubscriptionRequest, {
+            where: { organization_id: orgId },
+            relations: ['plan'],
+            order: { created_at: 'DESC' }
+        });
+    }
+
+    async processRequest(requestId: string, status: 'APPROVED' | 'REJECTED', adminNotes?: string) {
+        const manager = this.organizationsRepository.manager;
+        const request = await manager.findOne(SubscriptionRequest, {
+            where: { id: requestId },
+            relations: ['organization', 'plan']
+        });
+
+        if (!request) throw new NotFoundException('Request not found');
+        if (request.status !== SubscriptionRequestStatus.PENDING) {
+            throw new Error('Request already processed');
+        }
+
+        request.status = status === 'APPROVED' ? SubscriptionRequestStatus.APPROVED : SubscriptionRequestStatus.REJECTED;
+        if (adminNotes) {
+            request.admin_notes = adminNotes;
+        }
+        await manager.save(request);
+
+        if (status === 'APPROVED') {
+            const org = request.organization;
+            const plan = request.plan;
+
+            // Update organization plan
+            org.subscription_plan_name = plan.name;
+            org.subscription_status = OrgSubscriptionStatus.ACTIVE;
+
+            // Cumulative Expiry: New = Current (if valid) or Now + Plan Duration
+            const currentExpiry = org.subscription_expiry_date ? new Date(org.subscription_expiry_date) : new Date();
+            const referenceDate = currentExpiry > new Date() ? currentExpiry : new Date();
+            
+            const newExpiry = new Date(referenceDate);
+            newExpiry.setMonth(newExpiry.getMonth() + (plan.duration_months || 1));
+            org.subscription_expiry_date = newExpiry;
+
+            await this.organizationsRepository.save(org);
+
+            // Notify Tenant
+            await this.notificationsService.create({
+                organization_id: org.id,
+                title: 'Subscription Upgraded',
+                message: `Congratulations! Your request for the ${plan.name} plan has been approved. Your new expiry date is ${newExpiry.toLocaleDateString()}.`,
+                type: NotificationType.SYSTEM,
+            });
+        } else {
+            // Notify Tenant of Rejection
+            await this.notificationsService.create({
+                organization_id: request.organization_id,
+                title: 'Subscription Request Update',
+                message: `Your subscription upgrade request has been declined. Admin Notes: ${adminNotes || 'No additional information provided.'}`,
+                type: NotificationType.INFO
+            });
+        }
+
+        return request;
     }
 
     async getPlatformStats() {

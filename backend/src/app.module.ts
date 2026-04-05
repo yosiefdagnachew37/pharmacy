@@ -35,6 +35,9 @@ import { SubscriptionPlansModule } from './modules/subscription-plans/subscripti
 import { LicenseModule } from './common/security/license.module';
 import { LicenseMiddleware } from './common/middlewares/license.middleware';
 
+/**
+ * Main application module entry point - v2.0
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({

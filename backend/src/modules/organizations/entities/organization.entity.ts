@@ -64,6 +64,9 @@ export class Organization {
     @Column({ nullable: true })
     subscription_plan_name: string;
 
+    @Column({ type: 'json', nullable: true })
+    feature_overrides: string[];
+
     @CreateDateColumn()
     created_at: Date;
 
