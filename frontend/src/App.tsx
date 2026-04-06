@@ -46,37 +46,112 @@ const isElectron =
 
 const Router = isElectron ? HashRouter : BrowserRouter;
 
-// Handles proactive license status checking on startup
-const LicenseManager = ({ children }: { children: React.ReactNode }) => {
+/**
+ * LicenseGate — blocks the entire app until the hardware license is verified.
+ *
+ * Strategy:
+ *  1. Show an inline loading splash (nothing else renders).
+ *  2. Poll /license/status (with retries for slow backend startup).
+ *  3. If valid  → set state to 'ok', render children (normal app).
+ *  4. If invalid → set window.location.hash = '#/license-lock' BEFORE
+ *     rendering children, so HashRouter mounts reading the correct route.
+ *     No redirect, no race: the router simply starts at the right page.
+ *
+ * In non-Electron (web) mode the check is bypassed immediately.
+ * The Electron main process ALSO pre-sets the hash before the window loads,
+ * giving us double protection; this gate handles refreshes and edge cases.
+ */
+const LicenseGate = ({ children }: { children: React.ReactNode }) => {
+  // Web mode: no license gate needed
+  const [gateState, setGateState] = useState<'checking' | 'ok' | 'locked'>(
+    isElectron ? 'checking' : 'ok'
+  );
+
   useEffect(() => {
     if (!isElectron) return;
 
-    const checkLicense = async () => {
+    let cancelled = false;
+
+    const check = async (attempt = 0) => {
       try {
         const res = await client.get('/license/status');
-        if (res.data && res.data.isValid === false) {
-           // Redirect via hash if electron
-           window.location.hash = '#/license-lock';
+        if (cancelled) return;
+
+        if (res.data.isValid) {
+          setGateState('ok');
+        } else {
+          // Set hash BEFORE state update so HashRouter reads it on mount
+          window.location.hash = '#/license-lock';
+          setGateState('locked');
         }
       } catch (err: any) {
+        if (cancelled) return;
+
         if (err.response?.status === 402) {
           window.location.hash = '#/license-lock';
+          setGateState('locked');
+        } else if (attempt < 12) {
+          // Backend may still be starting — retry every 1.5 s (max ~18 s total)
+          setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1500);
+        } else {
+          // Exhausted retries — assume unlicensed to be safe
+          console.warn('[LicenseGate] Backend unreachable after retries — showing lock screen');
+          window.location.hash = '#/license-lock';
+          setGateState('locked');
         }
       }
     };
-    
-    checkLicense();
+
+    check();
+    return () => { cancelled = true; };
   }, []);
 
+  // Show a lightweight loading screen while we wait.
+  // This renders NOTHING from the actual app, so there is zero flash.
+  if (gateState === 'checking') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #0f2238 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontFamily: 'Segoe UI, sans-serif',
+        gap: 16,
+      }}>
+        <div style={{ fontSize: 48 }}>💊</div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Pharmacy Management System</h1>
+        <p style={{ color: '#90b8d8', margin: 0, fontSize: 13 }}>Verifying hardware license…</p>
+        <div style={{
+          width: 40, height: 40,
+          border: '3px solid rgba(255,255,255,0.2)',
+          borderTopColor: '#fff',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+          marginTop: 8,
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // For both 'ok' and 'locked':
+  // - 'ok'     → children render at whatever hash is current (root / saved route)
+  // - 'locked' → window.location.hash is already '#/license-lock'; HashRouter
+  //              will mount reading that hash → LicenseLock renders immediately
   return <>{children}</>;
 };
+
+
 
 function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
       <Router>
-        <LicenseManager>
+        <LicenseGate>
           <ToastContainer />
           <OfflineBanner />
         <Routes>
@@ -242,7 +317,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
         </Routes>
-        </LicenseManager>
+        </LicenseGate>
       </Router>
     </AuthProvider>
     </ThemeProvider>

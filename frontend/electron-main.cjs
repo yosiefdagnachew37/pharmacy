@@ -277,6 +277,30 @@ function startBackend(nodeBin) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// License pre-check (called after backend is ready, before window opens)
+// Uses a plain Node.js http call so we don't need any npm packages here.
+// ─────────────────────────────────────────────────────────────────────────────
+function checkLicenseStatus() {
+    const http = require('http');
+    return new Promise((resolve) => {
+        const req = http.get('http://localhost:3001/license/status', { timeout: 5000 }, (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(body);
+                    resolve(json.isValid === true);
+                } catch {
+                    resolve(false); // parse error → assume unlicensed
+                }
+            });
+        });
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Splash screen (shows while services are starting)
 // ─────────────────────────────────────────────────────────────────────────────
 function createSplash() {
@@ -343,8 +367,10 @@ function createSplash() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main window
+// initialHash: if provided (e.g. '#/license-lock'), load the window at that
+// hash route so the HashRouter never even renders the wrong page first.
 // ─────────────────────────────────────────────────────────────────────────────
-function createMainWindow() {
+function createMainWindow(initialHash = '') {
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
@@ -359,10 +385,19 @@ function createMainWindow() {
         icon: path.join(__dirname, 'dist', 'favicon.ico'),
     });
 
-    const url = isDev
+    // In packaged mode the app uses file:// + HashRouter.
+    // Appending the hash here means HashRouter reads the correct route
+    // on the very FIRST render — no async race condition possible.
+    let url = isDev
         ? 'http://localhost:5173'
         : `file://${path.join(__dirname, 'dist', 'index.html')}`;
 
+    if (initialHash && !isDev) {
+        // e.g. file:///...index.html#/license-lock
+        url += initialHash;
+    }
+
+    console.log('[App] Loading URL:', url);
     mainWindow.loadURL(url);
 
     mainWindow.once('ready-to-show', () => {
@@ -423,9 +458,18 @@ app.whenReady().then(async () => {
         // 3. Start NestJS backend
         await startBackend(nodeBin);
 
-        console.log('[App] 3. Starting main window...');
-        // 4. Open main window — splash closes automatically in ready-to-show
-        createMainWindow();
+        // 4. Pre-check license BEFORE opening the window.
+        //    This is the critical fix: we determine the correct starting route
+        //    right now, then load the window at that route. HashRouter will
+        //    read the hash on first mount — no async race condition.
+        console.log('[App] 3. Checking hardware license...');
+        const isLicensed = await checkLicenseStatus();
+        const startHash = isLicensed ? '' : '#/license-lock';
+        console.log('[App] License status:', isLicensed ? 'VALID' : 'INVALID — showing lock screen');
+
+        console.log('[App] 4. Starting main window at:', startHash || '(root)');
+        // 5. Open main window — splash closes automatically in ready-to-show
+        createMainWindow(startHash);
 
     } catch (err) {
         console.error('[App] Startup failed:', err);

@@ -135,6 +135,13 @@ RwIDAQAB
         throw new Error('Manipulated or fake license cryptographic signature.');
       }
 
+      if (licenseObj.expiry) {
+        const expiryDate = new Date(licenseObj.expiry);
+        if (new Date() > expiryDate) {
+          throw new Error('This license key has already expired.');
+        }
+      }
+
       fs.writeFileSync(path.join(process.cwd(), 'license.key'), licenseString, 'utf-8');
       return true;
     } catch (err: any) {

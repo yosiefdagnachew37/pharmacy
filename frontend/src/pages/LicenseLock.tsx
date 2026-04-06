@@ -55,6 +55,7 @@ export default function LicenseLock() {
       const response = await client.post('/license/apply', { licenseKey: licenseKey.trim() });
       if (response.data.success) {
         alert('License validated and activated successfully! The application will now reload.');
+        window.location.hash = '#/login';
         window.location.reload();
       } else {
         setError(response.data.message || 'Failed to apply license.');
