@@ -1,5 +1,6 @@
 import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardLayout from './layouts/DashboardLayout';
 import SuperAdminLayout from './layouts/SuperAdminLayout';
 import Dashboard from './pages/Dashboard';
@@ -72,6 +73,7 @@ const LicenseManager = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <Router>
         <LicenseManager>
@@ -243,6 +245,7 @@ function App() {
         </LicenseManager>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 

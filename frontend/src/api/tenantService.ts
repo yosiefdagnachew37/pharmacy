@@ -48,4 +48,12 @@ export const deleteStaff = async (userId: string) => {
     const res = await client.delete(`/users/${userId}`);
     return res.data;
 };
- Riverside:1-55
+
+/**
+ * Password Change for the currently logged-in user
+ */
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+    const res = await client.post('/users/me/change-password', { currentPassword, newPassword });
+    return res.data;
+};
+

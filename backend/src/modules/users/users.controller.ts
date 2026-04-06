@@ -15,6 +15,15 @@ export class UsersController {
         return { status: 'ok', timestamp: new Date().toISOString() };
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Post('me/change-password')
+    async changeMyPassword(@Body() body: { currentPassword: string; newPassword: string }, @Req() req: any) {
+        return this.usersService.update(req.user.userId, {
+            password: body.newPassword,
+            currentPassword: body.currentPassword,
+        });
+    }
+
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Post()
     @Roles(UserRole.ADMIN) // Only Admin can create users

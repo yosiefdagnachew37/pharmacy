@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   LayoutDashboard,
   Pill,
@@ -74,6 +75,7 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, role, logout, selectedOrganization, hasFeature } = useAuth();
+  const { pharmacyLogo } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
 
@@ -187,8 +189,17 @@ const DashboardLayout = () => {
         fixed lg:static inset-y-0 left-0 z-50 w-64 bg-indigo-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-indigo-800 flex items-center justify-between">
-          <div className="text-xl font-bold">Pharmacy ERP</div>
+        <div className="p-4 border-b border-indigo-800 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {pharmacyLogo ? (
+              <img src={pharmacyLogo} alt="Pharmacy Logo" className="w-8 h-8 rounded-lg object-contain bg-white/10 p-0.5" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-indigo-700/60 flex items-center justify-center text-indigo-200">
+                <Building2 className="w-4 h-4" />
+              </div>
+            )}
+            <div className="text-base font-bold text-white leading-tight">Pharmacy ERP</div>
+          </div>
           <button
             className="lg:hidden text-indigo-200 hover:text-white"
             onClick={() => setIsSidebarOpen(false)}
@@ -349,16 +360,18 @@ const DashboardLayout = () => {
 
                 <NotificationBell />
 
-                <button
-                  onClick={() => setIsSubscriptionOpen(true)}
-                  className="p-2 lg:p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all active:scale-95 group relative flex items-center justify-center shrink-0"
-                  title="Subscription Overview"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  {expiryWarning !== null && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
-                  )}
-                </button>
+                {role === 'ADMIN' && (
+                  <button
+                    onClick={() => setIsSubscriptionOpen(true)}
+                    className="p-2 lg:p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition-all active:scale-95 group relative flex items-center justify-center shrink-0"
+                    title="Subscription Overview"
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    {expiryWarning !== null && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white rounded-full animate-bounce"></span>
+                    )}
+                  </button>
+                )}
 
                 <Link
                   to="/settings"

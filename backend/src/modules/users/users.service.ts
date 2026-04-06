@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -112,9 +112,16 @@ export class UsersService {
             }
         }
 
-        const { password, ...rest } = updateUserDto;
+        const { password, currentPassword, ...rest } = updateUserDto;
         
         if (password) {
+            // If the caller provides currentPassword, verify it first
+            if (currentPassword) {
+                const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+                if (!isMatch) {
+                    throw new UnauthorizedException('Current password is incorrect');
+                }
+            }
             const salt = await bcrypt.genSalt();
             user.password_hash = await bcrypt.hash(password, salt);
         }
