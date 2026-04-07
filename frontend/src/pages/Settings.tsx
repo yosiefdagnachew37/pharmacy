@@ -326,7 +326,7 @@ export default function Settings() {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="px-5 py-2 bg-gray-900 dark:bg-indigo-600 text-white rounded-lg font-bold text-xs hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                      className="px-5 py-2 bg-indigo-600 text-white rounded-lg font-bold text-xs hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
                     >
                       {saving ? <Clock className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                       Save Profile
@@ -431,25 +431,25 @@ export default function Settings() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-5 rounded-xl text-white shadow-lg relative overflow-hidden">
-                    <CreditCard className="absolute -bottom-2 -right-2 w-16 h-16 text-white/5 rotate-12" />
+                  <div className="bg-indigo-600 dark:bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 p-5 rounded-xl text-white shadow-lg relative overflow-hidden">
+                    <CreditCard className="absolute -bottom-2 -right-2 w-16 h-16 text-white/10 rotate-12" />
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block mb-0.5">Current Tier</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 block mb-0.5">Current Tier</span>
                         <div className="text-xl font-black tracking-tight">{subscription.organization.plan_name || 'Free Trial'}</div>
                       </div>
-                      <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 ${subscription.organization.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                      <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/30 ${subscription.organization.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
                         {subscription.organization.status}
                       </div>
                     </div>
                     <div className="flex items-end justify-between">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block mb-0.5">Expiry</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 block mb-0.5">Expiry</span>
                         <div className="text-sm font-bold">{subscription.organization.expiry_date ? new Date(subscription.organization.expiry_date).toLocaleDateString() : 'N/A'}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-black tracking-tight">ETB {subscription.currentPlan?.costs || 0}</div>
-                        <span className="text-[10px] text-white/40 uppercase font-bold">/ Monthly</span>
+                        <span className="text-[10px] text-white/60 uppercase font-bold">/ Monthly</span>
                       </div>
                     </div>
                   </div>
@@ -638,7 +638,7 @@ export default function Settings() {
                       <button
                         type="submit"
                         disabled={passwordSaving || (!!securityForm.confirmPassword && securityForm.confirmPassword !== securityForm.newPassword)}
-                        className="px-5 py-2 bg-gray-900 dark:bg-sky-600 text-white rounded-lg font-bold text-xs hover:bg-sky-600 dark:hover:bg-sky-700 transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
+                        className="px-5 py-2 bg-sky-600 text-white rounded-lg font-bold text-xs hover:bg-sky-700 transition-all flex items-center gap-2 shadow-sm active:scale-95 disabled:opacity-50"
                       >
                         {passwordSaving ? <Clock className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
                         Update Password

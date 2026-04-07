@@ -49,14 +49,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Apply theme class to <html> element
   useEffect(() => {
     const root = document.documentElement;
+    const body = document.body;
+    
     if (resolvedTheme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      body?.classList.add('dark');
+      body?.classList.remove('light');
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      body?.classList.add('light');
+      body?.classList.remove('dark');
     }
   }, [resolvedTheme]);
+
 
   // Listen for system preference changes when theme is 'system'
   useEffect(() => {

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Ensure dark: variant follows the .dark class in Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+
 /* =========================================
    DARK MODE THEME VARIABLES
    ========================================= */
@@ -33,24 +37,27 @@
 
 /* ---- DARK MODE ---- */
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #1e293b;
-  --bg-card: #1e293b;
-  --border-color: #334155;
-  --border-subtle: #1e293b;
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
-  --sidebar-bg: #0f172a;
-  --sidebar-hover: rgba(99, 102, 241, 0.2);
-  --sidebar-active: #312e81;
-  --sidebar-text: #a5b4fc;
-  --header-bg: rgba(15, 23, 42, 0.9);
-  --shadow-color: rgba(0, 0, 0, 0.3);
-  --input-bg: #1e293b;
-  --input-border: #334155;
+  /* Sleek modern deep slate theme, referencing sleek portfolio aesthetics */
+  --bg-primary: #0F172A;     /* Slate 900 - rich deep blue-slate bg */
+  --bg-secondary: #1E293B;   /* Slate 800 - secondary blocks */
+  --bg-tertiary: #334155;    /* Slate 700 - tertiary/hover blocks */
+  --bg-card: #1E293B;        /* Slate 800 - cards and prominent sections */
+  --border-color: rgba(255, 255, 255, 0.1); 
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --text-primary: #F8FAFC;   /* Slate 50 - crisp white text */
+  --text-secondary: #CBD5E1; /* Slate 300 - soft off-white */
+  --text-muted: #94A3B8;     /* Slate 400 - subdued text */
+  --text-faint: #64748B;     /* Slate 500 - faint details */
+  
+  --sidebar-bg: #0B1120;     /* Ultra dark space blue, beautiful contrast */
+  --sidebar-hover: rgba(59, 130, 246, 0.15); /* Soft blue hover */
+  --sidebar-active: rgba(59, 130, 246, 0.25);
+  --sidebar-text: #E2E8F0;
+  
+  --header-bg: rgba(15, 23, 42, 0.85); /* Frosty translucent slate */
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --input-bg: rgba(15, 23, 42, 0.6);   /* Modern transparent inputs */
+  --input-border: rgba(255, 255, 255, 0.15);
   color-scheme: dark;
 }
 
@@ -71,10 +78,18 @@
   color: var(--text-primary);
 }
 
-/* Backgrounds */
-.dark .bg-white { background-color: var(--bg-card) !important; }
-.dark .bg-gray-50 { background-color: var(--bg-secondary) !important; }
-.dark .bg-gray-100 { background-color: var(--bg-tertiary) !important; }
+/* Backgrounds - strictly catch only children of .dark */
+.dark .bg-white:not(header) { background-color: var(--bg-card) !important; }
+.dark .bg-gray-50 { background-color: var(--bg-primary) !important; }
+.dark .bg-gray-100 { background-color: var(--bg-primary) !important; }
+
+
+/* Hover Overrides for Tables & Buttons */
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-indigo-50:hover {
+  background-color: var(--bg-tertiary) !important;
+}
 
 /* Borders */
 .dark .border-gray-100 { border-color: var(--border-color) !important; }
@@ -103,19 +118,79 @@
   border-color: var(--border-color) !important;
 }
 
-/* Sidebar */
-.dark .sidebar-root {
+/* Notification Dropdown Overrides */
+.dark .bg-gradient-to-r.from-indigo-50.to-white {
+  background: linear-gradient(to right, var(--bg-secondary), var(--bg-card)) !important;
+}
+
+.dark .bg-indigo-50\/30 {
+  background-color: rgba(99, 102, 241, 0.1) !important; /* Noticeable but subtle unread state */
+}
+
+.dark .hover\:bg-gray-50\/50:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .text-indigo-600 {
+  color: #a5b4fc !important; /* Soft indigo for dark mode */
+}
+
+.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Notification Type Backgrounds */
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.dark .bg-green-50 { background-color: rgba(16, 185, 129, 0.15) !important; }
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
+
+.dark .text-amber-600 { color: #fbbf24 !important; }
+.dark .text-green-500 { color: #34d399 !important; }
+.dark .text-red-500 { color: #f87171 !important; }
+.dark .text-blue-500 { color: #60a5fa !important; }
+
+/* Sidebar and Layout Overrides */
+.dark .sidebar-root,
+.dark .bg-indigo-900 {
   background-color: var(--sidebar-bg) !important;
+}
+.dark .bg-indigo-950\/30,
+.dark .bg-indigo-950\/40 {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+.dark .bg-indigo-800 {
+  background-color: var(--sidebar-active) !important;
+}
+.dark .text-indigo-100, .dark .text-indigo-200, .dark .text-indigo-300 {
+  color: var(--sidebar-text) !important;
+}
+.dark .border-indigo-800 {
+  border-color: var(--border-color) !important;
 }
 
 /* Cards */
 .dark .rounded-3xl.bg-white,
-.dark .rounded-\[1\.5rem\].bg-white {
+.dark .rounded-\[1\.5rem\].bg-white,
+.dark .rounded-xl.bg-white {
   background-color: var(--bg-card) !important;
 }
 
-/* Modals */
-.dark [role="dialog"] .bg-white { background-color: var(--bg-card) !important; }
+/* Modals, Dropdowns and Container Overrides */
+.dark [role="dialog"] .bg-white,
+.dark .fixed.sm\:absolute.bg-white,
+.dark .absolute.bg-white,
+.dark .bg-white:not(header) { 
+  background-color: var(--bg-card) !important; 
+  border-color: var(--border-color) !important;
+}
+
+
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  border-color: var(--border-color) !important;
+}
 
 /* =========================================
    COMPACT DENSITY GLOBAL OVERRIDES
