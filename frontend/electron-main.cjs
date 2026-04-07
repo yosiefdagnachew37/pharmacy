@@ -224,7 +224,9 @@ function startBackend(nodeBin) {
             NODE_ENV: 'production',
             NODE_PATH: path.join(backendDir, 'node_modules'),
             // CRITICAL: Tells the backend to enforce the Hardware License lock
-            IS_DESKTOP_OFFLINE: 'true'
+            IS_DESKTOP_OFFLINE: 'true',
+            // Stable userData path for the timeguard.bin ledger and license.key
+            USER_DATA_PATH: app.getPath('userData')
         };
 
         console.log('[Backend] Spawning:', nodeBin, backendMain);

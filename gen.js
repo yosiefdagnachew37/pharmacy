@@ -1,0 +1,13 @@
+const crypto=require('crypto');
+const fs=require('fs');
+const hwid='439c346430084979844f723ec20aab6bc6000c23608ab5ca801f4cfcc345d85e';
+const payload={hwid};
+const dataString=JSON.stringify(payload,Object.keys(payload).sort());
+const signer=crypto.createSign('SHA256');
+signer.update(dataString);
+signer.end();
+const pk=fs.readFileSync('private.pem','utf8');
+const signature=signer.sign(pk,'base64');
+fs.writeFileSync('backend/license.key',JSON.stringify({...payload,signature}));
+console.log("DONE");
+process.exit(0);

@@ -1,13 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { machineIdSync } from 'node-machine-id';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
+import { TimeGuardService } from './time-guard.service';
 
 export interface LicenseData {
   hwid: string;
   tenantId?: string;
-  expiry?: string; 
+  expiry?: string;
   plan?: string;
   signature?: string;
 }
@@ -15,7 +17,9 @@ export interface LicenseData {
 @Injectable()
 export class LicenseService {
   private readonly logger = new Logger(LicenseService.name);
-  
+
+  constructor(private readonly timeGuard: TimeGuardService) {}
+
   // Embedded Public Key for offline RSA validation
   private readonly publicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoIq72ekH+vaKRz14pYWh
@@ -27,49 +31,166 @@ Ndc518BKyI0fFzxuem5GNXZOFOdQ1RtWwq+oEAMnP2vPXuLzlJx2NUtkdDnXTGYG
 RwIDAQAB
 -----END PUBLIC KEY-----`;
 
-  /**
-   * Retrieves the physical hardware ID associated with the machine.
-   * Based on CPU/Motherboard/Disk identifiers.
-   */
-  public getHardwareId(): string {
-    try {
-      return machineIdSync();
-    } catch (err) {
-      this.logger.error('Failed to generate HWID', err);
-      // Fallback pseudo-HWID in case native wmic calls fail (e.g., restrictive sandboxes)
-      return crypto.createHash('sha256').update(require('os').hostname()).digest('hex').substring(0, 32);
-    }
-  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // Composite Hardware ID (Windows WMI-based)
+  // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Reads and validates the local license.key file against the hardware.
-   * Returns true if authorized, false otherwise.
+   * Retrieves hardware information using Windows PowerShell (WMI/CIM).
+   * Automatically falls back across modern (CimInstance), legacy (WmiObject),
+   * and deprecated (wmic) commands to ensure full backwards and forward
+   * compatibility from Windows 7 up to Windows 11+.
    */
-  public validateLicense(): { isValid: boolean; reason: string; hwid: string } {
-    const hwid = this.getHardwareId();
+  private getWindowsHardwareProp(wmiClass: string, property: string, filter?: string): string[] {
+    let stdout = '';
     
-    // Look for the license file in the current working directory, or the appData path if bundled
-    let licensePath = path.join(process.cwd(), 'license.key');
-    
-    // Fallback search logic for Electron environments
-    if (!fs.existsSync(licensePath)) {
-      // In production packaged mode, the cwd is usually the app bundle folder
-      const userDataPath = process.env.APPDATA 
-        ? path.join(process.env.APPDATA, 'pharmacy-system') // Just an example, maybe not the actual name, let's just stick to cwd and adjacent directories
-        : '';
-        
-      if (userDataPath && fs.existsSync(path.join(userDataPath, 'license.key'))) {
-        licensePath = path.join(userDataPath, 'license.key');
-      } else {
-        const potentialPath = path.join(process.cwd(), '..', 'license.key');
-        if (fs.existsSync(potentialPath)) {
-          licensePath = potentialPath;
-        } else {
-          return { isValid: false, reason: 'License file not found.', hwid };
-        }
+    // Attempt 1 & 2: PowerShell (CimInstance -> WmiObject fallback)
+    try {
+      const psFilter = filter ? `-Filter "${filter}"` : '';
+      const psCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $res = Get-CimInstance ${wmiClass} ${psFilter} -ErrorAction Stop } catch { $res = Get-WmiObject ${wmiClass} ${psFilter} }; if ($res) { $res.${property} }"`;
+      stdout = execSync(psCmd, { timeout: 8000, stdio: 'pipe' }).toString();
+    } catch (err) {
+      // Attempt 3: Legacy WMIC fallback (if PowerShell is completely blocked)
+      try {
+        const wmicClass = wmiClass.replace('Win32_', ''); // WMIC uses aliases
+        const wmicFilter = filter ? `where "${filter}"` : '';
+        const wmicCmd = `wmic ${wmicClass} ${wmicFilter} get ${property}`;
+        stdout = execSync(wmicCmd, { timeout: 8000, stdio: 'pipe' }).toString();
+      } catch (err2) {
+        return [];
       }
     }
 
+    const raw = stdout
+      .split(/[\r\n]+/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !/^[A-Za-z\s]+$/.test(l)); // skip headers
+
+    return raw.filter(
+      (v) =>
+        v !== 'To Be Filled By O.E.M.' &&
+        v !== 'Default string' &&
+        v !== 'Not Applicable' &&
+        v !== 'None' &&
+        v !== '00000000' &&
+        v.length > 2,
+    );
+  }
+
+  /**
+   * Builds a composite hardware fingerprint from multiple immutable identifiers:
+   *   • CPU Processor ID
+   *   • Motherboard / Baseboard Serial Number
+   *   • Primary MAC Address (first physical adapter)
+   *   • Disk Drive Serial Number(s)
+   *
+   * All collected values are sorted, joined, then SHA-256 hashed to produce
+   * a fixed-length 64-character hex string.
+   *
+   * Falls back to hostname hash if ALL queries fail.
+   */
+  public buildCompositeHwid(): string {
+    const parts: string[] = [];
+
+    if (os.platform() === 'win32') {
+      // 1. CPU Processor ID
+      const cpuIds = this.getWindowsHardwareProp('Win32_Processor', 'ProcessorId');
+      parts.push(...cpuIds.map((v) => `cpu:${v}`));
+
+      // 2. Motherboard / Baseboard Serial Number
+      const mbSerials = this.getWindowsHardwareProp('Win32_BaseBoard', 'SerialNumber');
+      parts.push(...mbSerials.map((v) => `mb:${v}`));
+
+      // 3. MAC Addresses (all physical adapters, skip virtual/loopback)
+      const macs = this.getWindowsHardwareProp('Win32_NetworkAdapter', 'MACAddress', 'PhysicalAdapter=TRUE');
+      parts.push(
+        ...macs
+          .filter((v) => /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(v))
+          .map((v) => `mac:${v.toUpperCase()}`),
+      );
+
+      // 4. Disk Drive Serial Number(s)
+      const diskSerials = this.getWindowsHardwareProp('Win32_DiskDrive', 'SerialNumber');
+      parts.push(...diskSerials.map((v) => `disk:${v}`));
+    }
+
+    if (parts.length === 0) {
+      // Cross-platform fallback for dev environments (macOS / Linux)
+      this.logger.warn(
+        '[HWID] WMI unavailable — using hostname fallback. (This is normal in dev.)',
+      );
+      const hostname = os.hostname();
+      const cpus = os.cpus().map((c) => c.model).join(',');
+      const nets = Object.values(os.networkInterfaces())
+        .flat()
+        .filter((n) => n && !n.internal && n.family === 'IPv4')
+        .map((n) => n!.mac)
+        .join(',');
+      parts.push(`host:${hostname}`, `cpu:${cpus}`, `mac:${nets}`);
+    }
+
+    // Sort for determinism, then deduplicate
+    const composite = [...new Set(parts.sort())].join('|');
+    const hwid = crypto.createHash('sha256').update(composite).digest('hex');
+
+    this.logger.log(
+      `[HWID] Composite parts (${parts.length}): ${parts.join(', ')}`,
+    );
+    this.logger.log(`[HWID] Final hash: ${hwid}`);
+    return hwid;
+  }
+
+  /**
+   * Public accessor used by the controller and lock screen.
+   */
+  public getHardwareId(): string {
+    return this.buildCompositeHwid();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // License Validation
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Reads and validates the local license.key file against the hardware
+   * AND the time-guard ledger.
+   * Returns true if authorized, false otherwise.
+   */
+  public validateLicense(): { isValid: boolean; reason: string; hwid: string } {
+    const hwid = this.buildCompositeHwid();
+
+    // ── Step 1: Anti-time-rollback check ───────────────────────────────────
+    try {
+      this.timeGuard.assertTimeIsValid(hwid);
+    } catch (timeErr: any) {
+      return { isValid: false, reason: timeErr.message, hwid };
+    }
+
+    // ── Step 2: Locate license.key file ───────────────────────────────────
+    // Search order:
+    //   1. USER_DATA_PATH (Electron userData dir — stable across updates)
+    //   2. process.cwd()   (backend working directory — dev / legacy)
+    //   3. parent of cwd() (adjacent directory fallback)
+    const candidates: string[] = [];
+
+    if (process.env.USER_DATA_PATH) {
+      candidates.push(path.join(process.env.USER_DATA_PATH, 'license.key'));
+    }
+    candidates.push(
+      path.join(process.cwd(), 'license.key'),
+      path.join(process.cwd(), '..', 'license.key'),
+    );
+
+    let licensePath: string | null = null;
+    for (const p of candidates) {
+      if (fs.existsSync(p)) { licensePath = p; break; }
+    }
+
+    if (!licensePath) {
+      return { isValid: false, reason: 'License file not found.', hwid };
+    }
+
+    // ── Step 3: Parse and validate the license ─────────────────────────────
     try {
       const licenseRaw = fs.readFileSync(licensePath, 'utf-8');
       const licenseObj = JSON.parse(licenseRaw) as LicenseData;
@@ -78,25 +199,32 @@ RwIDAQAB
         return { isValid: false, reason: 'Corrupted license format.', hwid };
       }
 
-      // Check hardware mismatch
+      // Hardware ID mismatch
       if (licenseObj.hwid !== hwid) {
-        return { isValid: false, reason: 'Hardware ID mismatch. This license belongs to another machine.', hwid };
+        return {
+          isValid: false,
+          reason: 'Hardware ID mismatch. This license belongs to another machine.',
+          hwid,
+        };
       }
 
-      // Check Cryptographic Signature
+      // RSA Signature verification
       const { signature, ...dataPayload } = licenseObj;
       const dataString = JSON.stringify(dataPayload, Object.keys(dataPayload).sort());
-      
+
       const verify = crypto.createVerify('SHA256');
       verify.update(dataString);
-      
       const isValidSig = verify.verify(this.publicKey, signature, 'base64');
-      
+
       if (!isValidSig) {
-        return { isValid: false, reason: 'Invalid signature. License was tampered with or is illegitimate.', hwid };
+        return {
+          isValid: false,
+          reason: 'Invalid signature. License was tampered with or is illegitimate.',
+          hwid,
+        };
       }
 
-      // Optional: Check Expiry Date
+      // Expiry date check (time-guard already confirmed no rollback, so Date.now() is trusted)
       if (licenseObj.expiry) {
         const expiryDate = new Date(licenseObj.expiry);
         if (new Date() > expiryDate) {
@@ -111,26 +239,29 @@ RwIDAQAB
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Apply License
+  // ─────────────────────────────────────────────────────────────────────────
+
   /**
-   * Applies a new license by writing it to the root directory
+   * Validates and persists a new license block to disk.
    */
   public applyLicense(licenseString: string): boolean {
-    const hwid = this.getHardwareId();
+    const hwid = this.buildCompositeHwid();
     try {
       const licenseObj = JSON.parse(licenseString) as LicenseData;
-      
-      // We will perform a quick check
+
       if (licenseObj.hwid !== hwid) {
         throw new Error('This license key was generated for a different Hardware ID.');
       }
 
       const { signature, ...dataPayload } = licenseObj;
       const dataString = JSON.stringify(dataPayload, Object.keys(dataPayload).sort());
-      
+
       const verify = crypto.createVerify('SHA256');
       verify.update(dataString);
-      
       const isValidSig = verify.verify(this.publicKey, signature as string, 'base64');
+
       if (!isValidSig) {
         throw new Error('Manipulated or fake license cryptographic signature.');
       }
@@ -142,7 +273,14 @@ RwIDAQAB
         }
       }
 
-      fs.writeFileSync(path.join(process.cwd(), 'license.key'), licenseString, 'utf-8');
+      // Write to USER_DATA_PATH (Electron userData) if available — stable across app updates
+      // and co-located with timeguard.bin. Falls back to cwd for dev/non-Electron mode.
+      const writePath = process.env.USER_DATA_PATH
+        ? path.join(process.env.USER_DATA_PATH, 'license.key')
+        : path.join(process.cwd(), 'license.key');
+
+      fs.writeFileSync(writePath, licenseString, 'utf-8');
+      this.logger.log(`[License] license.key written to: ${writePath}`);
       return true;
     } catch (err: any) {
       this.logger.error('Failed to apply license', err.message);
