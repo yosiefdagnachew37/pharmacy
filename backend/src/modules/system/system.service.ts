@@ -100,8 +100,43 @@ export class SystemService implements OnModuleInit {
             throw new Error('License generation is strictly disabled on offline nodes.');
         }
 
-        const privateKey = process.env.LICENSE_PRIVATE_KEY;
+        let privateKey: string | null | undefined = null;
+
+        // 1. Try to load key from private.pem file (most robust, same as manual script)
+        const possibleKeyPaths = [
+            path.join(process.cwd(), 'private.pem'),
+            path.join(process.cwd(), '..', 'private.pem'),
+        ];
+
+        for (const keyPath of possibleKeyPaths) {
+            if (fs.existsSync(keyPath)) {
+                try {
+                    privateKey = fs.readFileSync(keyPath, 'utf8');
+                    this.logger.log(`Loaded private key from file: ${keyPath}`);
+                    break;
+                } catch (err) {
+                    this.logger.warn(`Found private.pem at ${keyPath} but failed to read it: ${err.message}`);
+                }
+            }
+        }
+
+        // 2. Fallback to environment variable if no file found
         if (!privateKey) {
+            privateKey = process.env.LICENSE_PRIVATE_KEY;
+            
+            if (privateKey) {
+                this.logger.log('No private.pem file found. Using LICENSE_PRIVATE_KEY from environment.');
+                // Clean the environment string
+                privateKey = privateKey.trim();
+                if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+                    privateKey = privateKey.slice(1, -1);
+                }
+                privateKey = privateKey.replace(/\\n/g, '\n').trim();
+            }
+        }
+
+        if (!privateKey) {
+            this.logger.error('License generation failed: No private key found (checked private.pem file and LICENSE_PRIVATE_KEY environment variable).');
             throw new Error('Server misconfiguration: No private key found.');
         }
 
@@ -117,17 +152,27 @@ export class SystemService implements OnModuleInit {
             payload.plan = plan.trim();
         }
 
-        const dataString = JSON.stringify(payload, Object.keys(payload).sort());
+        try {
+            const dataString = JSON.stringify(payload, Object.keys(payload).sort());
 
-        const signer = cryptoOriginal.createSign('SHA256');
-        signer.update(dataString);
-        signer.end();
+            const signer = cryptoOriginal.createSign('SHA256');
+            signer.update(dataString);
+            signer.end();
 
-        const signature = signer.sign(privateKey, 'base64');
+            // Safe debug log to verify start/end of key format without revealing the secret
+            const keyStart = privateKey.substring(0, 25).replace(/\n/g, '\\n');
+            const keyEnd = privateKey.substring(privateKey.length - 25).replace(/\n/g, '\\n');
+            this.logger.log(`Signing license for HWID: ${payload.hwid} (Format check: [${keyStart}...${keyEnd}])`);
 
-        return {
-            ...payload,
-            signature
-        };
+            const signature = signer.sign(privateKey, 'base64');
+
+            return {
+                ...payload,
+                signature
+            };
+        } catch (err: any) {
+            this.logger.error(`Cryptographic signing failed: ${err.message}`);
+            throw new Error(`Server error while signing license: ${err.message}`);
+        }
     }
 }
