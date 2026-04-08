@@ -84,18 +84,27 @@ export class TimeGuardService implements OnModuleInit {
       this.prime(hwid);
     }
 
+    const nowMs = Date.now();
+
+    // If previously rolled back, check if the user has fixed their system clock.
     if (this.rollbackDetected) {
-      throw new Error(
-        'System clock has been rolled back. License check failed. ' +
-          'Please restore the correct system time and restart the application.',
-      );
+      const delta = nowMs - this.highWaterMarkMs;
+      if (delta >= -this.ROLLBACK_TOLERANCE_MS) {
+        this.rollbackDetected = false;
+        this.logger.log('[TimeGuard] System clock restored to normal. Lifted rollback lock.');
+      } else {
+        const rollbackSec = Math.round(-delta / 1000);
+        throw new Error(
+          `System clock has been rolled back by ~${rollbackSec} seconds. ` +
+            'License validation is blocked to prevent expiry bypass. ' +
+            'Please restore the correct system time and restart the application.',
+        );
+      }
     }
 
-    const nowMs = Date.now();
     const stored = this.readLedger();
 
     if (stored === null) {
-      // No ledger yet (fresh install) — create one and allow startup
       this.logger.log('[TimeGuard] No ledger found — creating fresh ledger.');
       this.writeLedger(nowMs);
       this.highWaterMarkMs = nowMs;
@@ -105,10 +114,6 @@ export class TimeGuardService implements OnModuleInit {
     const { timestampMs, valid } = stored;
 
     if (!valid) {
-      // HMAC mismatch — ledger was tampered with.
-      // We treat this conservatively: reset the ledger to now and allow startup.
-      // We do NOT block here because a corrupted ledger could be caused by a re-install
-      // with a new HWID configuration. We log a strong warning.
       this.logger.warn(
         '[TimeGuard] Ledger HMAC invalid (tampered or HWID changed). Resetting ledger.',
       );
@@ -120,7 +125,7 @@ export class TimeGuardService implements OnModuleInit {
     // Update in-memory HWM
     this.highWaterMarkMs = Math.max(this.highWaterMarkMs, timestampMs);
 
-    // Rollback check: current time must not be significantly behind the HWM
+    // Rollback check
     const delta = nowMs - this.highWaterMarkMs;
     if (delta < -this.ROLLBACK_TOLERANCE_MS) {
       this.rollbackDetected = true;
@@ -135,17 +140,23 @@ export class TimeGuardService implements OnModuleInit {
       );
     }
 
-    // All good — update the ledger to the current time (advance the HWM)
-    this.writeLedger(nowMs);
-    this.highWaterMarkMs = nowMs;
-    this.logger.debug(`[TimeGuard] Time valid. HWM updated to ${new Date(nowMs).toISOString()}`);
+    // All good — update in-memory HWM
+    this.highWaterMarkMs = Math.max(this.highWaterMarkMs, nowMs);
+    
+    // CRITICAL FIX: Rate-limit disk I/O to avoid Nodemon infinite restart loops
+    // and minimize disk wear. Write at most once every 1 Day (86,400,000 ms) during validation.
+    // The cron job inherently covers the daily sweeps.
+    if (this.highWaterMarkMs - timestampMs > 86_400_000) {
+      this.writeLedger(this.highWaterMarkMs);
+      this.logger.debug(`[TimeGuard] Ledger written to disk. HWM: ${new Date(this.highWaterMarkMs).toISOString()}`);
+    }
   }
 
   /**
-   * Periodic cron: advance the HWM every 30 minutes while the app is running.
+   * Periodic cron: advance the HWM every 1 Day (at midnight).
    * This narrows the window an attacker has to roll back the clock after the app closes.
    */
-  @Cron('0 */30 * * * *') // every 30 minutes
+  @Cron('0 0 * * *') // every day at 12:00 AM
   public periodicUpdate(): void {
     if (!this.hmacKey) {
       return; // Key not yet primed — skip

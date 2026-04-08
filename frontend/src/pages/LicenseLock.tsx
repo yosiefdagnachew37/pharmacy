@@ -54,9 +54,12 @@ export default function LicenseLock() {
     try {
       const response = await client.post('/license/apply', { licenseKey: licenseKey.trim() });
       if (response.data.success) {
-        alert('License validated and activated successfully! The application will now reload.');
+        // Removed native alert() which is known to permanently lock keyboard focus in Electron apps.
+        // Show success inline and reload cleanly after a brief UX pause.
         window.location.hash = '#/login';
-        window.location.reload();
+        setTimeout(() => {
+            window.location.reload();
+        }, 300);
       } else {
         setError(response.data.message || 'Failed to apply license.');
       }
