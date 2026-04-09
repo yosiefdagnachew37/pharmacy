@@ -19,7 +19,7 @@ const OfflineBanner = () => {
   };
 
   useEffect(() => {
-    const interval = setInterval(checkConnection, 10000); // Check every 10s
+    const interval = setInterval(checkConnection, 60000); // Check every 60s (was 10s — reduces background HTTP noise)
     checkConnection(); // Initial check
     return () => clearInterval(interval);
   }, []);

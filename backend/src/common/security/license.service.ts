@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -18,7 +18,36 @@ export interface LicenseData {
 export class LicenseService {
   private readonly logger = new Logger(LicenseService.name);
 
+  // ── Performance Caches ──────────────────────────────────────────────────
+  // Hardware fingerprint never changes during a process lifetime — compute once.
+  private hwidCache: string | null = null;
+
+  // License validation result: cache for 5 minutes to avoid re-reading disk
+  // and re-running RSA verification on every single API request.
+  private licenseCache: { result: { isValid: boolean; reason: string; hwid: string }; expiresAt: number } | null = null;
+  private readonly LICENSE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(private readonly timeGuard: TimeGuardService) {}
+
+  /**
+   * Pre-warm the HWID cache at server startup so the very first API request
+   * never has to wait for 4 PowerShell WMI processes to complete.
+   * Only runs in desktop offline mode — web deployments skip entirely.
+   */
+  onModuleInit() {
+    if (process.env.IS_DESKTOP_OFFLINE === 'true') {
+      this.logger.log('[LicenseService] Pre-warming HWID cache at startup...');
+      // Run in background so startup is non-blocking
+      setImmediate(() => {
+        try {
+          this.buildCompositeHwid();
+          this.logger.log('[LicenseService] HWID cache ready.');
+        } catch (e) {
+          this.logger.warn('[LicenseService] HWID pre-warm failed (will retry on first request).');
+        }
+      });
+    }
+  }
 
   // Embedded Public Key for offline RSA validation
   private readonly publicKey = `-----BEGIN PUBLIC KEY-----
@@ -90,6 +119,11 @@ RwIDAQAB
    * Falls back to hostname hash if ALL queries fail.
    */
   public buildCompositeHwid(): string {
+    // ── CACHE: Hardware never changes during process lifetime ──────────────
+    if (this.hwidCache) {
+      return this.hwidCache;
+    }
+
     const parts: string[] = [];
 
     if (os.platform() === 'win32') {
@@ -133,10 +167,11 @@ RwIDAQAB
     const composite = [...new Set(parts.sort())].join('|');
     const hwid = crypto.createHash('sha256').update(composite).digest('hex');
 
-    this.logger.log(
-      `[HWID] Composite parts (${parts.length}): ${parts.join(', ')}`,
-    );
+    this.logger.log(`[HWID] Composite parts (${parts.length}): ${parts.join(', ')}`);
     this.logger.log(`[HWID] Final hash: ${hwid}`);
+
+    // Store in cache — will be reused for all subsequent requests this session
+    this.hwidCache = hwid;
     return hwid;
   }
 
@@ -157,7 +192,21 @@ RwIDAQAB
    * Returns true if authorized, false otherwise.
    */
   public validateLicense(): { isValid: boolean; reason: string; hwid: string } {
-    const hwid = this.buildCompositeHwid();
+    // ── Web / Cloud mode: skip all license logic instantly ──────────────────
+    // License enforcement is ONLY for the offline desktop (Electron) build.
+    // Web deployments are controlled by subscription management instead.
+    if (process.env.IS_DESKTOP_OFFLINE !== 'true') {
+      return { isValid: true, reason: 'Web mode — license not required.', hwid: 'web' };
+    }
+
+    const hwid = this.buildCompositeHwid(); // returns instantly from cache after first call
+
+    // ── License Result Cache (5-min TTL) ────────────────────────────────────
+    // Avoids re-reading disk + re-running RSA verify on every API request.
+    // Cache is invalidated when applyLicense() writes a new key.
+    if (this.licenseCache && Date.now() < this.licenseCache.expiresAt) {
+      return this.licenseCache.result;
+    }
 
     // ── Step 1: Anti-time-rollback check ───────────────────────────────────
     try {
@@ -196,16 +245,16 @@ RwIDAQAB
       const licenseObj = JSON.parse(licenseRaw) as LicenseData;
 
       if (!licenseObj.hwid || !licenseObj.signature) {
-        return { isValid: false, reason: 'Corrupted license format.', hwid };
+        return this.cacheAndReturn({ isValid: false, reason: 'Corrupted license format.', hwid });
       }
 
       // Hardware ID mismatch
       if (licenseObj.hwid !== hwid) {
-        return {
+        return this.cacheAndReturn({
           isValid: false,
           reason: 'Hardware ID mismatch. This license belongs to another machine.',
           hwid,
-        };
+        });
       }
 
       // RSA Signature verification
@@ -217,26 +266,34 @@ RwIDAQAB
       const isValidSig = verify.verify(this.publicKey, signature, 'base64');
 
       if (!isValidSig) {
-        return {
+        return this.cacheAndReturn({
           isValid: false,
           reason: 'Invalid signature. License was tampered with or is illegitimate.',
           hwid,
-        };
+        });
       }
 
       // Expiry date check (time-guard already confirmed no rollback, so Date.now() is trusted)
       if (licenseObj.expiry) {
         const expiryDate = new Date(licenseObj.expiry);
         if (new Date() > expiryDate) {
-          return { isValid: false, reason: 'License has expired.', hwid };
+          return this.cacheAndReturn({ isValid: false, reason: 'License has expired.', hwid });
         }
       }
 
-      return { isValid: true, reason: 'Authorized', hwid };
+      return this.cacheAndReturn({ isValid: true, reason: 'Authorized', hwid });
     } catch (err) {
       this.logger.error('Error parsing license file', err);
-      return { isValid: false, reason: 'Failed to read or parse license file.', hwid };
+      return this.cacheAndReturn({ isValid: false, reason: 'Failed to read or parse license file.', hwid });
     }
+  }
+
+  /**
+   * Stores a validation result in the 5-minute cache and returns it.
+   */
+  private cacheAndReturn(result: { isValid: boolean; reason: string; hwid: string }) {
+    this.licenseCache = { result, expiresAt: Date.now() + this.LICENSE_CACHE_TTL_MS };
+    return result;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -281,6 +338,8 @@ RwIDAQAB
 
       fs.writeFileSync(writePath, licenseString, 'utf-8');
       this.logger.log(`[License] license.key written to: ${writePath}`);
+      // Invalidate license cache so the new key is picked up on the very next request
+      this.licenseCache = null;
       return true;
     } catch (err: any) {
       this.logger.error('Failed to apply license', err.message);

@@ -60,7 +60,7 @@ const NotificationBell = () => {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 10000); // More frequent updates for testing
+        const interval = setInterval(fetchUnreadCount, 90000); // Poll every 90s — was 10s which caused excessive DB load
         return () => clearInterval(interval);
     }, []);
 
@@ -154,17 +154,6 @@ const NotificationBell = () => {
                                     <span className="xs:hidden">All Read</span>
                                 </button>
                             )}
-                            <button
-                                onClick={async () => {
-                                    await client.post('/notifications/test');
-                                    fetchUnreadCount();
-                                    if (notifications.length > 0) fetchNotifications();
-                                }}
-                                className="text-[9px] sm:text-[10px] font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1 px-1.5 py-1 bg-amber-50 rounded-lg transition-colors whitespace-nowrap"
-                            >
-                                <span className="hidden xs:inline">Test Notification</span>
-                                <span className="xs:hidden">Test</span>
-                            </button>
                             <button
                                 onClick={() => setIsOpen(false)}
                                 className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
