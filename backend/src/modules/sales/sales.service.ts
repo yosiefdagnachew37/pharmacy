@@ -439,6 +439,34 @@ export class SalesService {
             sale.refund_amount = Number(sale.refund_amount || 0) + Number(amount);
             await manager.save(sale);
 
+            // Synchronize Refund out of the original Payment Account natively
+            const originalTx = await manager.findOne(PaymentAccountTransaction, {
+                where: { reference_id: sale_id, reference_type: PAReferenceType.SALE, type: PATransactionType.CREDIT, organization_id: getTenantId() }
+            });
+
+            if (originalTx && originalTx.payment_account_id) {
+                const paymentAccount = await manager.findOne(PaymentAccount, {
+                    where: { id: originalTx.payment_account_id, organization_id: getTenantId() }
+                });
+
+                if (paymentAccount) {
+                    paymentAccount.balance = Number(paymentAccount.balance || 0) - Number(amount);
+                    await manager.save(paymentAccount);
+
+                    const refundTx = manager.create(PaymentAccountTransaction, {
+                        payment_account_id: paymentAccount.id,
+                        amount: Number(amount),
+                        type: PATransactionType.DEBIT,
+                        reference_type: PAReferenceType.REFUND,
+                        reference_id: sale_id,
+                        description: `Refund for Sale ${sale.receipt_number || sale_id}`,
+                        created_by: userId,
+                        organization_id: getTenantId(),
+                    });
+                    await manager.save(refundTx);
+                }
+            }
+
             const TransactionType = (await import('../stock/entities/stock-transaction.entity')).TransactionType;
             await this.stockService.recordTransaction(
                 item.batch_id,

@@ -170,6 +170,17 @@ export default function PaymentAccounts() {
         </div>
       </div>
 
+      {/* <div className="bg-indigo-600 text-white p-2 rounded-lg shadow-sm flex items-center justify-between">
+        <div>
+          <p className="text-[8px] uppercase text-indigo-100">Float</p>
+          <h3 className="text-sm font-semibold">
+            ETB {totalPlatformBalance.toLocaleString()}
+          </h3>
+        </div>
+        <Wallet className="w-5 h-5 opacity-30" />
+      </div> */}
+
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Pane: Configured Accounts */}
         <div className="lg:col-span-4 space-y-3 relative">
