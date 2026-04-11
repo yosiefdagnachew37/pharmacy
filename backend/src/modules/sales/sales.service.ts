@@ -88,8 +88,8 @@ export class SalesService {
         order.status = SaleOrderStatus.CONFIRMED;
         order.confirmed_by = userId;
         order.confirmed_at = new Date();
-        order.payment_account_id = dto.payment_account_id;
-        order.payment_account_name = dto.payment_account_name;
+        order.payment_account_id = dto.payment_account_id || '';
+        order.payment_account_name = dto.payment_account_name || '';
         await this.saleOrderRepository.save(order);
 
         try {
@@ -107,45 +107,76 @@ export class SalesService {
                 const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
                 const receiptNumber = `RCPT-${dateStr}-${randomStr}`;
 
-                // Create the Sale header using CASH-like method mapped from payment account
+                let paidAmount = 0;
+                let creditAmount = 0;
+
+                const finalPaymentMethod = (dto.payment_method as PaymentMethod) || PaymentMethod.CASH;
+
+                if (finalPaymentMethod === PaymentMethod.CREDIT) {
+                    creditAmount = Number(order.total_amount);
+                } else if (finalPaymentMethod === PaymentMethod.SPLIT) {
+                    paidAmount = Number(dto.amount_paid || 0);
+                    creditAmount = Number(order.total_amount) - paidAmount;
+                } else {
+                    paidAmount = Number(order.total_amount);
+                }
+
+                const splitData = finalPaymentMethod === PaymentMethod.SPLIT ? 
+                    [
+                        { method: PaymentMethod.CASH, amount: paidAmount },
+                        { method: PaymentMethod.CREDIT, amount: creditAmount }
+                    ] : [];
+
                 const saleHeader = manager.create(Sale, {
                     receipt_number: receiptNumber,
                     patient_id: order.patient_id,
                     total_amount: order.total_amount,
                     discount: order.discount,
-                    payment_method: PaymentMethod.CASH, // all account-based payments are treated as CASH-equivalent
-                    split_payments: [],
+                    payment_method: finalPaymentMethod,
+                    split_payments: splitData,
                     prescription_image_url: order.prescription_image_url,
                     is_controlled_transaction: hasControlled,
-                    created_by: order.created_by, // pharmacist who created the order
+                    created_by: order.created_by,
                     organization_id,
-                    // Store payment account info in split_payments as structured metadata
-                    // We embed it there so no schema change is needed on the Sale entity
                 });
 
-                // Store payment account reference via a safe metadata field
                 (saleHeader as any).payment_account_id = dto.payment_account_id;
                 (saleHeader as any).payment_account_name = dto.payment_account_name;
                 (saleHeader as any).confirmed_by = userId;
 
                 const savedSale = await manager.save(saleHeader);
 
-                // Update the PaymentAccount balance and log transaction
-                if (dto.payment_account_id) {
+                if (creditAmount > 0) {
+                    if (!order.patient_id) {
+                        throw new BadRequestException('A registered customer/patient is required for credit sales.');
+                    }
+                    const dueDate = new Date();
+                    dueDate.setDate(dueDate.getDate() + 30);
+                    await this.creditService.recordCreditSale(
+                        order.patient_id,
+                        savedSale.id,
+                        creditAmount,
+                        dueDate,
+                        `Credit sale generated from POS Checkout`,
+                        manager
+                    );
+                }
+
+                if (paidAmount > 0 && dto.payment_account_id) {
                     const paymentAccount = await manager.findOne(PaymentAccount, {
                         where: { id: dto.payment_account_id, organization_id }
                     });
                     if (paymentAccount) {
-                        paymentAccount.balance = Number(paymentAccount.balance || 0) + Number(order.total_amount);
+                        paymentAccount.balance = Number(paymentAccount.balance || 0) + paidAmount;
                         await manager.save(paymentAccount);
 
                         const accountTransaction = manager.create(PaymentAccountTransaction, {
                             payment_account_id: paymentAccount.id,
-                            amount: Number(order.total_amount),
+                            amount: paidAmount,
                             type: PATransactionType.CREDIT,
                             reference_type: PAReferenceType.SALE,
                             reference_id: savedSale.id,
-                            description: `Sale Receipt: ${receiptNumber}`,
+                            description: `Sale Receipt: ${receiptNumber}${finalPaymentMethod === PaymentMethod.SPLIT ? ' (Upfront paid)' : ''}`,
                             created_by: userId,
                             organization_id,
                         });

@@ -620,6 +620,8 @@ const CashierPOS = () => {
   const [selectedOrder, setSelectedOrder] = useState<SaleOrder | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'CREDIT' | 'SPLIT'>('CASH');
+  const [amountPaid, setAmountPaid] = useState<number | ''>('');
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmedSale, setConfirmedSale] = useState<any>(null);
 
@@ -644,19 +646,46 @@ const CashierPOS = () => {
   const openPayment = (order: SaleOrder) => {
     setSelectedOrder(order);
     setSelectedAccount(null);
+    setPaymentMode('CASH');
+    setAmountPaid('');
     setShowPaymentModal(true);
   };
 
   const handleConfirm = async () => {
-    if (!selectedOrder || !selectedAccount) return;
+    if (!selectedOrder) return;
+    
+    // Validations
+    if (paymentMode === 'CASH' && !selectedAccount) return toastError('Error', 'Please select a payment account for cash receipt.');
+    if (paymentMode === 'CREDIT' && !selectedOrder.patient) return toastError('Error', 'Patient is required for credit transactions.');
+    if (paymentMode === 'SPLIT') {
+       if (!selectedAccount) return toastError('Error', 'Please select a payment account for the upfront portion.');
+       if (!selectedOrder.patient) return toastError('Error', 'Patient is required for the credit portion.');
+       if (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder.total_amount) return toastError('Error', 'Invalid upfront amount.');
+    }
+
     setConfirmLoading(true);
     try {
-      const res = await client.post(`/sales/orders/${selectedOrder.id}/confirm`, {
-        payment_account_id: selectedAccount.id,
-        payment_account_name: selectedAccount.name,
-      });
+      const payload: any = { payment_method: paymentMode };
+      
+      if (paymentMode === 'CASH') {
+         payload.payment_account_id = selectedAccount?.id;
+         payload.payment_account_name = selectedAccount?.name;
+      } else if (paymentMode === 'SPLIT') {
+         payload.payment_account_id = selectedAccount?.id;
+         payload.payment_account_name = selectedAccount?.name;
+         payload.amount_paid = Number(amountPaid);
+      }
+
+      const res = await client.post(`/sales/orders/${selectedOrder.id}/confirm`, payload);
       setConfirmedSale(res.data);
-      toastSuccess('Payment Confirmed', `ETB ${Number(selectedOrder.total_amount).toFixed(2)} received via ${selectedAccount.name}.`);
+      
+      let msg = '';
+      if (paymentMode === 'CASH') msg = `ETB ${Number(selectedOrder.total_amount).toFixed(2)} received via ${selectedAccount?.name || 'Account'}.`;
+      else if (paymentMode === 'CREDIT') msg = `Credit sale recorded for ${selectedOrder.patient?.name}.`;
+      else msg = `ETB ${amountPaid} received via ${selectedAccount?.name}, remainder passed to credit.`;
+      
+      toastSuccess('Payment Confirmed', msg);
+      
       setShowPaymentModal(false);
       fetchOrders();
     } catch (err: any) {
@@ -801,34 +830,65 @@ const CashierPOS = () => {
           </div>
 
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Select Payment Account</p>
-            {paymentAccounts.length === 0 ? (
-              <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
-                No payment accounts configured. Ask admin to add accounts.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
-                {paymentAccounts.map(acc => (
-                  <button key={acc.id} onClick={() => setSelectedAccount(acc)}
-                    className={`w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedAccount?.id === acc.id ? 'border-indigo-500 bg-indigo-50' : `${accountTypeColor(acc.type)} hover:border-indigo-300`}`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedAccount?.id === acc.id ? 'bg-indigo-600 text-white' : 'bg-white'}`}>
-                      {accountTypeIcon(acc.type)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-gray-900 text-sm">{acc.name}</p>
-                      {acc.account_number && <p className="text-xs text-gray-500">{acc.account_number}</p>}
-                    </div>
-                    {selectedAccount?.id === acc.id && <CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />}
-                  </button>
-                ))}
-              </div>
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
+               <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CASH' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
+               <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
+               <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
+            </div>
+
+            {paymentMode !== 'CASH' && !selectedOrder?.patient && (
+               <div className="bg-rose-50 text-rose-600 border border-rose-200 p-3 rounded-xl text-xs font-bold mb-4 flex items-center gap-2">
+                 <AlertTriangle className="w-4 h-4" /> Cannot issue credit: No patient attached to this order.
+               </div>
+            )}
+
+            {paymentMode === 'SPLIT' && (
+               <div className="mb-4">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upfront Amount Paid (ETB)</label>
+                  <input type="number" step="0.01" min="0" max={selectedOrder?.total_amount} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-lg font-black text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-all outline-none mb-1" placeholder="0.00" />
+                  {amountPaid && amountPaid > 0 && amountPaid < selectedOrder!.total_amount && (
+                     <p className="text-xs font-bold text-indigo-600 ml-1 mt-1">Remaining ETB {(selectedOrder!.total_amount - (amountPaid as number)).toFixed(2)} will be credited.</p>
+                  )}
+               </div>
+            )}
+
+            {paymentMode !== 'CREDIT' && (
+              <>
+                <p className="text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Select Payment Account <span className="lowercase font-medium text-gray-400">(for upfront cash)</span></p>
+                {paymentAccounts.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
+                    No payment accounts configured. Ask admin to add accounts.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+                    {paymentAccounts.map(acc => (
+                      <button key={acc.id} onClick={() => setSelectedAccount(acc)}
+                        className={`w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedAccount?.id === acc.id ? 'border-indigo-500 bg-indigo-50' : `${accountTypeColor(acc.type)} hover:border-indigo-300`}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedAccount?.id === acc.id ? 'bg-indigo-600 text-white' : 'bg-white'}`}>
+                          {accountTypeIcon(acc.type)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-900 text-sm">{acc.name}</p>
+                          {acc.account_number && <p className="text-xs text-gray-500">{acc.account_number}</p>}
+                        </div>
+                        {selectedAccount?.id === acc.id && <CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           <div className="flex gap-3 pt-2">
             <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all">Cancel</button>
             <button
-              disabled={!selectedAccount || confirmLoading}
+              disabled={
+                 confirmLoading || 
+                 (paymentMode !== 'CREDIT' && !selectedAccount) || 
+                 (paymentMode !== 'CASH' && !selectedOrder?.patient) ||
+                 (paymentMode === 'SPLIT' && (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder!.total_amount))
+              }
               onClick={handleConfirm}
               className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >

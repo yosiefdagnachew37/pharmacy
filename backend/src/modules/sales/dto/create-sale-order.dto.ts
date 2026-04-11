@@ -61,10 +61,18 @@ export class CreateSaleOrderDto {
 
 export class ConfirmSaleOrderDto {
   @IsUUID()
-  @IsNotEmpty()
-  payment_account_id: string;
+  @IsOptional()
+  payment_account_id?: string;
+
+  @IsString()
+  @IsOptional()
+  payment_account_name?: string;
 
   @IsString()
   @IsNotEmpty()
-  payment_account_name: string;
+  payment_method: string;
+
+  @IsNumber()
+  @IsOptional()
+  amount_paid?: number;
 }
