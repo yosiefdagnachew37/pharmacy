@@ -26,13 +26,13 @@ export class PaymentAccountsController {
   }
 
   @Get('transactions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR, UserRole.CASHIER)
   getAllTransactions(@Query('date') date?: string) {
     return this.service.getTransactions(undefined, { date });
   }
 
   @Get(':id/transactions')
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR, UserRole.CASHIER)
   getAccountTransactions(@Param('id') id: string, @Query('date') date?: string) {
     return this.service.getTransactions(id, { date });
   }
