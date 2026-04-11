@@ -44,8 +44,14 @@ export class PaymentAccountsController {
 
   @Post()
   @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreatePaymentAccountDto, @Request() req) {
+  create(@Body() dto: CreatePaymentAccountDto, @Request() req: any) {
     return this.service.create(dto, req);
+  }
+
+  @Post(':id/withdraw')
+  @Roles(UserRole.ADMIN, UserRole.CASHIER, UserRole.SUPER_ADMIN)
+  withdraw(@Param('id') id: string, @Body() body: { amount: number, reason: string }, @Request() req: any) {
+    return this.service.withdraw(id, body.amount, body.reason, req.user?.userId);
   }
 
   @Put(':id')

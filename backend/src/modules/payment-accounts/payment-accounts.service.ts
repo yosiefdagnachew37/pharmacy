@@ -102,4 +102,38 @@ export class PaymentAccountsService {
 
     return query.getMany();
   }
+
+  async withdraw(id: string, amount: number, reason: string, userId: string): Promise<PaymentAccountTransaction> {
+    if (amount <= 0) throw new Error('Withdrawal amount must be greater than zero');
+
+    return this.dataSource.transaction(async (manager) => {
+      const orgId = getTenantId();
+      const paymentAccount = await manager.findOne(PaymentAccount, {
+        where: { id, organization_id: orgId }
+      });
+
+      if (!paymentAccount) throw new NotFoundException(`Payment account not found`);
+
+      // Allow negative balance if that's what the business workflow forces, or we can restrict it.
+      // Usually registers shouldn't dip below 0, but for flexibility we just deduct.
+      if (Number(paymentAccount.balance || 0) < amount) {
+          throw new Error('Insufficient funds in the selected payment account');
+      }
+
+      paymentAccount.balance = Number(paymentAccount.balance || 0) - amount;
+      await manager.save(paymentAccount);
+
+      const transaction = manager.create(PaymentAccountTransaction, {
+        payment_account_id: paymentAccount.id,
+        amount: amount,
+        type: TransactionType.DEBIT,
+        reference_type: ReferenceType.MANUAL_ADJUSTMENT,
+        description: `Withdrawal: ${reason || 'Cash withdrawal'}`,
+        created_by: userId,
+        organization_id: orgId,
+      });
+
+      return manager.save(transaction);
+    });
+  }
 }

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Plus, Trash2, Pencil, Banknote, Clock, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { Wallet, Plus, Trash2, Pencil, Banknote, Clock, ArrowDownRight, ArrowUpRight, ArrowUpCircle } from 'lucide-react';
 import client from '../api/client';
 import { toastSuccess, toastError } from '../components/Toast';
 import Modal from '../components/Modal';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function PaymentAccounts() {
+  const { role } = useAuth();
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +30,12 @@ export default function PaymentAccounts() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState('');
+
+  // Withdraw state
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAcc, setWithdrawAcc] = useState<any>(null);
+  const [withdrawForm, setWithdrawForm] = useState({ amount: '', reason: '' });
+  const [withdrawSaving, setWithdrawSaving] = useState(false);
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -103,6 +113,32 @@ export default function PaymentAccounts() {
     }
   };
 
+  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawAcc) return;
+    const amount = Number(withdrawForm.amount);
+    if (amount <= 0) return toastError('Error', 'Withdrawal amount must be > 0');
+    if (amount > Number(withdrawAcc.balance || 0)) return toastError('Error', 'Insufficient float in the account');
+
+    setWithdrawSaving(true);
+    try {
+      await client.post(`/payment-accounts/${withdrawAcc.id}/withdraw`, {
+        amount,
+        reason: withdrawForm.reason
+      });
+      toastSuccess('Success', `Withdrew ETB ${amount} from ${withdrawAcc.name}`);
+      setShowWithdraw(false);
+      fetchAccounts();
+      if (selectedAccount?.id === withdrawAcc.id) {
+         fetchTransactions(selectedAccount.id, dateFilter);
+      }
+    } catch {
+      toastError('Error', 'Failed to process withdrawal.');
+    } finally {
+      setWithdrawSaving(false);
+    }
+  };
+
   const totalPlatformBalance = accounts.reduce((sum, a) => sum + Number(a.balance || 0), 0);
 
   return (
@@ -112,16 +148,18 @@ export default function PaymentAccounts() {
           <h1 className="text-2xl lg:text-3xl font-black text-gray-900 tracking-tight">Payment Accounts</h1>
           <p className="text-gray-500 font-medium mt-1">Manage cash drawers, bank accounts, and platform wallets</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingAcc(null);
-            setForm({ name: '', type: 'CASH', account_number: '', description: '', initial_balance: 0, is_active: true });
-            setShowForm(true);
-          }}
-          className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition active:scale-95 shadow-lg shadow-indigo-200"
-        >
-          <Plus className="w-5 h-5" /> New Account
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setEditingAcc(null);
+              setForm({ name: '', type: 'CASH', account_number: '', description: '', initial_balance: 0, is_active: true });
+              setShowForm(true);
+            }}
+            className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition active:scale-95 shadow-lg shadow-indigo-200"
+          >
+            <Plus className="w-5 h-5" /> New Account
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -174,8 +212,14 @@ export default function PaymentAccounts() {
                      </div>
                      
                      <div className="flex items-center gap-1">
-                        <button onClick={(e) => { e.stopPropagation(); setEditingAcc(acc); setForm({ name: acc.name, type: acc.type, account_number: acc.account_number || '', description: acc.description || '', initial_balance: 0, is_active: acc.is_active }); setShowForm(true); }} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.name); }} className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="px-3 py-1.5 flex items-center gap-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-black uppercase tracking-wide border border-transparent hover:border-rose-200 transition-all mr-1"><ArrowUpCircle className="w-3.5 h-3.5" /> Withdraw</button>
+                        
+                        {isAdmin && (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); setEditingAcc(acc); setForm({ name: acc.name, type: acc.type, account_number: acc.account_number || '', description: acc.description || '', initial_balance: 0, is_active: acc.is_active }); setShowForm(true); }} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.name); }} className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                          </>
+                        )}
                      </div>
                   </div>
                 </div>
@@ -281,6 +325,40 @@ export default function PaymentAccounts() {
                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-3 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all">Cancel</button>
                <button type="submit" disabled={saving} className="flex-[2] py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
                   {saving ? 'Processing...' : (editingAcc ? 'Save Changes' : 'Create Account')}
+               </button>
+            </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showWithdraw} onClose={() => setShowWithdraw(false)} title="Withdraw Cash">
+        <form onSubmit={handleWithdrawSubmit} className="pt-4 space-y-4">
+            <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-center justify-between">
+               <div>
+                 <p className="text-[10px] uppercase font-black text-rose-500 tracking-widest">Withdraw From</p>
+                 <p className="text-sm font-bold text-gray-900 mt-0.5">{withdrawAcc?.name}</p>
+               </div>
+               <div className="text-right">
+                 <p className="text-[10px] uppercase font-black text-rose-500 tracking-widest">Current Balance</p>
+                 <p className="text-sm font-black text-gray-900 mt-0.5">ETB {Number(withdrawAcc?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+               </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+               <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Amount to Withdraw (ETB) *</label>
+                  <input type="number" step="0.01" min="0" required value={withdrawForm.amount} onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})} className="w-full text-lg font-black text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 transition-all outline-none" placeholder="0.00" />
+               </div>
+
+               <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Reason / Note</label>
+                  <input type="text" value={withdrawForm.reason} onChange={e => setWithdrawForm({...withdrawForm, reason: e.target.value})} className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 transition-all outline-none" placeholder="e.g. Bank deposit, drawer drop..." />
+               </div>
+            </div>
+
+            <div className="pt-4 flex gap-3">
+               <button type="button" onClick={() => setShowWithdraw(false)} className="flex-1 py-3 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all">Cancel</button>
+               <button type="submit" disabled={withdrawSaving || !withdrawForm.amount} className="flex-[2] py-3 text-sm font-bold text-white bg-rose-600 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all disabled:opacity-50">
+                  {withdrawSaving ? 'Processing...' : 'Confirm Withdrawal'}
                </button>
             </div>
         </form>
