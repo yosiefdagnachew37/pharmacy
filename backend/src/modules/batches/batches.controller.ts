@@ -9,6 +9,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Batch } from './entities/batch.entity';
+import { Repository, MoreThan } from 'typeorm';
+import { getTenantId } from '../../common/utils/tenant-query';
 
 @Controller('batches')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,7 +20,33 @@ export class BatchesController {
     constructor(
         private readonly batchesService: BatchesService,
         private readonly auditService: AuditService,
+        @InjectRepository(Batch)
+        private readonly batchesRepository: Repository<Batch>,
     ) { }
+
+    /**
+     * POS FEFO Preview: Returns available batches for a medicine sorted by earliest expiry.
+     * Filters out locked, quarantined, empty, and expired (within 24h) batches.
+     * Accessible by PHARMACIST and CASHIER for the POS batch picker.
+     */
+    @Get('pos-preview/:medicineId')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
+    async getPosPreview(@Param('medicineId') medicineId: string) {
+        const organization_id = getTenantId();
+        const tomorrow = new Date();
+        tomorrow.setHours(tomorrow.getHours() + 24);
+        return this.batchesRepository
+            .createQueryBuilder('b')
+            .where('b.medicine_id = :medicineId', { medicineId })
+            .andWhere('b.organization_id = :organization_id', { organization_id })
+            .andWhere('b.quantity_remaining > 0')
+            .andWhere('b.is_locked = :locked', { locked: false })
+            .andWhere('b.is_quarantined = :quarantined', { quarantined: false })
+            .andWhere('b.expiry_date > :tomorrow', { tomorrow })
+            .orderBy('b.expiry_date', 'ASC')
+            .addOrderBy('b.created_at', 'ASC')
+            .getMany();
+    }
 
     @Post()
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)

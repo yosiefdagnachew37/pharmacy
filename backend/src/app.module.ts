@@ -34,6 +34,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { SubscriptionPlansModule } from './modules/subscription-plans/subscription-plans.module';
 import { LicenseModule } from './common/security/license.module';
 import { LicenseMiddleware } from './common/middlewares/license.middleware';
+import { PaymentAccountsModule } from './modules/payment-accounts/payment-accounts.module';
 
 /**
  * Main application module entry point - v2.0
@@ -77,6 +78,7 @@ import { LicenseMiddleware } from './common/middlewares/license.middleware';
     OrganizationsModule,
     SubscriptionPlansModule,
     LicenseModule,
+    PaymentAccountsModule,
   ],
   controllers: [AppController],
   providers: [

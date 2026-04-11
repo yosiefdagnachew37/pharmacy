@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between, In, QueryFailedError } from 'typeorm';
+import { Repository, DataSource, In, QueryFailedError } from 'typeorm';
 import { Sale, PaymentMethod } from './entities/sale.entity';
 import { SaleItem } from './entities/sale-item.entity';
+import { SaleOrder, SaleOrderStatus } from './entities/sale-order.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { CreateSaleOrderDto, ConfirmSaleOrderDto } from './dto/create-sale-order.dto';
 import { StockService } from '../stock/stock.service';
 import { ReferenceType } from '../stock/entities/stock-transaction.entity';
 import { AlertsService } from '../alerts/alerts.service';
@@ -24,12 +26,223 @@ export class SalesService {
         private readonly itemsRepository: Repository<SaleItem>,
         @InjectRepository(Refund)
         private readonly refundRepository: Repository<Refund>,
+        @InjectRepository(SaleOrder)
+        private readonly saleOrderRepository: Repository<SaleOrder>,
         private readonly stockService: StockService,
         private readonly alertsService: AlertsService,
         private readonly notificationsService: NotificationsService,
         private readonly creditService: CreditService,
         private dataSource: DataSource,
     ) { }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SALE ORDER WORKFLOW (Pharmacist → Cashier)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Step 1: Pharmacist creates a pending sale order.
+     * No stock is deducted at this point.
+     */
+    async createOrder(dto: CreateSaleOrderDto, userId: string): Promise<SaleOrder> {
+        const organization_id = getTenantId();
+
+        // Generate order number
+        const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const order_number = `ORD-${dateStr}-${randomStr}`;
+
+        const order = this.saleOrderRepository.create({
+            order_number,
+            items: dto.items,
+            total_amount: dto.total_amount,
+            discount: dto.discount ?? 0,
+            patient_id: dto.patient_id,
+            prescription_image_url: dto.prescription_image_url,
+            is_controlled_transaction: dto.is_controlled_transaction ?? false,
+            status: SaleOrderStatus.PENDING,
+            created_by: userId,
+            organization_id,
+        });
+
+        return this.saleOrderRepository.save(order);
+    }
+
+    /**
+     * Step 2: Cashier confirms the order — executes payment, deducts stock,
+     * records the amount in the payment account, and creates the finalized Sale.
+     */
+    async confirmOrder(orderId: string, dto: ConfirmSaleOrderDto, userId: string): Promise<Sale> {
+        const organization_id = getTenantId();
+
+        const order = await this.saleOrderRepository.findOne({
+            where: { id: orderId, organization_id },
+        });
+        if (!order) throw new NotFoundException('Sale order not found');
+        if (order.status !== SaleOrderStatus.PENDING) {
+            throw new BadRequestException(`Order is already ${order.status.toLowerCase()}.`);
+        }
+
+        // Mark order as confirmed immediately to prevent double-confirm
+        order.status = SaleOrderStatus.CONFIRMED;
+        order.confirmed_by = userId;
+        order.confirmed_at = new Date();
+        order.payment_account_id = dto.payment_account_id;
+        order.payment_account_name = dto.payment_account_name;
+        await this.saleOrderRepository.save(order);
+
+        try {
+            // Execute the sale inside a transaction (stock deduction + sale creation)
+            const sale = await this.dataSource.transaction(async (manager) => {
+                const medIds = order.items.map((i: any) => i.medicine_id);
+                const medicines = await manager.getRepository(Medicine).find({
+                    where: { id: In(medIds), organization_id },
+                });
+
+                const hasControlled = medicines.some(m => m.is_controlled);
+
+                // Generate unique receipt number
+                const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+                const receiptNumber = `RCPT-${dateStr}-${randomStr}`;
+
+                // Create the Sale header using CASH-like method mapped from payment account
+                const saleHeader = manager.create(Sale, {
+                    receipt_number: receiptNumber,
+                    patient_id: order.patient_id,
+                    total_amount: order.total_amount,
+                    discount: order.discount,
+                    payment_method: PaymentMethod.CASH, // all account-based payments are treated as CASH-equivalent
+                    split_payments: [],
+                    prescription_image_url: order.prescription_image_url,
+                    is_controlled_transaction: hasControlled,
+                    created_by: order.created_by, // pharmacist who created the order
+                    organization_id,
+                    // Store payment account info in split_payments as structured metadata
+                    // We embed it there so no schema change is needed on the Sale entity
+                });
+
+                // Store payment account reference via a safe metadata field
+                (saleHeader as any).payment_account_id = dto.payment_account_id;
+                (saleHeader as any).payment_account_name = dto.payment_account_name;
+                (saleHeader as any).confirmed_by = userId;
+
+                const savedSale = await manager.save(saleHeader);
+
+                // Process each item — respect batch selection if pharmacist chose a specific one
+                for (const item of order.items as any[]) {
+                    let transactions: any[];
+
+                    if (item.batch_id) {
+                        // Pharmacist chose a specific batch (FEFO override) — use stock override
+                        transactions = [await this.stockService.issueStockWithOverride(
+                            item.batch_id,
+                            item.quantity,
+                            ReferenceType.SALE,
+                            savedSale.id,
+                            userId,
+                            'Batch selected by pharmacist in POS',
+                        )].flat();
+
+                        const saleItem = manager.create(SaleItem, {
+                            sale_id: savedSale.id,
+                            medicine_id: item.medicine_id,
+                            batch_id: item.batch_id,
+                            quantity: item.quantity,
+                            unit_price: item.unit_price,
+                            subtotal: item.quantity * item.unit_price,
+                            organization_id,
+                        });
+                        await manager.save(saleItem);
+                    } else {
+                        // Default FEFO issuance
+                        transactions = await this.stockService.issueStock(
+                            item.medicine_id,
+                            item.quantity,
+                            ReferenceType.SALE,
+                            savedSale.id,
+                            userId,
+                        );
+
+                        for (const tx of transactions) {
+                            const saleItem = manager.create(SaleItem, {
+                                sale_id: savedSale.id,
+                                medicine_id: item.medicine_id,
+                                batch_id: tx.batch_id,
+                                quantity: tx.quantity,
+                                unit_price: item.unit_price,
+                                subtotal: tx.quantity * item.unit_price,
+                                organization_id,
+                            });
+                            await manager.save(saleItem);
+                        }
+                    }
+                }
+
+                const finalSale = await manager.findOne(Sale, {
+                    where: { id: savedSale.id, organization_id },
+                    relations: ['items', 'items.medicine', 'items.batch', 'patient'],
+                });
+
+                if (!finalSale) throw new Error('Sale creation failed');
+                return finalSale;
+            });
+
+            // Update order with the resulting sale id
+            await this.saleOrderRepository.update(orderId, { sale_id: sale.id });
+
+            // Trigger async side effects
+            this.alertsService.checkLowStock().catch(err =>
+                console.error('Error in reactive stock check:', err),
+            );
+            this.notificationsService.create({
+                title: 'Sale Confirmed',
+                message: `Order ${order.order_number} confirmed. Receipt: ${sale.receipt_number}`,
+                type: NotificationType.SALE,
+            }).catch(err => console.error('Error creating sale notification:', err));
+
+            return sale;
+        } catch (err) {
+            // Rollback order status on failure so it can be retried
+            await this.saleOrderRepository.update(orderId, { status: SaleOrderStatus.PENDING, confirmed_by: null as any, confirmed_at: null as any });
+            throw err;
+        }
+    }
+
+    /** Cancel a pending order */
+    async cancelOrder(orderId: string, userId: string): Promise<SaleOrder> {
+        const organization_id = getTenantId();
+        const order = await this.saleOrderRepository.findOne({
+            where: { id: orderId, organization_id },
+        });
+        if (!order) throw new NotFoundException('Sale order not found');
+        if (order.status !== SaleOrderStatus.PENDING) {
+            throw new BadRequestException(`Only PENDING orders can be cancelled. This order is ${order.status}.`);
+        }
+        order.status = SaleOrderStatus.CANCELLED;
+        return this.saleOrderRepository.save(order);
+    }
+
+    /** Get all pending orders for the cashier queue (polling) */
+    async findPendingOrders(): Promise<SaleOrder[]> {
+        return this.saleOrderRepository.find({
+            where: { status: SaleOrderStatus.PENDING, organization_id: getTenantId() },
+            relations: ['creator', 'patient'],
+            order: { created_at: 'ASC' },
+        });
+    }
+
+    /** Get all orders (for pharmacist "my orders" view) */
+    async findMyOrders(userId: string): Promise<SaleOrder[]> {
+        return this.saleOrderRepository.find({
+            where: { created_by: userId, organization_id: getTenantId() },
+            relations: ['creator', 'patient', 'confirmer'],
+            order: { created_at: 'DESC' },
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DIRECT SALE (Admin / legacy path — still supported)
+    // ─────────────────────────────────────────────────────────────────────────────
 
     async create(createSaleDto: CreateSaleDto, userId: string): Promise<Sale> {
         const { items, total_price, payment_method, ...rest } = createSaleDto;
@@ -49,7 +262,7 @@ export class SalesService {
 
                 // 1. Create Sale Header
                 const finalPaymentMethod = (payment_method as PaymentMethod) || PaymentMethod.CASH;
-                
+
                 // Generate unique receipt number (format: RCPT-YYYYMMDD-XXXX)
                 const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -82,8 +295,7 @@ export class SalesService {
                         throw new BadRequestException('A registered customer/patient is required for credit sales.');
                     }
                     const dueDate = new Date();
-                    dueDate.setDate(dueDate.getDate() + 30); // Default 30 days due date
-
+                    dueDate.setDate(dueDate.getDate() + 30);
                     await this.creditService.recordCreditSale(
                         rest.patient_id,
                         savedSale.id,
@@ -96,7 +308,6 @@ export class SalesService {
 
                 // 2. Process Items and Reduce Stock
                 for (const item of items) {
-                    // Issue stock using FIFO logic - returns array of transactions (one per batch)
                     const transactions = await this.stockService.issueStock(
                         item.medicine_id,
                         item.quantity,
@@ -105,7 +316,6 @@ export class SalesService {
                         userId
                     );
 
-                    // Create SaleItem records for each batch transaction involved
                     for (const tx of transactions) {
                         const saleItem = manager.create(SaleItem, {
                             sale_id: savedSale.id,
@@ -129,12 +339,9 @@ export class SalesService {
                 return finalSale;
             });
 
-            // Trigger low stock check after sale (async)
             this.alertsService.checkLowStock().catch(err =>
                 console.error('Error in reactive stock check:', err)
             );
-
-            // Notify admins of the new sale
             this.notificationsService.create({
                 title: 'New Sale Completed',
                 message: `A sale of $${sale.total_amount.toLocaleString()} has been processed (Receipt: ${sale.receipt_number || 'N/A'})`,
@@ -175,23 +382,19 @@ export class SalesService {
             });
             if (!sale) throw new NotFoundException('Sale not found');
 
-            // 0. Validate Credit Status (Refund restricted until credit is PAID)
-            const hasUnpaidCredit = (sale.payment_method === PaymentMethod.CREDIT || 
-                                     sale.split_payments?.some(p => p.method === PaymentMethod.CREDIT)) && 
+            const hasUnpaidCredit = (sale.payment_method === PaymentMethod.CREDIT ||
+                                     sale.split_payments?.some(p => p.method === PaymentMethod.CREDIT)) &&
                                     sale.credit_records?.some(cr => cr.status !== CreditStatus.PAID);
 
             if (hasUnpaidCredit) {
                 throw new BadRequestException('Refund restricted: the associated credit/debt for this sale must be fully paid before a refund can be processed.');
             }
 
-            // Find an item that hasn't been refunded yet for this medicine
             const item = sale.items.find(i => i.medicine_id === medicine_id && !i.is_refunded);
             if (!item) throw new BadRequestException('No unrefunded item found for this medicine in this sale');
-            
-            // For now, we assume full item refund as per current UI logic
+
             if (item.quantity < quantity) throw new BadRequestException('Refund quantity exceeds original sale item quantity');
 
-            // 1. Create Refund Record
             const refund = manager.create(Refund, {
                 sale_id,
                 medicine_id,
@@ -203,18 +406,14 @@ export class SalesService {
             });
             const savedRefund = await manager.save(refund);
 
-            // 2. Update SaleItem status
             item.is_refunded = true;
             await manager.save(item);
 
-            // 3. Update Sale Header
-            // Check if ALL items are now refunded
             const allItemsRefunded = sale.items.every(i => i.is_refunded);
             sale.is_refunded = allItemsRefunded;
             sale.refund_amount = Number(sale.refund_amount || 0) + Number(amount);
             await manager.save(sale);
 
-            // 4. Reverse Stock (Add back to batch)
             const TransactionType = (await import('../stock/entities/stock-transaction.entity')).TransactionType;
             await this.stockService.recordTransaction(
                 item.batch_id,
