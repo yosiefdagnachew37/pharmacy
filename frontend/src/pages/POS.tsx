@@ -58,6 +58,7 @@ interface SaleOrder {
   items: CartItem[];
   total_amount: number;
   discount: number;
+  is_controlled_transaction: boolean;
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
   patient_id?: string;
   patient?: { name: string };

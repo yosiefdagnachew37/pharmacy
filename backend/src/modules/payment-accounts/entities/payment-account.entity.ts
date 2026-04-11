@@ -1,8 +1,9 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, ManyToOne,
-  JoinColumn, CreateDateColumn, UpdateDateColumn,
+  JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany,
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { PaymentAccountTransaction } from './payment-account-transaction.entity';
 
 export enum PaymentAccountType {
   CASH      = 'CASH',
@@ -31,9 +32,16 @@ export class PaymentAccount {
   @Column({ default: true })
   is_active: boolean;
 
+  /** Running balance — incremented each time a cashier confirms payment to this account */
+  @Column('decimal', { precision: 14, scale: 2, default: 0 })
+  balance: number;
+
   @ManyToOne(() => Organization)
   @JoinColumn({ name: 'organization_id' })
   organization: Organization;
+
+  @OneToMany(() => PaymentAccountTransaction, transaction => transaction.payment_account)
+  transactions: PaymentAccountTransaction[];
 
   @Column({ type: 'uuid', nullable: false })
   organization_id: string;

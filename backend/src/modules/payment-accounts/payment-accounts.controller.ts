@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Put, Delete,
-  Body, Param, UseGuards, Request,
+  Body, Param, UseGuards, Request, Query,
 } from '@nestjs/common';
 import { PaymentAccountsService } from './payment-accounts.service';
 import { CreatePaymentAccountDto } from './dto/create-payment-account.dto';
@@ -25,6 +25,18 @@ export class PaymentAccountsController {
     return this.service.findActive();
   }
 
+  @Get('transactions')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR)
+  getAllTransactions(@Query('date') date?: string) {
+    return this.service.getTransactions(undefined, { date });
+  }
+
+  @Get(':id/transactions')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.AUDITOR)
+  getAccountTransactions(@Param('id') id: string, @Query('date') date?: string) {
+    return this.service.getTransactions(id, { date });
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
@@ -32,8 +44,8 @@ export class PaymentAccountsController {
 
   @Post()
   @Roles(UserRole.ADMIN)
-  create(@Body() dto: CreatePaymentAccountDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreatePaymentAccountDto, @Request() req) {
+    return this.service.create(dto, req);
   }
 
   @Put(':id')

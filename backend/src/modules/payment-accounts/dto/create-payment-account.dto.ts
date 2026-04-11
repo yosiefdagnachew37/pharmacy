@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { PaymentAccountType } from '../entities/payment-account.entity';
 
 export class CreatePaymentAccountDto {
@@ -17,6 +17,10 @@ export class CreatePaymentAccountDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsNumber()
+  @IsOptional()
+  initial_balance?: number;
 
   @IsBoolean()
   @IsOptional()

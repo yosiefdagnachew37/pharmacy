@@ -23,6 +23,7 @@ const categories = [
 const Expenses = () => {
     const { role } = useAuth();
     const [expenses, setExpenses] = useState<any[]>([]);
+    const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
     const [dailyExpected, setDailyExpected] = useState<any>(null);
     const [monthlySummary, setMonthlySummary] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -48,19 +49,22 @@ const Expenses = () => {
         expense_date: new Date().toISOString().split('T')[0],
         is_recurring: false,
         description: '',
-        receipt_reference: ''
+        receipt_reference: '',
+        payment_account_id: ''
     });
 
     const fetchData = async () => {
         try {
-            const [expRes, dailyRes, monthlyRes] = await Promise.all([
+            const [expRes, dailyRes, monthlyRes, accRes] = await Promise.all([
                 client.get('/expenses'),
                 client.get('/expenses/daily-expected'),
-                client.get('/expenses/monthly-summary')
+                client.get('/expenses/monthly-summary'),
+                client.get('/payment-accounts/active')
             ]);
             setExpenses(expRes.data);
             setDailyExpected(dailyRes.data);
             setMonthlySummary(monthlyRes.data);
+            setPaymentAccounts(accRes.data || []);
         } catch (err) {
             console.error('Failed to load expenses data', err);
         } finally {
@@ -74,7 +78,8 @@ const Expenses = () => {
         try {
             const data = {
                 ...form,
-                amount: parseFloat(form.amount)
+                amount: parseFloat(form.amount),
+                payment_account_id: form.payment_account_id || undefined
             };
 
             if (editing) {
@@ -112,7 +117,8 @@ const Expenses = () => {
             expense_date: new Date(e.expense_date).toISOString().split('T')[0],
             is_recurring: e.is_recurring,
             description: e.description || '',
-            receipt_reference: e.receipt_reference || ''
+            receipt_reference: e.receipt_reference || '',
+            payment_account_id: e.payment_account_id || ''
         });
         setShowModal(true);
     };
@@ -126,7 +132,8 @@ const Expenses = () => {
             expense_date: new Date().toISOString().split('T')[0],
             is_recurring: false,
             description: '',
-            receipt_reference: ''
+            receipt_reference: '',
+            payment_account_id: ''
         });
     };
 
@@ -360,6 +367,32 @@ const Expenses = () => {
                                 >
                                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Withdraw From Payment Account (Optional)</label>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                                        <Wallet2 className="w-5 h-5" />
+                                    </div>
+                                    <select
+                                        value={form.payment_account_id}
+                                        onChange={e => setForm({ ...form, payment_account_id: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm font-medium"
+                                    >
+                                        <option value="">-- Do not deduct from configured accounts --</option>
+                                        {paymentAccounts.map(acc => (
+                                            <option key={acc.id} value={acc.id}>
+                                                {acc.name} (Balance: ETB {Number(acc.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {!editing && form.payment_account_id && (
+                                   <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600 mt-1.5 pl-14">
+                                      Funds will be automatically debited from this account.
+                                   </p>
+                                )}
                             </div>
 
                             <div>

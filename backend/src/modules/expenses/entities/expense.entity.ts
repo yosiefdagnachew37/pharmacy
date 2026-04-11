@@ -59,6 +59,9 @@ export class Expense {
     @Column({ nullable: true })
     branch_id: string;
 
+    @Column({ nullable: true, type: 'uuid' })
+    payment_account_id: string;
+
     @CreateDateColumn()
     created_at: Date;
 

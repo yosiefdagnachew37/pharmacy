@@ -21,6 +21,7 @@ import CreditManagement from './pages/CreditManagement';
 import IntelligentForecasting from './pages/IntelligentForecasting';
 import SalesHistory from './pages/SalesHistory';
 import StockAudit from './pages/StockAudit';
+import PaymentAccounts from './pages/PaymentAccounts';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from './components/Toast';
@@ -283,6 +284,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <StockAudit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="payment-accounts"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
+                  <PaymentAccounts />
                 </ProtectedRoute>
               }
             />

@@ -46,7 +46,9 @@ export default function SubscriptionPlans() {
     'Intelligent Forecasting',
     'Inventory',
     'Expenses',
-    'Credit'
+    'Credit',
+    'Payment Accounts',
+    'Stock Audit'
   ];
 
   const [formData, setFormData] = useState({

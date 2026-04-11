@@ -59,6 +59,7 @@ const allMenuItems: MenuItem[] = [
   { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
   { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Expenses' },
   { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], requiredFeature: 'Credit' },
+  { icon: Wallet2, label: 'Payment Accounts', path: '/payment-accounts', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Payment Accounts' },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: Shield, label: 'Super Admin Panel', path: '/super-admin', roles: ['SUPER_ADMIN'] },
 ];

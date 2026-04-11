@@ -15,6 +15,8 @@ import { NotificationType } from '../notifications/entities/notification.entity'
 import { CreditService } from '../credit/credit.service';
 import { Refund } from './entities/refund.entity';
 import { CreditStatus } from '../credit/entities/credit-record.entity';
+import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
+import { PaymentAccountTransaction, TransactionType as PATransactionType, ReferenceType as PAReferenceType } from '../payment-accounts/entities/payment-account-transaction.entity';
 import { getTenantId } from '../../common/utils/tenant-query';
 
 @Injectable()
@@ -127,6 +129,29 @@ export class SalesService {
                 (saleHeader as any).confirmed_by = userId;
 
                 const savedSale = await manager.save(saleHeader);
+
+                // Update the PaymentAccount balance and log transaction
+                if (dto.payment_account_id) {
+                    const paymentAccount = await manager.findOne(PaymentAccount, {
+                        where: { id: dto.payment_account_id, organization_id }
+                    });
+                    if (paymentAccount) {
+                        paymentAccount.balance = Number(paymentAccount.balance || 0) + Number(order.total_amount);
+                        await manager.save(paymentAccount);
+
+                        const accountTransaction = manager.create(PaymentAccountTransaction, {
+                            payment_account_id: paymentAccount.id,
+                            amount: Number(order.total_amount),
+                            type: PATransactionType.CREDIT,
+                            reference_type: PAReferenceType.SALE,
+                            reference_id: savedSale.id,
+                            description: `Sale Receipt: ${receiptNumber}`,
+                            created_by: userId,
+                            organization_id,
+                        });
+                        await manager.save(accountTransaction);
+                    }
+                }
 
                 // Process each item — respect batch selection if pharmacist chose a specific one
                 for (const item of order.items as any[]) {

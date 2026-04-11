@@ -20,15 +20,8 @@ import {
   KeyRound,
   Sun,
   Moon,
-  Laptop,
-  Wallet,
-  Plus,
-  Trash2,
-  Pencil,
-  X,
-  Banknote
+  Laptop
 } from 'lucide-react';
-import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { Theme, Density } from '../contexts/ThemeContext';
@@ -42,7 +35,7 @@ import {
 import { toastSuccess, toastError } from '../components/Toast';
 import Modal from '../components/Modal';
 
-type SettingsTab = 'profile' | 'appearance' | 'subscription' | 'notifications' | 'security' | 'preferences' | 'payment_accounts';
+type SettingsTab = 'profile' | 'appearance' | 'subscription' | 'notifications' | 'security' | 'preferences';
 
 export default function Settings() {
   const { user, role } = useAuth();
@@ -86,56 +79,8 @@ export default function Settings() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeNotes, setUpgradeNotes] = useState('');
 
-  // Payment Accounts state
-  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
-  const [paLoading, setPaLoading] = useState(false);
-  const [showPaForm, setShowPaForm] = useState(false);
-  const [editingPa, setEditingPa] = useState<any>(null);
-  const [paForm, setPaForm] = useState({ name: '', type: 'CASH', account_number: '', description: '', is_active: true });
-  const [paSaving, setPaSaving] = useState(false);
-
-  const fetchPaymentAccounts = async () => {
-    setPaLoading(true);
-    try {
-      const res = await client.get('/payment-accounts');
-      setPaymentAccounts(res.data || []);
-    } catch { /* ignore */ }
-    finally { setPaLoading(false); }
-  };
-
-  const handlePaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPaSaving(true);
-    try {
-      if (editingPa) {
-        await client.put(`/payment-accounts/${editingPa.id}`, paForm);
-        toastSuccess('Updated', `"${paForm.name}" has been updated.`);
-      } else {
-        await client.post('/payment-accounts', paForm);
-        toastSuccess('Created', `"${paForm.name}" has been added.`);
-      }
-      setShowPaForm(false);
-      setEditingPa(null);
-      setPaForm({ name: '', type: 'CASH', account_number: '', description: '', is_active: true });
-      fetchPaymentAccounts();
-    } catch { toastError('Error', 'Failed to save payment account.'); }
-    finally { setPaSaving(false); }
-  };
-
-  const handlePaDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    try {
-      await client.delete(`/payment-accounts/${id}`);
-      toastSuccess('Deleted', `"${name}" removed.`);
-      fetchPaymentAccounts();
-    } catch { toastError('Error', 'Could not delete account.'); }
-  };
-
   const handlePaToggle = async (acc: any) => {
-    try {
-      await client.put(`/payment-accounts/${acc.id}`, { ...acc, is_active: !acc.is_active });
-      fetchPaymentAccounts();
-    } catch { toastError('Error', 'Could not update status.'); }
+    // legacy
   };
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -172,10 +117,6 @@ export default function Settings() {
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (activeTab === 'payment_accounts') fetchPaymentAccounts();
-  }, [activeTab]);
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,7 +215,6 @@ export default function Settings() {
     { id: 'notifications', label: 'Notifications', icon: Bell, roles: ['ADMIN', 'PHARMACIST'] },
     { id: 'security', label: 'Security', icon: Shield, roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR'] },
     { id: 'preferences', label: 'Preferences', icon: SettingsIcon, roles: ['ADMIN', 'PHARMACIST'] },
-    { id: 'payment_accounts', label: 'Payment Accounts', icon: Wallet, roles: ['ADMIN'] },
   ];
 
   const visibleTabs = tabs.filter(t => t.roles.includes(role || ''));
@@ -781,91 +721,6 @@ export default function Settings() {
                     <p className="text-[9px] text-gray-400 mt-1">This appears as a custom header on printed receipts.</p>
                   </div>
                 </div>
-              </div>
-            )}
-            {/* ========== PAYMENT ACCOUNTS ========== */}
-            {activeTab === 'payment_accounts' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-emerald-600"><Wallet className="w-4 h-4" /></div>
-                    <div>
-                      <h2 className="text-sm font-black text-gray-900 dark:text-white">Payment Accounts</h2>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Cash, bank, mobile money accounts</p>
-                    </div>
-                  </div>
-                  <button onClick={() => { setShowPaForm(true); setEditingPa(null); setPaForm({ name: '', type: 'CASH', account_number: '', description: '', is_active: true }); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-all">
-                    <Plus className="w-3.5 h-3.5" /> Add Account
-                  </button>
-                </div>
-
-                {showPaForm && (
-                  <form onSubmit={handlePaSubmit} className="mb-5 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 space-y-3">
-                    <h3 className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">{editingPa ? 'Edit Account' : 'New Account'}</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="col-span-2">
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Account Name *</label>
-                        <input type="text" required value={paForm.name} onChange={e => setPaForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Abyssinia Bank, Telebirr, Cash Drawer" className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 transition-all" />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Type</label>
-                        <select value={paForm.type} onChange={e => setPaForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500">
-                          <option value="CASH">💵 Cash</option>
-                          <option value="BANK">🏦 Bank Transfer</option>
-                          <option value="MOBILE_MONEY">📱 Mobile Money (Telebirr/CBE)</option>
-                          <option value="OTHER">Other</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Account / Reference No.</label>
-                        <input type="text" value={paForm.account_number} onChange={e => setPaForm(f => ({ ...f, account_number: e.target.value }))} placeholder="Optional" className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 transition-all" />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Description</label>
-                        <input type="text" value={paForm.description} onChange={e => setPaForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional note" className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 transition-all" />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={() => { setShowPaForm(false); setEditingPa(null); }} className="flex-1 py-2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-gray-600 dark:text-gray-300 rounded-lg font-bold text-xs hover:bg-gray-50 transition-all">Cancel</button>
-                      <button type="submit" disabled={paSaving} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-all disabled:opacity-50">{paSaving ? 'Saving…' : editingPa ? 'Save Changes' : 'Add Account'}</button>
-                    </div>
-                  </form>
-                )}
-
-                {paLoading ? (
-                  <div className="text-center py-8 text-gray-400 text-sm">Loading accounts…</div>
-                ) : paymentAccounts.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Wallet className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="font-semibold text-sm">No payment accounts yet</p>
-                    <p className="text-xs mt-1">Add accounts like "Cash Drawer", "Telebirr", "CBE", "Abyssinia Bank"</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {paymentAccounts.map((acc: any) => {
-                      const typeColors: Record<string, string> = { CASH: 'text-emerald-700 bg-emerald-50 border-emerald-200', BANK: 'text-indigo-700 bg-indigo-50 border-indigo-200', MOBILE_MONEY: 'text-blue-700 bg-blue-50 border-blue-200', OTHER: 'text-gray-700 bg-gray-50 border-gray-200' };
-                      const typeIcons: Record<string, string> = { CASH: '💵', BANK: '🏦', MOBILE_MONEY: '📱', OTHER: '💳' };
-                      return (
-                        <div key={acc.id} className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all ${acc.is_active ? 'bg-white dark:bg-gray-700/50 border-gray-200 dark:border-gray-600' : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-60'}`}>
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 border ${typeColors[acc.type] || typeColors.OTHER}`}>{typeIcons[acc.type] || '💳'}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{acc.name}</p>
-                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border uppercase tracking-wide ${typeColors[acc.type] || typeColors.OTHER}`}>{acc.type.replace('_', ' ')}</span>
-                            </div>
-                            {acc.account_number && <p className="text-xs text-gray-500 dark:text-gray-400">{acc.account_number}</p>}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button onClick={() => handlePaToggle(acc)} className={`px-2 py-1 rounded-lg text-[10px] font-black border transition-all ${acc.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'}`}>{acc.is_active ? 'Active' : 'Inactive'}</button>
-                            <button onClick={() => { setEditingPa(acc); setPaForm({ name: acc.name, type: acc.type, account_number: acc.account_number || '', description: acc.description || '', is_active: acc.is_active }); setShowPaForm(true); }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handlePaDelete(acc.id, acc.name)} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
           </div>
