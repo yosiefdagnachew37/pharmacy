@@ -128,7 +128,33 @@ export class ReportingController {
         this.sendWordResponse(res, buffer, `sales_report_${startDate.toISOString().split('T')[0]}.docx`);
     }
 
+    // Purchases Exports
+    @Get('purchases/export/excel')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
+    async exportPurchasesExcel(@Query('start') start: string, @Query('end') end: string, @Res() res: Response) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        const workbook = await this.reportingService.generatePurchasesExcel(startDate, endDate);
+        this.sendExcelResponse(res, workbook, `purchases_report_${startDate.toISOString().split('T')[0]}.xlsx`);
+    }
+
+    @Get('purchases/export/pdf')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
+    async exportPurchasesPdf(@Query('start') start: string, @Query('end') end: string, @Res() res: Response) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        this.sendPdfHeaders(res, `purchases_report_${startDate.toISOString().split('T')[0]}.pdf`);
+        this.reportingService.generatePurchasesPdf(startDate, endDate, res);
+    }
+
+    @Get('purchases/export/word')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.AUDITOR)
+    async exportPurchasesWord(@Query('start') start: string, @Query('end') end: string, @Res() res: Response) {
+        const { startDate, endDate } = this.parseDates(start, end);
+        const buffer = await this.reportingService.generatePurchasesWord(startDate, endDate);
+        this.sendWordResponse(res, buffer, `purchases_report_${startDate.toISOString().split('T')[0]}.docx`);
+    }
+
     // Profit & Loss Exports
+
     @Get('profit-loss/export/excel')
     @Roles(UserRole.ADMIN, UserRole.AUDITOR)
     async exportPLExcel(@Query('start') start: string, @Query('end') end: string, @Res() res: Response) {

@@ -189,7 +189,7 @@ const Reports = () => {
     const handleExport = async (type: string, format: 'excel' | 'pdf' | 'word') => {
         try {
             let url = `/reporting/${type}/export/${format}`;
-            if (type === 'sales' || type === 'profit-loss') {
+            if (type === 'sales' || type === 'profit-loss' || type === 'purchases') {
                 url += `?start=${dateRange.start}&end=${dateRange.end}`;
             }
 
@@ -526,6 +526,17 @@ const Reports = () => {
                                     <p className="text-sm text-gray-400 font-medium mt-1">
                                         {purchases.length} orders · ETB {purchases.reduce((s: number, p: any) => s + Number(p.total_amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} total
                                     </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => handleExport('purchases', 'excel')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100 whitespace-nowrap">
+                                        <FileSpreadsheet className="w-4 h-4" /> Excel
+                                    </button>
+                                    <button onClick={() => handleExport('purchases', 'pdf')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all border border-rose-100 whitespace-nowrap">
+                                        <FileText className="w-4 h-4" /> PDF
+                                    </button>
+                                    <button onClick={() => handleExport('purchases', 'word')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all border border-indigo-100 whitespace-nowrap">
+                                        <FileIcon className="w-4 h-4" /> Word
+                                    </button>
                                 </div>
                             </div>
 

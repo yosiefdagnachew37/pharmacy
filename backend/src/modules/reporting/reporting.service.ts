@@ -494,6 +494,158 @@ export class ReportingService {
             .getMany();
     }
 
+
+    // ─── PURCHASE EXPORTS ─────────────────────────────────────────
+
+    async generatePurchasesExcel(startDate: Date, endDate: Date) {
+        const pos = await this.getPurchasesReport(startDate, endDate);
+        const workbook = new ExcelJS.Workbook();
+        const ws = workbook.addWorksheet('Purchases Report');
+
+        ws.columns = [
+            { header: 'PO Number', key: 'po_number', width: 18 },
+            { header: 'Date', key: 'date', width: 22 },
+            { header: 'Supplier', key: 'supplier', width: 25 },
+            { header: 'Status', key: 'status', width: 18 },
+            { header: 'Payment Status', key: 'payment_status', width: 15 },
+            { header: 'Total Amount (ETB)', key: 'total_amount', width: 18 },
+            { header: 'Created By', key: 'created_by', width: 18 },
+        ];
+
+        // Style header row
+        const headerRow = ws.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        headerRow.height = 22;
+
+        pos.forEach(po => {
+            const row = ws.addRow({
+                po_number: po.po_number || 'N/A',
+                date: new Date(po.created_at).toLocaleString(),
+                supplier: po.supplier?.name || 'Unknown Supplier',
+                status: po.status,
+                payment_status: po.payment_status || 'UNPAID',
+                total_amount: Number(po.total_amount).toFixed(2),
+                created_by: po.created_by_user?.username || 'System',
+            });
+            // Zebra striping
+            if (row.number % 2 === 0) {
+                row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5FF' } };
+            }
+        });
+
+        // Add totals row
+        ws.addRow([]);
+        const totalRow = ws.addRow({
+            po_number: 'TOTAL',
+            total_amount: pos.reduce((sum, po) => sum + Number(po.total_amount || 0), 0).toFixed(2),
+        });
+        totalRow.font = { bold: true };
+        totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+
+        ws.columns.forEach(col => { col.border = { bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } } }; });
+
+        return workbook;
+    }
+
+    async generatePurchasesPdf(startDate: Date, endDate: Date, res: any) {
+        const pos = await this.getPurchasesReport(startDate, endDate);
+        const doc = new PDFDocument({ margin: 50, size: 'A4', layout: 'landscape' });
+
+        doc.fontSize(20).font('Helvetica-Bold').fillColor('#4F46E5').text('Purchase Orders Report', { align: 'center' });
+        doc.fontSize(10).font('Helvetica').fillColor('#6B7280').text(`Period: ${startDate.toLocaleDateString()} – ${endDate.toLocaleDateString()}`, { align: 'center' });
+        doc.moveDown(1.5);
+
+        // Column headers
+        const y = doc.y;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#374151');
+        doc.text('PO Number', 50, y);
+        doc.text('Date', 140, y);
+        doc.text('Supplier', 230, y);
+        doc.text('Status', 370, y);
+        doc.text('Pay Status', 460, y);
+        doc.text('Total (ETB)', 560, y);
+        doc.moveDown(0.3);
+        doc.strokeColor('#E5E7EB').moveTo(50, doc.y).lineTo(760, doc.y).stroke();
+        doc.moveDown(0.5);
+
+        doc.font('Helvetica').fontSize(8).fillColor('#111827');
+        let totalAmount = 0;
+        pos.forEach((po, i) => {
+            if (doc.y > 500) doc.addPage({ layout: 'landscape' });
+            const rowY = doc.y;
+            if (i % 2 === 0) {
+                doc.rect(50, rowY - 3, 720, 16).fill('#F9FAFB');
+                doc.fillColor('#111827');
+            }
+            doc.text(po.po_number || 'N/A', 50, rowY, { width: 85 });
+            doc.text(new Date(po.created_at).toLocaleDateString(), 140, rowY, { width: 85 });
+            doc.text(po.supplier?.name || 'Unknown', 230, rowY, { width: 135 });
+            doc.text(po.status, 370, rowY, { width: 85 });
+            doc.text(po.payment_status || 'UNPAID', 460, rowY, { width: 90 });
+            doc.text(`ETB ${Number(po.total_amount).toFixed(2)}`, 560, rowY, { width: 100 });
+            totalAmount += Number(po.total_amount || 0);
+            doc.moveDown(0.9);
+        });
+
+        doc.moveDown(0.5);
+        doc.strokeColor('#4F46E5').moveTo(50, doc.y).lineTo(760, doc.y).stroke();
+        doc.moveDown(0.5);
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#4F46E5')
+            .text(`GRAND TOTAL: ETB ${totalAmount.toFixed(2)}`, 50);
+
+        doc.pipe(res);
+        doc.end();
+    }
+
+    async generatePurchasesWord(startDate: Date, endDate: Date): Promise<Buffer> {
+        const pos = await this.getPurchasesReport(startDate, endDate);
+
+        const doc = new Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new Paragraph({
+                        text: 'Purchase Orders Report',
+                        heading: HeadingLevel.TITLE,
+                        alignment: AlignmentType.CENTER,
+                    }),
+                    new Paragraph({
+                        text: `Period: ${startDate.toLocaleDateString()} – ${endDate.toLocaleDateString()}`,
+                        alignment: AlignmentType.CENTER,
+                        spacing: { after: 400 },
+                    }),
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph({ text: 'PO Number', style: 'bold' })] }),
+                                    new TableCell({ children: [new Paragraph({ text: 'Date', style: 'bold' })] }),
+                                    new TableCell({ children: [new Paragraph({ text: 'Supplier', style: 'bold' })] }),
+                                    new TableCell({ children: [new Paragraph({ text: 'Status', style: 'bold' })] }),
+                                    new TableCell({ children: [new Paragraph({ text: 'Total (ETB)', style: 'bold' })] }),
+                                ],
+                            }),
+                            ...pos.map(po => new TableRow({
+                                children: [
+                                    new TableCell({ children: [new Paragraph(po.po_number || 'N/A')] }),
+                                    new TableCell({ children: [new Paragraph(new Date(po.created_at).toLocaleDateString())] }),
+                                    new TableCell({ children: [new Paragraph(po.supplier?.name || 'Unknown')] }),
+                                    new TableCell({ children: [new Paragraph(po.status)] }),
+                                    new TableCell({ children: [new Paragraph(`ETB ${Number(po.total_amount).toFixed(2)}`)] }),
+                                ],
+                            })),
+                        ],
+                    }),
+                ],
+            }],
+        });
+
+        return await Packer.toBuffer(doc);
+    }
+
     // ... existing generateSalesExcel ...
     async generateSalesExcel(startDate: Date, endDate: Date) {
         const sales = await this.getSalesReport(startDate, endDate);

@@ -332,7 +332,8 @@ const PharmacistPurchases = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest sticky top-0 z-30 shadow-sm border-b border-gray-100">
@@ -455,7 +456,63 @@ const PharmacistPurchases = () => {
                 </div>
             </div>
 
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+                {filteredPO.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-12 text-center text-gray-400 italic border border-gray-100 shadow-sm">
+                        No purchase orders found matching your criteria.
+                    </div>
+                ) : filteredPO.map((po) => (
+                    <div key={po.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-mono text-xs font-black text-indigo-600">{po.po_number}</p>
+                                <p className="font-bold text-gray-800 text-sm mt-0.5">{po.supplier?.name || 'Unknown Vendor'}</p>
+                            </div>
+                            <span className={`px-2.5 py-1 text-[9px] font-black uppercase rounded-md shadow-sm border border-black/5 ${getStatusBadge(po.status)}`}>
+                                {po.status.replace('_', ' ')}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="font-bold text-gray-500">Total</span>
+                            <span className="font-black text-gray-900">ETB {Number(po.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="font-bold text-gray-500">Payment</span>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${getPaymentStatusBadge(po.payment_status)}`}>{po.payment_status || 'UNPAID'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="font-bold text-gray-500">Date</span>
+                            <span className="text-gray-700 font-medium">{new Date(po.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                            <button onClick={() => { setSelectedPO(po); setShowHistoryModal(true); }}
+                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-100 transition-colors">
+                                <History className="w-3.5 h-3.5" /> History
+                            </button>
+                            <button onClick={() => { setSelectedPO(po); setShowPaymentModal(true); }}
+                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                <Eye className="w-3.5 h-3.5" /> View
+                            </button>
+                            {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
+                                <button onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
+                                    className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all">
+                                    Send for Payment
+                                </button>
+                            )}
+                            {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
+                                <button onClick={() => openReceiveModal(po)}
+                                    className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all">
+                                    Receive Goods
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {/* CREATE PO MODAL */}
+
             {showCreateModal && (
                 <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl border border-white/20">
