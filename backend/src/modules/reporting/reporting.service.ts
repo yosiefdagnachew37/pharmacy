@@ -437,6 +437,15 @@ export class ReportingService {
             .select('SUM(s.total_amount - COALESCE(s.refund_amount, 0))', 'total')
             .getRawOne();
 
+        // Compute today's COGS (purchase price × qty sold) for gross profit
+        const cogsTodayRaw = await this.saleItemsRepository.createQueryBuilder('si')
+            .leftJoin('si.sale', 's')
+            .leftJoin('si.batch', 'b')
+            .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
+            .andWhere('s.organization_id = :orgId', { orgId })
+            .select('SUM(COALESCE(b.purchase_price, 0) * si.quantity)', 'cogs')
+            .getRawOne();
+
         const [tSales, ySales, wSales] = await Promise.all([
             query("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date"),
             query("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date - 1"),
@@ -446,7 +455,8 @@ export class ReportingService {
         return {
             today: parseFloat(tSales?.total) || 0,
             yesterday: parseFloat(ySales?.total) || 0,
-            thisWeek: parseFloat(wSales?.total) || 0
+            thisWeek: parseFloat(wSales?.total) || 0,
+            costToday: parseFloat(cogsTodayRaw?.cogs) || 0,
         };
     }
 
@@ -473,6 +483,8 @@ export class ReportingService {
         return await this.poRepository.createQueryBuilder('po')
             .leftJoinAndSelect('po.supplier', 'supplier')
             .leftJoinAndSelect('po.created_by_user', 'user')
+            .leftJoinAndSelect('po.items', 'items')
+            .leftJoinAndSelect('items.medicine', 'medicine')
             .where("(po.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
                 start: startDate.toISOString().split('T')[0],
                 end: endDate.toISOString().split('T')[0]

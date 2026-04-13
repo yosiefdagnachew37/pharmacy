@@ -141,19 +141,7 @@ export class PurchaseOrdersService {
                     relations: ['batches']
                 });
                 
-                const medRisk = riskData.find(r => r.medicine_id === item.medicine_id && r.risk_status === 'CRITICAL');
-                if (medRisk) {
-                    throw new BadRequestException(`Purchase blocked: ${medicine?.name} is at CRITICAL expiry risk (Score: ${medRisk.risk_score}). Suggest supplier return instead of new purchase.`);
-                }
-
-                if (medicine) {
-                    const currentStock = (medicine.batches || []).reduce((sum, b) => sum + Number(b.quantity_remaining || 0), 0);
-                    const forecasted60DayDemand = await this.forecastingService.getForecastedDemand(item.medicine_id, 60);
-
-                    if (forecasted60DayDemand > 0 && (currentStock + item.quantity_ordered) > (forecasted60DayDemand * 1.2)) {
-                        throw new BadRequestException(`Over-purchase prevention: Ordering ${item.quantity_ordered} for ${medicine.name} would exceed 120% of 60-day forecasted demand (${forecasted60DayDemand}).`);
-                    }
-                }
+                // Note: Over-purchase and expiry checks removed — pharmacist may order any quantity.
 
                 const poItem = manager.create(PurchaseOrderItem, {
                     purchase_order_id: savedPO.id,

@@ -340,9 +340,9 @@ const Dashboard = () => {
               <div className="p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200">
                 <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">True Profit Today</p>
                 <h4 className="text-2xl font-black text-emerald-700">
-                  ETB {((revenue?.today || 0) - dailyExpense.total_expected_daily).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ETB {((revenue?.today || 0) - (revenue?.costToday || 0) - dailyExpense.total_expected_daily).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h4>
-                <p className="text-[9px] text-emerald-600/80 mt-1 uppercase font-bold text-right">(Rev - Exp)</p>
+                <p className="text-[9px] text-emerald-600/80 mt-1 uppercase font-bold text-right">(Rev - COGS - Exp)</p>
               </div>
             </div>
 

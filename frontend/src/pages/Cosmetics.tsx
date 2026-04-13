@@ -327,23 +327,29 @@ const Cosmetics = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Category</label>
-                            <select
+                            <input
+                                list="cosmetic_categories"
+                                placeholder="Select or type..."
                                 value={form.category}
                                 onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
-                            >
+                            />
+                            <datalist id="cosmetic_categories">
                                 {COSMETIC_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </select>
+                            </datalist>
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Unit</label>
-                            <select
+                            <input
+                                list="cosmetic_units"
+                                placeholder="Select or type..."
                                 value={form.unit}
                                 onChange={e => setForm(p => ({ ...p, unit: e.target.value }))}
                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
-                            >
+                            />
+                            <datalist id="cosmetic_units">
                                 {['PCS', 'BOTTLE', 'PACKET', 'BOX', 'TUBE', 'JAR', 'SACHET'].map(u => <option key={u} value={u}>{u}</option>)}
-                            </select>
+                            </datalist>
                         </div>
                     </div>
 
@@ -364,8 +370,8 @@ const Cosmetics = () => {
                             <input
                                 type="number"
                                 min={0}
-                                value={form.minimum_stock_level}
-                                onChange={e => setForm(p => ({ ...p, minimum_stock_level: Number(e.target.value) }))}
+                                value={form.minimum_stock_level || ''}
+                                onChange={e => setForm(p => ({ ...p, minimum_stock_level: e.target.value === '' ? 0 : Number(e.target.value) }))}
                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                             />
                         </div>

@@ -380,21 +380,29 @@ const Medicines = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <input
                   type="text"
+                  list="medicine_categories"
                   placeholder="e.g. Antibiotic"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 />
+                <datalist id="medicine_categories">
+                  {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </datalist>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
                 <input
                   type="text"
+                  list="medicine_units"
                   placeholder="e.g. TAB, ML"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   value={formData.unit}
                   onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 />
+                <datalist id="medicine_units">
+                  {['TAB', 'CAP', 'BTL', 'AMP', 'VIAL', 'TUBE', 'SACHET', 'PCS'].map(u => <option key={u} value={u}>{u}</option>)}
+                </datalist>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

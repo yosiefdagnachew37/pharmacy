@@ -31,7 +31,83 @@ import {
     Area
 } from 'recharts';
 
+
 type ReportTab = 'profit-loss' | 'sales' | 'purchases' | 'inventory' | 'batches' | 'analytics';
+
+// Expandable Purchase Order Row for Reports
+const PurchaseRow = ({ po }: { po: any }) => {
+    const [expanded, setExpanded] = useState(false);
+    const statusColors: Record<string, string> = {
+        COMPLETED: 'bg-emerald-100 text-emerald-700',
+        CONFIRMED: 'bg-indigo-100 text-indigo-700',
+        APPROVED: 'bg-blue-100 text-blue-700',
+        PENDING_PAYMENT: 'bg-amber-100 text-amber-700',
+        CANCELLED: 'bg-rose-100 text-rose-700',
+        DRAFT: 'bg-gray-100 text-gray-600',
+    };
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 gap-2 hover:bg-gray-50 transition-colors text-left"
+            >
+                <div className="flex flex-wrap items-center gap-3">
+                    <span className="font-mono text-[11px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                        {po.po_number || 'PO-??'}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[po.status] || 'bg-gray-100 text-gray-600'}`}>
+                        {po.status?.replace('_', ' ')}
+                    </span>
+                    <span className="text-sm font-bold text-gray-800">{po.supplier?.name || 'Unknown Supplier'}</span>
+                    <span className="text-xs text-gray-400">{new Date(po.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-lg font-black text-gray-900">ETB {Number(po.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+                </div>
+            </button>
+            {expanded && (
+                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        Ordered Items · By {po.created_by_user?.username || 'System'}
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="text-[10px] text-gray-400 uppercase tracking-wide">
+                                <tr className="border-b border-gray-100">
+                                    <th className="text-left py-2 pr-4">Item</th>
+                                    <th className="text-right py-2 px-4">Qty Ordered</th>
+                                    <th className="text-right py-2 px-4">Unit Price</th>
+                                    <th className="text-right py-2 pl-4">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {(po.items || []).length === 0 ? (
+                                    <tr><td colSpan={4} className="py-4 text-center text-gray-400 italic text-xs">No item details available.</td></tr>
+                                ) : (po.items || []).map((item: any) => (
+                                    <tr key={item.id} className="hover:bg-gray-50/60">
+                                        <td className="py-2.5 pr-4 font-semibold text-gray-800">{item.medicine?.name || 'Unknown Item'}</td>
+                                        <td className="py-2.5 px-4 text-right font-mono font-bold text-gray-700">{item.quantity_ordered}</td>
+                                        <td className="py-2.5 px-4 text-right text-gray-500">ETB {Number(item.unit_price).toFixed(2)}</td>
+                                        <td className="py-2.5 pl-4 text-right font-bold text-gray-900">ETB {Number(item.subtotal || item.quantity_ordered * item.unit_price).toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            {(po.items || []).length > 0 && (
+                                <tfoot>
+                                    <tr className="border-t border-gray-200">
+                                        <td colSpan={3} className="pt-2.5 text-xs font-black text-gray-600 uppercase tracking-wider">Grand Total</td>
+                                        <td className="pt-2.5 pl-4 text-right font-black text-indigo-700">ETB {Number(po.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const Reports = () => {
     const [activeTab, setActiveTab] = useState<ReportTab>('profit-loss');
@@ -443,42 +519,30 @@ const Reports = () => {
 
                     {/* PURCHASES View */}
                     {activeTab === 'purchases' && (
-                        <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div className="space-y-4">
+                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-800">Purchase Orders</h3>
-                                    <p className="text-sm text-gray-400 font-medium mt-1">Detailed log of all purchases within the selected period.</p>
+                                    <p className="text-sm text-gray-400 font-medium mt-1">
+                                        {purchases.length} orders · ETB {purchases.reduce((s: number, p: any) => s + Number(p.total_amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} total
+                                    </p>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                                            <tr>
-                                                <th className="px-6 py-4 whitespace-nowrap">PO Number</th>
-                                                <th className="px-6 py-4 whitespace-nowrap">Date & Time</th>
-                                                <th className="px-6 py-4 whitespace-nowrap">Supplier</th>
-                                                <th className="px-6 py-4 whitespace-nowrap">Creator</th>
-                                                <th className="px-6 py-4 text-right whitespace-nowrap">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {purchases.map((po) => (
-                                                <tr key={po.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-600 whitespace-nowrap">{po.po_number || 'PO-XXXX'}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">{new Date(po.created_at).toLocaleString()}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-700 font-bold whitespace-nowrap">{po.supplier?.name || 'Unknown Supplier'}</td>
-                                                    <td className="px-6 py-4 italic text-sm text-gray-400 whitespace-nowrap">{po.created_by_user?.username || 'System'}</td>
-                                                    <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">ETB {Number(po.total_amount).toFixed(2)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            {purchases.length === 0 ? (
+                                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center text-gray-400 italic">
+                                    No purchase orders in the selected period.
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {purchases.map((po: any) => (
+                                        <PurchaseRow key={po.id} po={po} />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
+
 
                     {/* INVENTORY View */}
                     {activeTab === 'inventory' && (

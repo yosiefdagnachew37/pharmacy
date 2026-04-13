@@ -38,16 +38,10 @@ const Purchases = () => {
     // Form states
     const [supplierId, setSupplierId] = useState('');
     const [orderItems, setOrderItems] = useState([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
-    const [paymentMethod, setPaymentMethod] = useState('CASH');
     const [notes, setNotes] = useState('');
     const [isVatInclusive, setIsVatInclusive] = useState(false);
     const [vatRate, setVatRate] = useState(15);
-    
-    // Cheque specific states
-    const [chequeBankName, setChequeBankName] = useState('');
-    const [chequeNumber, setChequeNumber] = useState('');
-    const [chequeIssueDate, setChequeIssueDate] = useState('');
-    const [chequeDueDate, setChequeDueDate] = useState('');
+    const [poModalTab, setPoModalTab] = useState<'MEDICINE' | 'COSMETIC'>('MEDICINE');
 
     // Receive items state
     const [receiveData, setReceiveData] = useState<any[]>([]);
@@ -82,17 +76,12 @@ const Purchases = () => {
         try {
             await client.post('/purchase-orders', {
                 supplier_id: supplierId,
-                payment_method: paymentMethod,
+                payment_method: 'CASH',
                 is_vat_inclusive: isVatInclusive,
                 vat_rate: isVatInclusive ? vatRate : 0,
                 notes,
                 items: orderItems,
-                ...(paymentMethod === 'CHEQUE' && {
-                    cheque_bank_name: chequeBankName,
-                    cheque_number: chequeNumber,
-                    cheque_issue_date: chequeIssueDate,
-                    cheque_due_date: chequeDueDate,
-                })
+                po_type: poModalTab,
             });
             setShowCreateModal(false);
             resetForm();
@@ -205,15 +194,11 @@ const Purchases = () => {
 
     const resetForm = () => {
         setSupplierId('');
-        setPaymentMethod('CASH');
         setNotes('');
         setIsVatInclusive(false);
         setVatRate(15);
         setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
-        setChequeBankName('');
-        setChequeNumber('');
-        setChequeIssueDate('');
-        setChequeDueDate('');
+        setPoModalTab('MEDICINE');
     };
 
     const getStatusBadge = (status: string) => {
@@ -284,7 +269,7 @@ const Purchases = () => {
                     <h1 className="text-2xl font-black text-gray-900">Purchases & Procurements</h1>
                     <p className="text-gray-500 mt-1 font-medium">Manage stock orders and record supply receipts</p>
                 </div>
-                {(role === 'ADMIN' || role === 'PHARMACIST') && (
+                {(role === 'ADMIN' || role === 'PHARMACIST') && activeTab === 'PLANNED' && (
                     <button
                         onClick={() => setShowCreateModal(true)}
                         className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 border-b-4 border-indigo-800"
@@ -472,97 +457,126 @@ const Purchases = () => {
             {/* CREATE PO MODAL */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                                <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600"><ShoppingBag className="w-6 h-6" /></div>
+                    <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl border border-white/20">
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center mb-5">
+                            <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                                <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600"><ShoppingBag className="w-5 h-5" /></div>
                                 New Purchase Order
                             </h2>
                             <button onClick={() => setShowCreateModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95">
-                                <X className="w-6 h-6" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 text-gray-900">
-                            <div className="xl:col-span-2 space-y-6">
-                                <div>
-                                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Line Items</h3>
-                                    <div className="space-y-3">
-                                        {orderItems.map((item, index) => (
-                                            <div key={index} className="flex flex-wrap sm:flex-nowrap items-start gap-4 p-4 rounded-3xl border-2 border-gray-50 focus-within:border-indigo-100 focus-within:bg-indigo-50/10 transition-colors shadow-sm">
-                                                <div className="flex-1 min-w-[200px]">
-                                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Medicine / Product *</label>
-                                                    <select
-                                                        value={item.medicine_id}
-                                                        onChange={e => {
-                                                            const newItems = [...orderItems];
-                                                            newItems[index].medicine_id = e.target.value;
-                                                            setOrderItems(newItems);
-                                                        }}
-                                                        className="w-full px-4 py-3 bg-gray-50 border-transparent rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-bold transition-all text-gray-800"
-                                                    >
-                                                        <option value="">Select Item</option>
-                                                        {medicines.map(m => (
-                                                            <option key={m.id} value={m.id}>{m.name} — {m.generic_name}</option>
+                        {/* Order Type Tabs */}
+                        <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl mb-6 shadow-inner">
+                            <button
+                                onClick={() => { setPoModalTab('MEDICINE'); setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]); }}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                                    poModalTab === 'MEDICINE'
+                                        ? 'bg-white text-indigo-700 shadow-md'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                💊 Medicine Order
+                            </button>
+                            <button
+                                onClick={() => { setPoModalTab('COSMETIC'); setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]); }}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                                    poModalTab === 'COSMETIC'
+                                        ? 'bg-white text-pink-700 shadow-md'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                ✨ Cosmetics Order
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 text-gray-900">
+                            {/* Line Items */}
+                            <div className="xl:col-span-2 space-y-4">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Line Items</h3>
+                                <div className="space-y-3">
+                                    {orderItems.map((item, index) => (
+                                        <div key={index} className="flex flex-wrap sm:flex-nowrap items-start gap-3 p-4 rounded-2xl border-2 border-gray-50 focus-within:border-indigo-100 focus-within:bg-indigo-50/10 transition-colors shadow-sm">
+                                            <div className="flex-1 min-w-[160px]">
+                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                                                    {poModalTab === 'MEDICINE' ? 'Medicine' : 'Cosmetic'} *
+                                                </label>
+                                                <select
+                                                    value={item.medicine_id}
+                                                    onChange={e => {
+                                                        const newItems = [...orderItems];
+                                                        newItems[index].medicine_id = e.target.value;
+                                                        setOrderItems(newItems);
+                                                    }}
+                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-semibold transition-all text-gray-800"
+                                                >
+                                                    <option value="">Select Item</option>
+                                                    {medicines
+                                                        .filter(m => poModalTab === 'COSMETIC' ? m.product_type === 'COSMETIC' : m.product_type !== 'COSMETIC')
+                                                        .map(m => (
+                                                            <option key={m.id} value={m.id}>{m.name}{m.generic_name ? ` — ${m.generic_name}` : ''}</option>
                                                         ))}
-                                                    </select>
-                                                </div>
-                                                <div className="w-[100px]">
-                                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Qty *</label>
-                                                    <input
-                                                        type="number" min="1"
-                                                        value={item.quantity_ordered}
-                                                        onChange={e => {
-                                                            const newItems = [...orderItems];
-                                                            newItems[index].quantity_ordered = parseInt(e.target.value) || 0;
-                                                            setOrderItems(newItems);
-                                                        }}
-                                                        className="w-full px-4 py-3 bg-gray-50 border-transparent rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black text-center transition-all text-gray-800"
-                                                    />
-                                                </div>
-                                                <div className="w-[140px]">
-                                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Unit Prc (ETB) *</label>
-                                                    <input
-                                                        type="number" min="0" step="0.01"
-                                                        value={item.unit_price}
-                                                        onChange={e => {
-                                                            const newItems = [...orderItems];
-                                                            newItems[index].unit_price = parseFloat(e.target.value) || 0;
-                                                            setOrderItems(newItems);
-                                                        }}
-                                                        className="w-full px-4 py-3 bg-gray-50 border-transparent rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black transition-all text-gray-800"
-                                                    />
-                                                </div>
-                                                <div className="h-full flex items-end justify-center pb-3">
-                                                    {index > 0 && (
-                                                        <button
-                                                            onClick={() => setOrderItems(orderItems.filter((_, i) => i !== index))}
-                                                            className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-colors"
-                                                        >
-                                                            <X className="w-5 h-5" />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                </select>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <button
-                                        onClick={() => setOrderItems([...orderItems, { medicine_id: '', quantity_ordered: 1, unit_price: 0 }])}
-                                        className="mt-4 text-[11px] font-black text-indigo-700 hover:text-white uppercase tracking-wider flex items-center bg-indigo-50 hover:bg-indigo-600 px-5 py-2.5 rounded-xl transition-all active:scale-95"
-                                    >
-                                        <Plus className="w-4 h-4 mr-2" /> Add Next Item
-                                    </button>
+                                            <div className="w-[90px]">
+                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Qty *</label>
+                                                <input
+                                                    type="number" min="1"
+                                                    value={item.quantity_ordered || ''}
+                                                    onChange={e => {
+                                                        const newItems = [...orderItems];
+                                                        newItems[index].quantity_ordered = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                                        setOrderItems(newItems);
+                                                    }}
+                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black text-center transition-all text-gray-800"
+                                                />
+                                            </div>
+                                            <div className="w-[130px]">
+                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Unit Price (ETB) *</label>
+                                                <input
+                                                    type="number" min="0" step="0.01"
+                                                    value={item.unit_price || ''}
+                                                    onChange={e => {
+                                                        const newItems = [...orderItems];
+                                                        newItems[index].unit_price = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                                        setOrderItems(newItems);
+                                                    }}
+                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black transition-all text-gray-800"
+                                                />
+                                            </div>
+                                            <div className="flex items-end pb-1">
+                                                {index > 0 && (
+                                                    <button
+                                                        onClick={() => setOrderItems(orderItems.filter((_, i) => i !== index))}
+                                                        className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-colors"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
+                                <button
+                                    onClick={() => setOrderItems([...orderItems, { medicine_id: '', quantity_ordered: 1, unit_price: 0 }])}
+                                    className="text-[11px] font-black text-indigo-700 hover:text-white uppercase tracking-wider flex items-center bg-indigo-50 hover:bg-indigo-600 px-4 py-2 rounded-xl transition-all active:scale-95"
+                                >
+                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Item
+                                </button>
                             </div>
 
-                            <div className="space-y-5 bg-gray-50 p-6 rounded-[2rem] border border-gray-100 shadow-inner">
-                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Procurement Details</h3>
+                            {/* Procurement Details */}
+                            <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner">
+                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Procurement Details</h3>
                                 <div>
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Supplier *</label>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Supplier *</label>
                                     <select
                                         value={supplierId}
                                         onChange={e => setSupplierId(e.target.value)}
-                                        className="w-full px-4 py-3.5 bg-white rounded-2xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all"
+                                        className="w-full px-4 py-3 bg-white rounded-xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all"
                                     >
                                         <option value="">Select Vendor</option>
                                         {suppliers.map(s => (
@@ -570,83 +584,79 @@ const Purchases = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-3 mb-3">
+                                <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-3">
                                         <input
                                             type="checkbox"
                                             checked={isVatInclusive}
                                             onChange={e => setIsVatInclusive(e.target.checked)}
-                                            className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                                             id="vat-check"
                                         />
                                         <label htmlFor="vat-check" className="text-sm font-bold text-gray-700 cursor-pointer">Includes VAT</label>
                                     </div>
                                     {isVatInclusive && (
-                                        <div className="animate-in slide-in-from-top-2 duration-300 flex items-center gap-3">
+                                        <div className="mt-3 flex items-center gap-3">
                                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Rate (%)</label>
-                                            <input 
-                                                type="number" min="0" max="100" 
-                                                value={vatRate} onChange={e => setVatRate(Number(e.target.value))} 
-                                                className="w-20 px-3 py-2 text-sm bg-gray-50 font-bold border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100"
+                                            <input
+                                                type="number" min="0" max="100"
+                                                value={vatRate || ''}
+                                                onChange={e => setVatRate(e.target.value === '' ? 0 : Number(e.target.value))}
+                                                className="w-20 px-3 py-1.5 text-sm bg-gray-50 font-bold border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100"
                                             />
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 <div>
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Payment Terms / Method</label>
-                                    <select
-                                        value={paymentMethod}
-                                        onChange={e => setPaymentMethod(e.target.value)}
-                                        className="w-full px-4 py-3.5 bg-white rounded-2xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all"
-                                    >
-                                        <option value="CASH">Direct Cash Payment</option>
-                                        <option value="CREDIT">Credit Procurement</option>
-                                    </select>
-                                </div>
-                                
-                                <div className="pt-2">
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Remarks</label>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Remarks</label>
                                     <textarea
                                         value={notes}
                                         onChange={e => setNotes(e.target.value)}
-                                        rows={3}
-                                        className="w-full px-4 py-3 bg-white rounded-2xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-medium resize-none text-gray-800 transition-all"
+                                        rows={2}
+                                        className="w-full px-4 py-2.5 bg-white rounded-xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-medium resize-none text-gray-800 transition-all"
                                         placeholder="Internal notes..."
                                     />
                                 </div>
 
-                                <div className="mt-4 pt-4 border-t-2 border-dashed border-gray-200">
+                                <div className="pt-3 border-t-2 border-dashed border-gray-200">
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Subtotal:</span>
-                                        <span className="font-bold text-gray-800">ETB {orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0).toFixed(2)}</span>
+                                        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Subtotal</span>
+                                        <span className="font-bold text-gray-800 text-sm">ETB {orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0).toFixed(2)}</span>
                                     </div>
                                     {isVatInclusive && (
-                                        <div className="flex justify-between items-center mb-1 text-indigo-600">
-                                            <span className="text-xs font-bold uppercase tracking-wider">VAT ({vatRate}%):</span>
-                                            <span className="font-bold">ETB {(orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (vatRate / 100)).toFixed(2)}</span>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-indigo-600 text-xs font-bold uppercase tracking-wider">VAT ({vatRate}%)</span>
+                                            <span className="font-bold text-indigo-600 text-sm">ETB {(orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (vatRate / 100)).toFixed(2)}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-                                        <span className="text-gray-900 text-sm font-black uppercase tracking-wider">Grand Total:</span>
-                                        <span className={`text-2xl font-black ${orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1) > 50000 ? 'text-rose-600' : 'text-indigo-600'}`}>
+                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                                        <span className="text-gray-900 text-xs font-black uppercase tracking-wider">Grand Total</span>
+                                        <span className={`text-xl font-black ${
+                                            orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1) > 50000
+                                                ? 'text-rose-600' : 'text-indigo-600'
+                                        }`}>
                                             ETB {(orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1)).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                         </span>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="mt-10 flex justify-end gap-4 pt-6">
-                            <button onClick={() => setShowCreateModal(false)}
-                                className="px-8 py-3.5 bg-gray-100 rounded-2xl text-sm font-black text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-all active:scale-95">
-                                Dismiss
-                            </button>
-                            <button onClick={handleCreatePO}
-                                disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
-                                className="px-10 py-3.5 bg-indigo-600 text-white rounded-2xl text-sm font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50 border-b-4 border-indigo-800">
-                                Formalize Order &rarr;
-                            </button>
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setShowCreateModal(false)}
+                                        className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-black text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-all active:scale-95">
+                                        Cancel
+                                    </button>
+                                    <button onClick={handleCreatePO}
+                                        disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
+                                        className={`flex-1 py-2.5 rounded-xl text-sm font-black text-white transition-all shadow-xl active:scale-95 disabled:opacity-50 border-b-4 ${
+                                            poModalTab === 'COSMETIC'
+                                                ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-200 border-pink-700'
+                                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 border-indigo-800'
+                                        }`}>
+                                        Create Order
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

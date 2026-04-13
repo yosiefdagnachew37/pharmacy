@@ -179,7 +179,7 @@ function App() {
             <Route
               path="cosmetics"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPER_ADMIN']}>
                   <Cosmetics />
                 </ProtectedRoute>
               }
