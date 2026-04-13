@@ -200,6 +200,11 @@ export class PurchaseOrdersService {
                 });
                 if (!po) throw new NotFoundException('PO not found');
 
+                // Enforce strictly that goods cannot be received unless payment is settled by the Cashier.
+                if (po.payment_status !== POPaymentStatus.PAID) {
+                    throw new BadRequestException('Cannot receive goods before the cashier processes payment.');
+                }
+
                 // Generate unique GRN number (format: GRN-YYYYMMDD-XXXX)
                 const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
                 const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -456,6 +461,9 @@ export class PurchaseOrdersService {
             po.payment_account_id = data.payment_account_id;
             if (po.total_paid >= po.total_amount) {
                 po.payment_status = POPaymentStatus.PAID;
+                if (po.status === POStatus.PENDING_PAYMENT) {
+                    po.status = POStatus.CONFIRMED;
+                }
             } else {
                 po.payment_status = POPaymentStatus.PARTIALLY_PAID;
             }

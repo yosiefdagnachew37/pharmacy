@@ -56,7 +56,7 @@ const allMenuItems: MenuItem[] = [
   { icon: AlertCircle, label: 'Alerts', path: '/alerts', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
   { icon: History, label: 'Audit Logs', path: '/audit', roles: ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'] },
   { icon: Building2, label: 'Suppliers', path: '/suppliers', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Suppliers' },
-  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], requiredFeature: 'Purchases' },
+  { icon: ShoppingBag, label: 'Purchases', path: '/purchases', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'], requiredFeature: 'Purchases' },
   { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], requiredFeature: 'Intelligent Forecasting' },
   { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
   { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Expenses' },

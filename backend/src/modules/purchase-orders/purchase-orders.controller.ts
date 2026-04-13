@@ -15,9 +15,15 @@ export class PurchaseOrdersController {
     constructor(private readonly poService: PurchaseOrdersService) { }
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
     findAll(@Query('status') status?: POStatus) {
         return this.poService.findAll(status);
+    }
+
+    @Get('pending-payment')
+    @Roles(UserRole.ADMIN, UserRole.CASHIER)
+    findPendingPayment() {
+        return this.poService.findPendingPayment();
     }
 
     @Get('summary')
@@ -52,11 +58,7 @@ export class PurchaseOrdersController {
         return this.poService.updateStatus(id, body.status, req.user.userId);
     }
 
-    @Get('pending-payment')
-    @Roles(UserRole.ADMIN, UserRole.CASHIER)
-    findPendingPayment() {
-        return this.poService.findPendingPayment();
-    }
+
 
     @Post(':id/pay')
     @Roles(UserRole.ADMIN, UserRole.CASHIER)

@@ -470,8 +470,8 @@ export class ReportingService {
             .leftJoinAndSelect('s.patient', 'patient')
             .leftJoinAndSelect('s.user', 'user')
             .where("(s.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
-                start: new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
-                end: new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+                start: startDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' }),
+                end: endDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
             })
             .andWhere('s.organization_id = :orgId', { orgId })
             .orderBy('s.created_at', 'DESC')
@@ -486,8 +486,8 @@ export class ReportingService {
             .leftJoinAndSelect('po.items', 'items')
             .leftJoinAndSelect('items.medicine', 'medicine')
             .where("(po.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
-                start: new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
-                end: new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0]
+                start: startDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' }),
+                end: endDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
             })
             .andWhere('po.organization_id = :orgId', { orgId })
             .orderBy('po.created_at', 'DESC')

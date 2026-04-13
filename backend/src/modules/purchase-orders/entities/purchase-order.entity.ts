@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, Unique } from 'typeorm';
 import { Supplier } from '../../suppliers/entities/supplier.entity';
 import { User } from '../../users/entities/user.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { PurchaseOrderItem } from './purchase-order-item.entity';
 
 export enum POStatus {
     DRAFT = 'DRAFT',
@@ -122,6 +123,9 @@ export class PurchaseOrder {
 
     @Column('decimal', { precision: 12, scale: 2, nullable: true })
     cheque_amount: number;
+
+    @OneToMany(() => PurchaseOrderItem, item => item.purchase_order, { cascade: false })
+    items: PurchaseOrderItem[];
 
     @CreateDateColumn()
     created_at: Date;

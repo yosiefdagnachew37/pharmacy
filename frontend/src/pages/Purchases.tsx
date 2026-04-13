@@ -9,7 +9,7 @@ import { toastSuccess, toastError, toastWarning } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
 import ColumnFilter from '../components/ColumnFilter';
 
-const Purchases = () => {
+const PharmacistPurchases = () => {
     const { role } = useAuth();
     const [purchases, setPurchases] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -33,7 +33,7 @@ const Purchases = () => {
         paymentStatus: [],
         date: [],
     });
-    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED'>('ALL');
+    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED' | 'PENDING_PAYMENT'>('ALL');
 
     // Form states
     const [supplierId, setSupplierId] = useState('');
@@ -233,6 +233,7 @@ const Purchases = () => {
             let matchesTab = true;
             if (activeTab === 'ALL') matchesTab = po.status !== 'DRAFT';
             if (activeTab === 'PLANNED') matchesTab = po.status === 'DRAFT' || po.status === 'APPROVED';
+            if (activeTab === 'PENDING_PAYMENT') matchesTab = po.status === 'PENDING_PAYMENT';
             
             const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
             const poDate = new Date(po.created_at).toLocaleDateString();
@@ -286,6 +287,20 @@ const Purchases = () => {
                     >
                         Active Orders
                     </button>
+                    {(role === 'ADMIN' || role === 'CASHIER') && (
+                        <button
+                            onClick={() => setActiveTab('PENDING_PAYMENT')}
+                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'PENDING_PAYMENT' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'PENDING_PAYMENT' ? 'border-gray-100' : 'border-transparent'} relative`}
+                        >
+                            Payment Queue
+                            {purchases.filter(po => po.status === 'PENDING_PAYMENT').length > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                </span>
+                            )}
+                        </button>
+                    )}
 
                     <button
                         onClick={() => setActiveTab('PLANNED')}
@@ -395,11 +410,11 @@ const Purchases = () => {
                                     <td className="px-6 py-4 text-right space-x-1.5 pr-6">
                                         {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                             <button
-                                                onClick={() => handleUpdateStatus(po.id, 'CONFIRMED')}
-                                                className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors active:scale-95"
-                                                title="Confirm Order"
+                                                onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
+                                                className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-bold text-[10px] uppercase shadow-md shadow-indigo-200 active:scale-95 transition-all"
+                                                title="Send to Cashier for Payment"
                                             >
-                                                <CheckCircle className="w-4 h-4" />
+                                                Send for Payment
                                             </button>
                                         )}
                                         {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
@@ -888,9 +903,196 @@ const Purchases = () => {
                     </div>
                 </div>
             )}
-
         </div>
     );
+};
+
+const CashierPurchases = () => {
+    const [pendingPOs, setPendingPOs] = useState<any[]>([]);
+    const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedPO, setSelectedPO] = useState<any>(null);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [selectedPaymentAccount, setSelectedPaymentAccount] = useState('');
+
+    const fetchData = async () => {
+        try {
+            const [poRes, actRes] = await Promise.all([
+                client.get('/purchase-orders'),
+                client.get('/payment-accounts')
+            ]);
+            const filteredPOs = (poRes.data || []).filter((po: any) => po.status === 'PENDING_PAYMENT');
+            setPendingPOs(filteredPOs);
+            setPaymentAccounts(actRes.data || []);
+        } catch (err) {
+            console.error('Failed fetching queue data', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 6000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleRecordPayment = async () => {
+        if (!selectedPO || paymentAmount <= 0) return;
+        if (!selectedPaymentAccount) {
+            toastWarning('Payment Account Required', 'Please select a payment account.');
+            return;
+        }
+
+        try {
+            await client.post(`/purchase-orders/${selectedPO.id}/pay`, {
+                payment_account_id: selectedPaymentAccount,
+                amount: paymentAmount,
+            });
+            setShowPaymentModal(false);
+            setSelectedPaymentAccount('');
+            setSelectedPO(null);
+            fetchData();
+            toastSuccess('Payment Confirmed', 'The purchase order has been successfully paid.');
+        } catch (err: any) {
+            console.error('Failed to record payment', err);
+            const msg = extractErrorMessage(err, 'Error recording payment.');
+            toastError('Payment failed', msg);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="h-[60vh] flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-full min-h-0 space-y-6 pb-12">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-none">
+                <div>
+                    <h1 className="text-2xl font-black text-gray-900">PO Payment Queue</h1>
+                    <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-indigo-400" /> Auto-refreshing every 6 seconds
+                    </p>
+                </div>
+                <div className={`px-4 py-2 rounded-full font-bold text-sm border ${pendingPOs.length > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                    {pendingPOs.length} Pending {pendingPOs.length === 1 ? 'Order' : 'Orders'}
+                </div>
+            </div>
+
+            {pendingPOs.length === 0 ? (
+                <div className="text-center py-20 text-gray-400">
+                    <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="w-10 h-10 text-emerald-400 opacity-60" />
+                    </div>
+                    <p className="font-semibold text-gray-500 text-lg">Queue is Clear</p>
+                    <p className="text-sm mt-1">No purchase orders awaiting payment.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {pendingPOs.map(po => (
+                        <div key={po.id} className="bg-white rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-all p-5 flex flex-col">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-0.5">Pending Payment</p>
+                                    <p className="font-black text-gray-900 text-base">{po.po_number || 'PO-??'}</p>
+                                </div>
+                                <span className="text-xs text-gray-400">{new Date(po.created_at).toLocaleDateString()}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                                <Building2 className="w-4 h-4 text-gray-400" />
+                                <span className="font-semibold">{po.supplier?.name || 'Unknown Supplier'}</span>
+                            </div>
+
+                            <div className="border-t border-dashed border-gray-200 pt-3 mb-4 flex justify-between items-center mt-auto">
+                                <span className="text-sm font-bold text-gray-500">Total Due</span>
+                                <span className="text-xl font-black text-indigo-700">ETB {Number(po.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+
+                            <button
+                                onClick={() => { setSelectedPO(po); setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
+                                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+                            >
+                                <CheckCircle className="w-4 h-4" /> Accept Payment
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* PAYMENT MODAL */}
+            {showPaymentModal && selectedPO && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)} />
+                    <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200">
+                        <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 border border-gray-100 right-4 p-2 bg-gray-50 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
+                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100"><DollarSign className="w-6 h-6" /></div>
+                            <div>
+                                <h2 className="text-xl font-black text-gray-900">Process Bank/Cash Payment</h2>
+                                <p className="text-sm font-medium text-gray-500 mt-0.5">Clearing funds for {selectedPO.po_number}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex justify-between items-center">
+                                <span className="font-bold text-amber-900 text-sm">Total Required:</span>
+                                <span className="font-black text-amber-600 text-xl">ETB {Number(selectedPO.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Deduct From Account</label>
+                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {paymentAccounts.filter(act => act.is_active).map(act => (
+                                        <button key={act.id} onClick={() => setSelectedPaymentAccount(act.id)}
+                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${selectedPaymentAccount === act.id ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-100 bg-white hover:border-indigo-200'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-xl border ${selectedPaymentAccount === act.id ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                                                    <Building2 className="w-4 h-4" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className={`font-bold text-sm ${selectedPaymentAccount === act.id ? 'text-indigo-900' : 'text-gray-900'}`}>{act.name}</p>
+                                                    <p className="text-xs font-medium text-gray-500">Balance: ETB {Number(act.balance).toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            {selectedPaymentAccount === act.id && <CheckCircle className="w-5 h-5 text-indigo-600" />}
+                                        </button>
+                                    ))}
+                                    {paymentAccounts.length === 0 && (
+                                        <div className="p-6 text-center text-sm font-medium text-rose-500 bg-rose-50 rounded-2xl border border-rose-100">
+                                            No active payment accounts configured for the organization.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex gap-3">
+                            <button onClick={() => setShowPaymentModal(false)} className="flex-1 px-6 py-4 bg-gray-50 text-gray-600 rounded-2xl font-bold hover:bg-gray-100 transition-colors border border-gray-200">Cancel</button>
+                            <button onClick={handleRecordPayment} disabled={!selectedPaymentAccount} className="flex-[2] px-6 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors shadow-lg active:scale-[0.98] tracking-wide border-b-[4px] border-indigo-800 flex justify-center items-center gap-2">
+                                <DollarSign className="w-4 h-4" /> Confirm & Pay ETB {Number(selectedPO.total_amount).toLocaleString()}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const Purchases = () => {
+    const { role } = useAuth();
+    if (role === 'CASHIER') return <CashierPurchases />;
+    return <PharmacistPurchases />;
 };
 
 export default Purchases;
