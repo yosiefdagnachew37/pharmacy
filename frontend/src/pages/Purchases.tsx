@@ -336,7 +336,7 @@ const PharmacistPurchases = () => {
             <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto min-h-[400px]">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black tracking-widest sticky top-0 z-30 shadow-sm border-b border-gray-100">
+                        <thead className="bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-300 uppercase text-[10px] font-black tracking-widest sticky top-0 z-30 shadow-sm border-b border-gray-100 dark:border-slate-700">
                             <tr>
                                 <ColumnFilter
                                     label="PO Number"

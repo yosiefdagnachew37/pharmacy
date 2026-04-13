@@ -247,7 +247,7 @@ const SalesHistory = () => {
                                     onFilterChange={(v) => updateFilter('status', v)}
                                     className="px-3 py-3 text-center hidden sm:table-cell"
                                 />
-                                <th className="px-3 py-3 text-right sticky right-0 bg-gray-50 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
+                                <th className="px-3 py-3 text-right sticky right-0 bg-gray-50 dark:bg-slate-800 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -295,10 +295,10 @@ const SalesHistory = () => {
                                                 <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold border border-green-100">Paid</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50">
+                                        <td className="px-3 py-3 text-right sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50 dark:border-slate-800">
                                             <button
                                                 onClick={() => handleOpenDetail(sale)}
-                                                className="p-1 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                                                className="p-1 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-lg text-indigo-600 dark:text-indigo-400 transition-colors"
                                             >
                                                 <ChevronRight className="w-4 h-4" />
                                             </button>

@@ -413,13 +413,13 @@ const PharmacistPOS = () => {
       </div>
 
       {/* Cart Panel */}
-      <div className={`w-full lg:w-[420px] bg-white border border-gray-100 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 ${activeTab !== 'cart' && 'hidden lg:flex'}`}>
-        <div className="p-4 border-b border-gray-50 flex items-center justify-between flex-none">
+      <div className={`w-full lg:w-[420px] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 ${activeTab !== 'cart' && 'hidden lg:flex'}`}>
+        <div className="p-4 border-b border-gray-50 dark:border-slate-800 flex items-center justify-between flex-none">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600"><ShoppingCart className="w-5 h-5" /></div>
-            <h2 className="font-bold text-gray-800 text-lg">Current Sale</h2>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingCart className="w-5 h-5" /></div>
+            <h2 className="font-bold text-gray-800 dark:text-slate-100 text-lg">Current Sale</h2>
           </div>
-          <button onClick={() => setCart([])} className="text-[10px] font-black uppercase text-rose-500 hover:text-white bg-rose-50 hover:bg-rose-500 px-3 py-1.5 rounded-lg transition-all">Clear</button>
+          <button onClick={() => setCart([])} className="text-[10px] font-black uppercase text-rose-500 hover:text-white bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-500 px-3 py-1.5 rounded-lg transition-all">Clear</button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
@@ -427,7 +427,7 @@ const PharmacistPOS = () => {
             <div className="text-center py-16 text-gray-400"><ShoppingCart className="w-16 h-16 mx-auto mb-4 opacity-10" /><p className="font-medium">Click a medicine to add</p><p className="text-xs mt-1">FEFO batch selected automatically</p></div>
           ) : (
             cart.map((item, idx) => (
-              <div key={`${item.medicine_id}-${item.batch_id}-${idx}`} className="group relative bg-gray-50 p-3 rounded-2xl border border-gray-100/50">
+              <div key={`${item.medicine_id}-${item.batch_id}-${idx}`} className="group relative bg-gray-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-gray-100/50 dark:border-slate-700/50">
                 <div className="flex justify-between items-start mb-1.5">
                   <div className="pr-7">
                     <h4 className="text-sm font-bold text-gray-800 leading-tight">{item.name}</h4>
@@ -467,10 +467,10 @@ const PharmacistPOS = () => {
         </div>
 
         {/* Bottom Controls */}
-        <div className="p-3 bg-gray-50/50 rounded-b-[2rem] border-t border-gray-100 flex flex-col gap-2 flex-none">
+        <div className="p-3 bg-gray-50/50 dark:bg-slate-800/80 rounded-b-[2rem] border-t border-gray-100 dark:border-slate-800 flex flex-col gap-2 flex-none">
           {/* Customer */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 ml-1">Customer / Patient</label>
+            <label className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase mb-1 ml-1">Customer / Patient</label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select value={patientId} onChange={e => e.target.value === 'NEW_CUSTOMER' ? setShowAddPatientModal(true) : setPatientId(e.target.value)}
@@ -490,24 +490,24 @@ const PharmacistPOS = () => {
           )}
 
           {/* Discount + Totals */}
-          <div className="pt-2 border-t border-dashed border-gray-200">
-            <div className="flex justify-between items-center text-gray-500 mb-1">
+          <div className="pt-2 border-t border-dashed border-gray-200 dark:border-slate-700">
+            <div className="flex justify-between items-center text-gray-500 dark:text-slate-400 mb-1">
               <span className="text-[10px] font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Discount</span>
               <div className="relative w-16">
-                <input type="number" min="0" max="100" className="w-full text-right bg-white border border-gray-200 rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none focus:border-indigo-400" value={cartDiscount} onChange={e => setCartDiscount(parseFloat(e.target.value) || 0)} />
+                <input type="number" min="0" max="100" className="w-full text-right bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none focus:border-indigo-400" value={cartDiscount} onChange={e => setCartDiscount(parseFloat(e.target.value) || 0)} />
                 <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
               </div>
             </div>
-            <div className="flex justify-between items-center text-gray-400 mb-1">
+            <div className="flex justify-between items-center text-gray-400 dark:text-slate-500 mb-1">
               <span className="text-[10px] font-bold uppercase">Subtotal</span>
               <span className="text-xs font-bold">ETB {subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-end text-gray-900 mt-1">
+            <div className="flex justify-between items-end text-gray-900 dark:text-slate-100 mt-1">
               <div className="flex flex-col">
                 {discountAmount > 0 && <span className="text-[10px] font-bold text-rose-500 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
-                <span className="text-[10px] font-black uppercase leading-none text-gray-400">Total Due</span>
+                <span className="text-[10px] font-black uppercase leading-none text-gray-400 dark:text-slate-500">Total Due</span>
               </div>
-              <span className="text-xl font-black leading-none text-indigo-700">ETB {total.toFixed(2)}</span>
+              <span className="text-xl font-black leading-none text-indigo-700 dark:text-indigo-400">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 

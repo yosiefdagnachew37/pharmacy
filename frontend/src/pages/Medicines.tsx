@@ -249,7 +249,7 @@ const Medicines = () => {
 
         <div className="hidden md:block overflow-x-auto min-h-[400px]">
           <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
+            <thead className="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-300 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm transition-colors">
               <tr>
                 <ColumnFilter
                   label="Medicine Name"
