@@ -33,7 +33,7 @@ const Purchases = () => {
         paymentStatus: [],
         date: [],
     });
-    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED' | 'PENDING_PAYMENT'>('ALL');
+    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED'>('ALL');
 
     // Form states
     const [supplierId, setSupplierId] = useState('');
@@ -233,7 +233,6 @@ const Purchases = () => {
             let matchesTab = true;
             if (activeTab === 'ALL') matchesTab = po.status !== 'DRAFT';
             if (activeTab === 'PLANNED') matchesTab = po.status === 'DRAFT' || po.status === 'APPROVED';
-            if (activeTab === 'PENDING_PAYMENT') matchesTab = po.status === 'PENDING_PAYMENT';
             
             const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
             const poDate = new Date(po.created_at).toLocaleDateString();
@@ -287,20 +286,7 @@ const Purchases = () => {
                     >
                         Active Orders
                     </button>
-                    {(role === 'ADMIN' || role === 'CASHIER') && (
-                        <button
-                            onClick={() => setActiveTab('PENDING_PAYMENT')}
-                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'PENDING_PAYMENT' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'PENDING_PAYMENT' ? 'border-gray-100' : 'border-transparent'} relative`}
-                        >
-                            Payment Queue
-                            {purchases.filter(po => po.status === 'PENDING_PAYMENT').length > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                                </span>
-                            )}
-                        </button>
-                    )}
+
                     <button
                         onClick={() => setActiveTab('PLANNED')}
                         className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'PLANNED' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'PLANNED' ? 'border-gray-100' : 'border-transparent'}`}
