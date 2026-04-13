@@ -204,7 +204,7 @@ const Cosmetics = () => {
                     </select>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
                             <tr>
@@ -291,6 +291,73 @@ const Cosmetics = () => {
                         </tbody>
                     </table>
                 </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-3">
+                    {loading ? (
+                        <div className="py-12 text-center border border-gray-100 rounded-2xl">
+                            <Loader2 className="w-8 h-8 text-pink-400 animate-spin mx-auto mb-2" />
+                            <p className="text-sm text-gray-400">Loading cosmetics...</p>
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-12 text-center border border-gray-100 rounded-2xl">
+                            <Sparkles className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                            <p className="text-sm font-semibold text-gray-400">No cosmetic products found</p>
+                        </div>
+                    ) : (
+                        filtered.map(item => {
+                            const isLow = item.total_stock <= (item.minimum_stock_level || 5);
+                            const isOut = item.total_stock <= 0;
+                            return (
+                                <div key={item.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col gap-3">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center shrink-0">
+                                                <ShoppingBag className="w-4 h-4 text-pink-500" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-sm text-gray-900">{item.name}</h3>
+                                                <span className="inline-block px-2.5 py-0.5 mt-1 bg-pink-50 text-pink-700 rounded-full text-[10px] font-bold border border-pink-100">
+                                                    {item.category || '—'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {isOut ? (
+                                            <span className="inline-flex px-2 py-1 bg-red-50 text-red-600 text-[10px] font-bold rounded-full border border-red-100">Out of Stock</span>
+                                        ) : isLow ? (
+                                            <span className="inline-flex px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full border border-amber-100">Low Stock</span>
+                                        ) : (
+                                            <span className="inline-flex px-2 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-full border border-emerald-100">In Stock</span>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                                        <div>
+                                            <span className="text-gray-400 text-[11px] uppercase tracking-wider font-bold">Stock</span>
+                                            <p className={`font-black ${isOut ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-emerald-600'}`}>
+                                                {item.total_stock || 0} {item.unit}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-gray-400 text-[11px] uppercase tracking-wider font-bold">Price</span>
+                                            <p className="font-black text-indigo-700">
+                                                {item.selling_price > 0 ? `ETB ${Number(item.selling_price).toFixed(2)}` : '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-gray-50 pt-3 mt-1 flex justify-end gap-2">
+                                        <button onClick={() => openEdit(item)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-500 hover:bg-indigo-100 rounded-lg text-[11px] font-bold transition-colors">
+                                            <Edit3 className="w-3.5 h-3.5" /> Edit
+                                        </button>
+                                        <button onClick={() => { setDeleteTarget(item); setShowDeleteModal(true); }} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[11px] font-bold transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5" /> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
                 {filtered.length > 0 && (
                     <div className="px-5 py-3 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400 font-medium">
                         <span>Showing {filtered.length} of {cosmetics.length} products</span>

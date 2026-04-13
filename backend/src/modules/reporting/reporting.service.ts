@@ -480,18 +480,23 @@ export class ReportingService {
 
     async getPurchasesReport(startDate: Date, endDate: Date) {
         const orgId = getTenantId();
-        return await this.poRepository.createQueryBuilder('po')
-            .leftJoinAndSelect('po.supplier', 'supplier')
-            .leftJoinAndSelect('po.created_by_user', 'user')
-            .leftJoinAndSelect('po.items', 'items')
-            .leftJoinAndSelect('items.medicine', 'medicine')
-            .where("(po.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
-                start: startDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' }),
-                end: endDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
-            })
-            .andWhere('po.organization_id = :orgId', { orgId })
-            .orderBy('po.created_at', 'DESC')
-            .getMany();
+        try {
+            return await this.poRepository.createQueryBuilder('po')
+                .leftJoinAndSelect('po.supplier', 'supplier')
+                .leftJoinAndSelect('po.created_by_user', 'createdByUser')
+                .leftJoinAndSelect('po.items', 'items')
+                .leftJoinAndSelect('items.medicine', 'medicine')
+                .where("(po.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
+                    start: startDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' }),
+                    end: endDate.toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
+                })
+                .andWhere('po.organization_id = :orgId', { orgId })
+                .orderBy('po.created_at', 'DESC')
+                .getMany();
+        } catch (error) {
+            console.error('Error in getPurchasesReport:', error);
+            throw error;
+        }
     }
 
 

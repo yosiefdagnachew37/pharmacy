@@ -260,7 +260,7 @@ const StockAudit = () => {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="overflow-x-auto">
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
                                 <tr>
@@ -321,6 +321,58 @@ const StockAudit = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                    
+                    {/* Mobile Card View for Audit Items */}
+                    <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                        {filteredItems.map(item => (
+                            <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
+                                    <div>
+                                        <p className="font-bold text-gray-800 text-sm">{item.medicine?.name || 'N/A'}</p>
+                                        <p className="text-[10px] text-gray-500">{item.medicine?.generic_name || 'N/A'}</p>
+                                    </div>
+                                    <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded whitespace-nowrap">
+                                        Batch: {item.batch?.batch_number || 'N/A'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-gray-400">System Qty</p>
+                                        <p className="font-medium text-gray-700">{item.system_quantity}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] uppercase font-bold text-gray-400">Physical Qty</p>
+                                        {isSummary ? (
+                                            <span className="font-bold text-gray-800">{item.scanned_quantity}</span>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                className="w-20 px-2 py-1 border border-gray-200 rounded font-bold text-sm outline-none focus:ring-1 focus:ring-indigo-500 ml-auto"
+                                                value={item.scanned_quantity}
+                                                onChange={(e) => handleUpdateQuantity(item.batch_id, parseInt(e.target.value) || 0)}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-50">
+                                    {!isSummary ? (
+                                        item.scanned_quantity > 0 ? (
+                                            <span className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold uppercase">
+                                                <CheckCircle className="w-3.5 h-3.5" /> Checked
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1.5 text-gray-300 text-[10px] font-bold uppercase">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-gray-300" /> Pending
+                                            </span>
+                                        )
+                                    ) : <div></div>}
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${item.variance === 0 ? 'text-emerald-600 bg-emerald-50/50' : 'text-rose-600 bg-rose-50/50'}`}>
+                                        Var: {item.variance > 0 ? `+${item.variance}` : item.variance}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

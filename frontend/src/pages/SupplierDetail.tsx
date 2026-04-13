@@ -300,7 +300,8 @@ const SupplierDetail = () => {
                         </button>
                     </div>
                     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                        <table className="w-full text-sm text-left">
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full text-sm text-left">
                             <thead className="text-[10px] uppercase bg-gray-50 text-gray-500 font-bold">
                                 <tr>
                                     <th className="px-5 py-3">Period</th>
@@ -337,6 +338,45 @@ const SupplierDetail = () => {
                                 )}
                             </tbody>
                         </table>
+                        </div>
+                        
+                        {/* Mobile Card View for Performance History */}
+                        <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                            {performance.length === 0 ? (
+                                <div className="text-center py-10 text-gray-400 italic">No performance data recorded.</div>
+                            ) : performance.map(p => {
+                                const b = getScoreBadge(p.computed_score || 0);
+                                return (
+                                    <div key={p.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                        <div className="flex justify-between items-start mb-3 border-b border-gray-100 pb-3">
+                                            <div>
+                                                <p className="font-bold text-gray-800 text-sm">Period: <span className="font-mono text-indigo-600">{p.period}</span></p>
+                                            </div>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${b.class} uppercase tracking-widest`}>
+                                                {((p.computed_score || 0) * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold text-gray-400">Deliveries</p>
+                                                <p className="font-medium text-gray-700">{p.on_time_deliveries}/{p.total_deliveries} on-time</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] uppercase font-bold text-gray-400">Quality</p>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                                    <span className="font-bold text-gray-800">{p.quality_rating}</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-2 mt-1">
+                                                <p className="text-[10px] uppercase font-bold text-gray-400">Returns</p>
+                                                <p className="font-medium text-gray-700">{p.returned_items}/{p.total_items} items</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}

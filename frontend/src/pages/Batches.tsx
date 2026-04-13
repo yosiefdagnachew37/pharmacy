@@ -273,7 +273,7 @@ const Batches = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="hidden md:block overflow-x-auto min-h-[400px]">
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-30 shadow-sm">
               <tr>
@@ -378,6 +378,77 @@ const Batches = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3 pt-4.border-t border-gray-100 mt-4 rounded-b-2xl">
+        {loading ? (
+          <div className="py-12 text-center text-gray-400 italic">Loading batches...</div>
+        ) : filteredBatches.length === 0 ? (
+          <div className="py-12 text-center text-gray-400 italic">No batches found.</div>
+        ) : (
+          filteredBatches.map((batch) => (
+            <div key={batch.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-2 items-center">
+                  <div className={`p-2 rounded-lg ${isExpired(batch.expiry_date) ? 'bg-red-50 text-red-500' : isExpiringSoon(batch.expiry_date) ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-500'}`}>
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-gray-900">{batch.medicine?.name}</h3>
+                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Batch #{batch.batch_number}</p>
+                  </div>
+                </div>
+                {isExpired(batch.expiry_date) ? (
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[9px] font-bold border border-red-100 uppercase">
+                    <AlertTriangle className="w-3 h-3 mr-1" /> Expired
+                  </div>
+                ) : isExpiringSoon(batch.expiry_date) ? (
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[9px] font-bold border border-amber-100 uppercase">
+                    <Clock className="w-3 h-3 mr-1" /> Expiring
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[9px] font-bold border border-emerald-100 uppercase">
+                    Good
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-sm mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100/50">
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Quantity</span>
+                  <span className="font-black text-gray-800 text-base">{batch.quantity_remaining}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Expiry</span>
+                  <div className="flex items-center text-gray-700 font-bold">
+                    <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                    {new Date(batch.expiry_date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Buy Price</span>
+                  <span className="font-semibold text-gray-600">ETB {Number(batch.purchase_price).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Sell Price</span>
+                  <span className="font-black text-indigo-600">ETB {Number(batch.selling_price).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1 border-t border-gray-50">
+                <button onClick={() => handleEdit(batch)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-all">
+                  <Edit2 className="w-3.5 h-3.5" /> Edit
+                </button>
+                {canDelete('batches') && (
+                  <button onClick={() => setDeleteConfirm(batch.id)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-xs font-bold transition-all">
+                    <Trash2 className="w-3.5 h-3.5" /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Add Batch Modal */}

@@ -71,7 +71,7 @@ const PurchaseRow = ({ po }: { po: any }) => {
                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
                         Ordered Items · By {po.created_by_user?.username || 'System'}
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead className="text-[10px] text-gray-400 uppercase tracking-wide">
                                 <tr className="border-b border-gray-100">
@@ -102,6 +102,24 @@ const PurchaseRow = ({ po }: { po: any }) => {
                                 </tfoot>
                             )}
                         </table>
+                    </div>
+                    
+                    {/* Mobile Card View for PO Items */}
+                    <div className="md:hidden space-y-2 mt-2">
+                        {(po.items || []).length === 0 ? (
+                            <div className="py-4 text-center text-gray-400 italic text-xs">No item details available.</div>
+                        ) : (po.items || []).map((item: any) => (
+                            <div key={item.id} className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-sm flex flex-col gap-1.5">
+                                <div className="flex justify-between">
+                                    <span className="font-bold text-gray-800">{item.medicine?.name || 'Unknown Item'}</span>
+                                    <span className="font-black text-gray-900">ETB {Number(item.subtotal || item.quantity_ordered * item.unit_price).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500">
+                                    <span>Qty: {item.quantity_ordered}</span>
+                                    <span>@ ETB {Number(item.unit_price).toFixed(2)} / ea</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -408,7 +426,7 @@ const Reports = () => {
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
-                                <div className="mt-6 overflow-x-auto">
+                                <div className="mt-6 hidden md:block overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
                                             <tr>
@@ -432,6 +450,32 @@ const Reports = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                {/* Mobile Card View for Net Profit Analytics */}
+                                <div className="md:hidden mt-4 space-y-3">
+                                    {netProfitAnalytics.map((day, idx) => (
+                                        <div key={idx} className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="font-bold text-gray-800">{day.date}</span>
+                                                <span className="text-xs font-bold text-gray-400">{Number(day.margin || 0).toFixed(1)}% Margin</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-bold">Gross Profit</p>
+                                                    <p className="font-bold text-gray-800">ETB {(day.grossProfit || 0).toFixed(2)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-gray-500 uppercase font-bold">Expenses</p>
+                                                    <p className="font-bold text-rose-500">-ETB {(day.expenses || 0).toFixed(2)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-200">
+                                                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-wider">Net Profit</span>
+                                                <span className="font-black text-emerald-600">ETB {(day.netProfit || 0).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Medicine Breakdown Table */}
@@ -439,7 +483,7 @@ const Reports = () => {
                                 <div className="p-6 border-b border-gray-50 flex items-center justify-between">
                                     <h3 className="text-lg font-bold text-gray-800">Profitability by Medicine</h3>
                                 </div>
-                                <div className="overflow-x-auto">
+                                <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                                             <tr>
@@ -463,6 +507,32 @@ const Reports = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                {/* Mobile Card View for Medicine Profitability */}
+                                <div className="md:hidden p-4 space-y-3 bg-gray-50/50">
+                                    {profitLoss.medicineBreakdown.map((item: any, i: number) => (
+                                        <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-2">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-bold text-gray-800 text-sm">{item.name}</p>
+                                                <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{item.quantity} sold</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 uppercase font-bold">Revenue</p>
+                                                    <p className="font-medium text-gray-600">ETB {Number(item.revenue).toFixed(2)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-gray-400 uppercase font-bold">Cost</p>
+                                                    <p className="font-medium text-gray-600">ETB {Number(item.cost).toFixed(2)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
+                                                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Profit</span>
+                                                <span className="font-black text-emerald-600">ETB {Number(item.profit).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -470,7 +540,7 @@ const Reports = () => {
                     {/* SALES View */}
                     {activeTab === 'sales' && (
                         <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-800">Sales Transactions</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">Detailed log of all sales within the selected period.</p>
@@ -489,7 +559,7 @@ const Reports = () => {
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto">
+                                <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                                             <tr>
@@ -513,6 +583,25 @@ const Reports = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                {/* Mobile Card View for Sales Transactions */}
+                                <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                                    {sales.map((sale) => (
+                                        <div key={sale.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                            <div className="flex justify-between items-start mb-3 border-b border-gray-50 pb-2">
+                                                <div>
+                                                    <p className="text-xs font-mono font-bold text-indigo-600">{sale.receipt_number || 'TRX-XXXX'}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-0.5">{new Date(sale.created_at).toLocaleString()}</p>
+                                                </div>
+                                                <span className="text-xs italic text-gray-400">{sale.payment_method}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-bold text-gray-700">{sale.patient?.name || 'Walk-in'}</span>
+                                                <span className="text-sm font-black text-gray-900">ETB {Number(sale.total_amount).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -520,7 +609,7 @@ const Reports = () => {
                     {/* PURCHASES View */}
                     {activeTab === 'purchases' && (
                         <div className="space-y-4">
-                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-800">Purchase Orders</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">
@@ -598,7 +687,7 @@ const Reports = () => {
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto">
+                                <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                                             <tr>
@@ -638,6 +727,33 @@ const Reports = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                {/* Mobile Card View for Inventory */}
+                                <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                                    {medicines.map((m) => (
+                                        <div key={m.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                            <div className="flex justify-between items-start mb-2 border-b border-gray-50 pb-2">
+                                                <div>
+                                                    <p className="font-bold text-gray-800">{m.name}</p>
+                                                    <p className="text-[10px] text-gray-500">{m.generic_name || '-'}</p>
+                                                </div>
+                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">{m.category || 'General'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <div className="text-sm font-bold text-gray-900">{m.total_stock} {m.unit}</div>
+                                                {m.total_stock <= m.minimum_stock_level ? (
+                                                    <span className="flex items-center gap-1.5 text-rose-600 text-[10px] font-bold">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" /> Low Stock
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> Healthy
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -645,7 +761,7 @@ const Reports = () => {
                     {/* BATCHES View */}
                     {activeTab === 'batches' && (
                         <div className="space-y-6">
-                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-800">Batch Lifetime & Expiry</h3>
                                     <p className="text-sm text-gray-400 font-medium mt-1">Monitor specific batch numbers and expiration timelines.</p>
@@ -664,7 +780,7 @@ const Reports = () => {
                             </div>
 
                             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto">
+                                <div className="hidden md:block overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
                                             <tr>
@@ -689,6 +805,31 @@ const Reports = () => {
                                             ))}
                                         </tbody>
                                     </table>
+                                </div>
+                                
+                                {/* Mobile Card View for Batches */}
+                                <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                                    {batches.map((b) => (
+                                        <div key={b.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                            <div className="flex justify-between items-start mb-2 border-b border-gray-50 pb-2">
+                                                <div>
+                                                    <p className="font-bold text-gray-800">{b.medicine?.name}</p>
+                                                    <p className="text-[10px] font-mono text-indigo-600">Batch: {b.batch_number}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest">Expires</p>
+                                                    <p className="text-xs font-bold text-gray-700">{new Date(b.expiry_date).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <div>
+                                                    <span className="text-[10px] text-gray-500 font-medium">Qty: </span>
+                                                    <span className="font-bold text-gray-900">{b.quantity_remaining}</span>
+                                                </div>
+                                                <div className="font-black text-gray-900">ETB {Number(b.selling_price).toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -776,7 +917,7 @@ const Reports = () => {
                                         <RefreshCcw className="w-5 h-5 text-emerald-500" />
                                         Batch Depletion Metrics (Turnover)
                                     </h3>
-                                    <div className="overflow-x-auto">
+                                    <div className="hidden md:block overflow-x-auto">
                                         <table className="w-full text-left">
                                             <thead>
                                                 <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
@@ -810,6 +951,30 @@ const Reports = () => {
                                                 )}
                                             </tbody>
                                         </table>
+                                    </div>
+                                    
+                                    {/* Mobile Card View for Batch Depletion */}
+                                    <div className="md:hidden mt-4 space-y-3">
+                                        {batchTurnover.length === 0 ? (
+                                            <div className="p-4 bg-emerald-50/50 rounded-xl text-center text-gray-400 italic text-xs">
+                                                No batch depletion logs found for the selected period.
+                                            </div>
+                                        ) : (
+                                            batchTurnover.slice(0, 10).map((bt, i) => (
+                                                <div key={i} className="bg-gray-50 border border-gray-100 p-3 rounded-xl flex justify-between items-center">
+                                                    <div>
+                                                        <p className="font-bold text-gray-700 text-sm">{bt.name}</p>
+                                                        <p className="text-[10px] text-indigo-500 font-mono italic">{bt.batchNo}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] text-gray-500 font-medium">Qty: {bt.qty}</p>
+                                                        <span className={`mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${bt.days_to_deplete <= 7 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                            {bt.days_to_deplete} Days
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -865,6 +1030,42 @@ const Reports = () => {
                                             </tfoot>
                                         )}
                                     </table>
+                                </div>
+                                
+                                {/* Mobile Card View for Supplier Aging */}
+                                <div className="md:hidden mt-4 space-y-3">
+                                    {supplierAging.length === 0 ? (
+                                        <div className="p-4 bg-emerald-50/50 rounded-xl text-center text-gray-400 italic text-xs">
+                                            No outstanding payables currently recorded.
+                                        </div>
+                                    ) : (
+                                        supplierAging.map((sa: any, i: number) => (
+                                            <div key={i} className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                                                <div className="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+                                                    <span className="font-bold text-gray-800">{sa.supplier_name}</span>
+                                                    <span className="font-black text-gray-900 text-sm">ETB {sa.total_outstanding.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500">0-30 Days:</span>
+                                                        <span className="font-medium text-gray-700">{sa.current > 0 ? sa.current.toLocaleString() : '-'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500">31-60 Days:</span>
+                                                        <span className="font-medium text-amber-600">{sa.days_31_60 > 0 ? sa.days_31_60.toLocaleString() : '-'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500">61-90 Days:</span>
+                                                        <span className="font-medium text-orange-600">{sa.days_61_90 > 0 ? sa.days_61_90.toLocaleString() : '-'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-500">&gt; 90 Days:</span>
+                                                        <span className="font-medium text-rose-600">{sa.over_90 > 0 ? sa.over_90.toLocaleString() : '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>

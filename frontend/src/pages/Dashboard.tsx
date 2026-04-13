@@ -587,7 +587,7 @@ const Dashboard = () => {
           {expiryData.top_10_risks?.length > 0 && (
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-50">
               <h4 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Top Expiry Risks</h4>
-              <div className="overflow-x-auto">
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
@@ -623,6 +623,47 @@ const Dashboard = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              
+              {/* Mobile Card View for Expiry Risks */}
+              <div className="md:hidden space-y-3 mt-4">
+                {expiryData.top_10_risks.map((risk: any) => (
+                  <div key={risk.batch_id} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">{risk.medicine_name}</p>
+                        <p className="text-xs font-mono text-gray-500 mt-0.5">Batch: {risk.batch_number}</p>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${risk.risk_status === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                          risk.risk_status === 'HIGH_RISK' ? 'bg-orange-100 text-orange-700' :
+                            risk.risk_status === 'MONITOR' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                          }`}>
+                          {risk.risk_status.replace('_', ' ')}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-600 mt-1">Score: {risk.risk_score}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-1 bg-white p-2 rounded-lg border border-gray-100">
+                       <div>
+                          <p className="text-[10px] uppercase font-bold text-gray-400">Stock</p>
+                          <p className="font-bold text-gray-800">{risk.current_stock}</p>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-[10px] uppercase font-bold text-gray-400">Days Left</p>
+                          <p className="font-black text-rose-600">{risk.days_until_expiry}</p>
+                       </div>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-gray-200 mt-1">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest text-center bg-gray-100 py-1 rounded">
+                        Action: {risk.suggested_action?.replace(/_/g, ' ')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

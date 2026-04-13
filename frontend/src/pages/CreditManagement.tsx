@@ -250,7 +250,7 @@ const CreditManagement = () => {
 
             {activeTab === 'CUSTOMERS' && (
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
-                    <div className="overflow-x-auto min-h-[400px]">
+                    <div className="hidden md:block overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider sticky top-0 z-30 shadow-sm">
                                 <tr>
@@ -349,12 +349,74 @@ const CreditManagement = () => {
                             </tbody>
                         </table>
                     </div>
+                    
+                    {/* Mobile Card View for CUSTOMERS */}
+                    <div className="md:hidden p-4 space-y-3 bg-gray-50/50">
+                        {filteredCustomers.length === 0 ? (
+                            <div className="py-12 text-center text-gray-400 italic">
+                                <Users className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                                No customers found.
+                            </div>
+                        ) : (
+                            filteredCustomers.map((c) => {
+                                const hasDebt = Number(c.total_credit) > 0;
+                                return (
+                                    <div key={c.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-3">
+                                        <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+                                                    <Users className="w-5 h-5 text-gray-400" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-900 text-sm">{c.name}</h3>
+                                                    <p className="text-xs text-gray-500 font-medium mt-0.5">{c.phone || 'No phone'}</p>
+                                                </div>
+                                            </div>
+                                            {hasDebt ? (
+                                                <span className="px-2 py-1 bg-rose-50 text-rose-700 text-[9px] font-black rounded border border-rose-100 uppercase tracking-widest">
+                                                    Due Debt
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-[9px] font-black rounded border border-emerald-100 uppercase tracking-widest">
+                                                    Cleared
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Balance Due</p>
+                                                {hasDebt ? (
+                                                    <p className="font-black text-rose-600 text-base">ETB {Number(c.total_credit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                                ) : (
+                                                    <p className="font-bold text-gray-400 text-base">ETB 0.00</p>
+                                                )}
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Last Activity</p>
+                                                <p className="font-bold text-gray-700 text-sm">{new Date(c.updated_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        {hasDebt && (role === 'ADMIN' || role === 'PHARMACIST' || role === 'CASHIER') && (
+                                            <div className="pt-2">
+                                                <button
+                                                    onClick={() => openPaymentModal(c)}
+                                                    className="w-full py-2.5 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-colors active:scale-95"
+                                                >
+                                                    <Wallet className="w-4 h-4" /> Process Repayment
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             )}
 
             {activeTab === 'RECORDS' && (
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-50 overflow-visible">
-                    <div className="overflow-x-auto min-h-[400px]">
+                    <div className="hidden md:block overflow-x-auto min-h-[400px]">
                         <table className="w-full text-sm text-left">
                             <thead className="text-xs uppercase bg-gray-50 text-gray-500 font-bold tracking-wider sticky top-0 z-30 shadow-sm">
                                 <tr>
@@ -434,6 +496,51 @@ const CreditManagement = () => {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                    
+                    {/* Mobile Card View for RECORDS */}
+                    <div className="md:hidden p-4 space-y-3 bg-gray-50/50">
+                        {filteredRecordsMemo.length === 0 ? (
+                            <div className="py-12 text-center text-gray-400 italic">
+                                <Clock className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                                No credit sales found.
+                            </div>
+                        ) : (
+                            filteredRecordsMemo.map((r) => (
+                                <div key={r.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                        <div>
+                                            <p className="font-mono text-xs font-black text-indigo-600 tracking-wider font-mono">{r.sale?.receipt_number || 'N/A'}</p>
+                                            <p className="font-bold text-gray-800 text-sm mt-0.5">{r.customer?.name}</p>
+                                        </div>
+                                        <span className={`px-2 py-1 text-[9px] font-black uppercase rounded border tracking-widest ${r.status === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                r.status === 'PARTIAL' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                    'bg-rose-50 text-rose-600 border-rose-100'
+                                            }`}>
+                                            {r.status}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 p-3 rounded-xl border border-gray-100/50">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Original</span>
+                                            <span className="font-semibold text-gray-600">ETB {Number(r.original_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Balance Due</span>
+                                            <span className="font-black text-rose-600">ETB {(Number(r.original_amount) - Number(r.paid_amount)).toLocaleString()}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Date</span>
+                                            <span className="font-medium text-gray-700">{new Date(r.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest block">Due Date</span>
+                                            <span className="font-bold text-gray-800">{new Date(r.due_date).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             )}

@@ -245,7 +245,7 @@ const Expenses = () => {
 
             {/* EXPENSE LIST */}
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-visible">
-                <div className="overflow-x-auto min-h-[400px]">
+                <div className="hidden md:block overflow-x-auto min-h-[400px]">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold tracking-widest sticky top-0 z-30 shadow-sm">
                             <tr>
@@ -329,6 +329,65 @@ const Expenses = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-3 bg-gray-50/50 rounded-b-3xl">
+                    {filteredExpenses.length === 0 ? (
+                        <div className="py-12 text-center text-gray-400 italic">
+                            <FileText className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                            No expenses logged.
+                        </div>
+                    ) : (
+                        filteredExpenses.map((e) => (
+                            <div key={e.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-3">
+                                <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                                            <FileText className="w-5 h-5 text-indigo-500" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900 text-sm">{e.name}</h3>
+                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-1 inline-block uppercase tracking-widest">
+                                                {e.category}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span className="font-black text-rose-600 text-base">
+                                        ETB {Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Date</p>
+                                        <p className="font-medium text-gray-700">{new Date(e.expense_date).toLocaleDateString()}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Frequency</p>
+                                        <p className="font-bold text-gray-700">{e.frequency.replace('_', ' ')}</p>
+                                    </div>
+                                    <div className="col-span-2 flex items-center justify-between bg-gray-50 p-2 rounded-lg mt-1 border border-gray-100">
+                                        <span className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Amortized (Daily Profit Tracking)</span>
+                                        {e.is_recurring ? (
+                                            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">YES</span>
+                                        ) : (
+                                            <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest">NO</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {role === 'ADMIN' && (
+                                    <div className="pt-2 flex gap-2 border-t border-gray-50 mt-1">
+                                        <button onClick={() => openEdit(e)} className="flex-1 py-2 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-colors">
+                                            <Pencil className="w-3.5 h-3.5" /> Edit
+                                        </button>
+                                        <button onClick={() => setDeleteConfirm(e.id)} className="flex-1 py-2 flex items-center justify-center gap-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors">
+                                            <Trash2 className="w-3.5 h-3.5" /> Remove
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
 

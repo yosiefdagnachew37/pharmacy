@@ -198,7 +198,7 @@ const SalesHistory = () => {
                     )}
                 </div>
 
-                <div className="overflow-x-auto min-h-[400px]">
+                <div className="hidden md:block overflow-x-auto min-h-[400px]">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 text-gray-600 uppercase text-[11px] font-bold sticky top-0 z-30 shadow-sm">
                             <tr>
@@ -308,6 +308,57 @@ const SalesHistory = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-3">
+                    {loading ? (
+                        <div className="py-12 text-center text-gray-400 italic bg-gray-50 rounded-2xl">Loading history...</div>
+                    ) : filteredSales.length === 0 ? (
+                        <div className="py-12 text-center text-gray-400 italic bg-gray-50 rounded-2xl">No records found.</div>
+                    ) : (
+                        filteredSales.map((sale) => (
+                            <div key={sale.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+                                <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                    <div>
+                                        <p className="font-mono text-xs font-black text-indigo-600 tracking-wider font-mono">{sale.receipt_number}</p>
+                                        <p className="font-bold text-gray-800 text-sm mt-0.5">{sale.patient?.name || 'Walk-in'}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 font-medium">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            {new Date(sale.created_at).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1.5">
+                                        {sale.is_refunded ? (
+                                            <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[9px] font-bold border border-red-100 uppercase tracking-widest">Refunded</span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[9px] font-bold border border-green-100 uppercase tracking-widest">Paid</span>
+                                        )}
+                                        {sale.is_controlled_transaction && (
+                                            <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[9px] font-bold uppercase border border-indigo-100 shadow-sm tracking-widest">
+                                                <Lock className="w-2.5 h-2.5" /> Ctrl
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black text-gray-600 border border-gray-200 uppercase tracking-widest">{sale.payment_method}</span>
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50 px-2 py-1 border border-gray-100 rounded">By: {sale.user?.name || sale.user?.username || 'Sys'}</span>
+                                    </div>
+                                    <span className="font-black text-indigo-700 text-base">ETB {Number(sale.total_amount).toFixed(2)}</span>
+                                </div>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => handleOpenDetail(sale)}
+                                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-colors active:scale-95"
+                                    >
+                                        <ChevronRight className="w-4 h-4" /> View Details & Items
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
 

@@ -247,7 +247,7 @@ const Medicines = () => {
           )}
         </div>
 
-        <div className="overflow-x-auto min-h-[400px]">
+        <div className="hidden md:block overflow-x-auto min-h-[400px]">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
               <tr>
@@ -347,6 +347,67 @@ const Medicines = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden p-4 space-y-3">
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading inventory...</div>
+        ) : filteredMedicines.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No medicines found.</div>
+        ) : (
+          filteredMedicines.map((med) => (
+            <div key={med.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-gray-900">{med.name}</h3>
+                  <p className="text-xs text-gray-500">{med.generic_name}</p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${med.total_stock <= med.minimum_stock_level ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                  {med.total_stock <= med.minimum_stock_level ? 'Low Stock' : 'In Stock'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-400 text-xs">Category:</span>
+                  <p className="font-medium text-gray-800">{med.category}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-400 text-xs">Stock:</span>
+                  <p className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
+                    {med.total_stock} {med.unit}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-xs">Min Level:</span>
+                  <p className="font-medium text-gray-800">{med.minimum_stock_level}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-400 text-xs">Price:</span>
+                  <p className="font-black text-indigo-700">ETB {Number(med.selling_price || 0).toFixed(2)}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3 mt-1 flex justify-end gap-3">
+                {canUpdate('medicines') && (
+                  <button
+                    onClick={() => handleOpenModal(med)}
+                    className="flex-1 py-2 flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit
+                  </button>
+                )}
+                {canDelete('medicines') && (
+                  <button
+                    onClick={() => setDeleteConfirm(med.id)}
+                    className="flex-1 py-2 flex items-center justify-center gap-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <Modal
