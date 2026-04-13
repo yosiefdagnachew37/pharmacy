@@ -7,6 +7,10 @@ import { CreditPayment } from './entities/credit-payment.entity';
 import { ChequeRecord, ChequeStatus } from './entities/cheque-record.entity';
 import { Patient } from '../patients/entities/patient.entity';
 import { getTenantId, scopeQuery } from '../../common/utils/tenant-query';
+import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
+import { PaymentAccountTransaction, TransactionType as PATransactionType, ReferenceType as PAReferenceType } from '../payment-accounts/entities/payment-account-transaction.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class CreditService {
@@ -21,6 +25,9 @@ export class CreditService {
         private readonly chequeRepo: Repository<ChequeRecord>,
         @InjectRepository(Patient)
         private readonly patientRepo: Repository<Patient>,
+        @InjectRepository(PaymentAccount)
+        private readonly paymentAccountRepo: Repository<PaymentAccount>,
+        private readonly notificationsService: NotificationsService,
         private dataSource: DataSource,
     ) { }
 
@@ -143,7 +150,8 @@ export class CreditService {
         amount: number;
         paymentMethod: string;
         referenceNumber?: string;
-        recordIds?: string[]; // Specific records to pay towards
+        recordIds?: string[];
+        payment_account_id?: string; // Payment account to credit
     }, userId: string) {
         return await this.dataSource.transaction(async (manager) => {
             const orgId = getTenantId();
@@ -205,6 +213,36 @@ export class CreditService {
             // 3. Update Customer Total Credit
             customer.total_credit = Number(customer.total_credit) - paymentAmount;
             await manager.save(customer);
+
+            // 4. Credit the payment to a payment account if specified
+            if (data.payment_account_id) {
+                const paymentAccount = await manager.findOne(PaymentAccount, {
+                    where: { id: data.payment_account_id, organization_id: orgId },
+                });
+                if (paymentAccount) {
+                    paymentAccount.balance = Number(paymentAccount.balance) + paymentAmount;
+                    await manager.save(paymentAccount);
+
+                    const paTx = manager.create(PaymentAccountTransaction, {
+                        payment_account_id: paymentAccount.id,
+                        amount: paymentAmount,
+                        type: PATransactionType.CREDIT,
+                        reference_type: PAReferenceType.CREDIT_REPAYMENT,
+                        reference_id: savedPayment.id,
+                        description: `Credit repayment from customer`,
+                        created_by: userId,
+                        organization_id: orgId,
+                    });
+                    await manager.save(paTx);
+                }
+            }
+
+            // Sync notification
+            this.notificationsService.create({
+                title: 'Credit Repayment Received',
+                message: `Payment of ETB ${paymentAmount} received from customer ${customer.name || ''}.`,
+                type: NotificationType.CREDIT_PAYMENT,
+            }).catch(err => console.error('Error creating credit payment notification:', err));
 
             return savedPayment;
         });

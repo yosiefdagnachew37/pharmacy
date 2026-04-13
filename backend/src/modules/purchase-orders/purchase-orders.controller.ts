@@ -52,6 +52,18 @@ export class PurchaseOrdersController {
         return this.poService.updateStatus(id, body.status, req.user.userId);
     }
 
+    @Get('pending-payment')
+    @Roles(UserRole.ADMIN, UserRole.CASHIER)
+    findPendingPayment() {
+        return this.poService.findPendingPayment();
+    }
+
+    @Post(':id/pay')
+    @Roles(UserRole.ADMIN, UserRole.CASHIER)
+    recordPayment(@Param('id') id: string, @Body() body: { payment_account_id: string; amount: number }, @Request() req: any) {
+        return this.poService.recordPayment(id, body, req.user.userId);
+    }
+
     @Post(':id/receive')
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     receiveGoods(@Param('id') id: string, @Body() body: any, @Request() req: any) {

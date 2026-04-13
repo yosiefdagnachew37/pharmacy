@@ -2,6 +2,11 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, Up
 import { Batch } from '../../batches/entities/batch.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 
+export enum ProductType {
+    MEDICINE = 'MEDICINE',
+    COSMETIC = 'COSMETIC',
+}
+
 @Entity('medicines')
 @Unique(['name', 'organization_id'])
 @Unique(['barcode', 'organization_id'])
@@ -16,6 +21,9 @@ export class Medicine {
 
     @Column({ nullable: true })
     generic_name: string;
+
+    @Column({ type: 'enum', enum: ProductType, default: ProductType.MEDICINE })
+    product_type: ProductType;
 
     @Column({ nullable: true })
     category: string; // e.g., 'Antibiotics', 'Painkillers'

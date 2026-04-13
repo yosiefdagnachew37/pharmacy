@@ -22,6 +22,7 @@ import IntelligentForecasting from './pages/IntelligentForecasting';
 import SalesHistory from './pages/SalesHistory';
 import StockAudit from './pages/StockAudit';
 import PaymentAccounts from './pages/PaymentAccounts';
+import Cosmetics from './pages/Cosmetics';
 import OfflineBanner from './components/OfflineBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastContainer } from './components/Toast';
@@ -176,6 +177,14 @@ function App() {
               }
             />
             <Route
+              path="cosmetics"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
+                  <Cosmetics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="pos"
               element={
                 <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN']}>
@@ -266,7 +275,7 @@ function App() {
             <Route
               path="credit"
               element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN']}>
+                <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'AUDITOR', 'CASHIER', 'SUPER_ADMIN']}>
                   <CreditManagement />
                 </ProtectedRoute>
               }

@@ -468,6 +468,20 @@ export class ReportingService {
             .getMany();
     }
 
+    async getPurchasesReport(startDate: Date, endDate: Date) {
+        const orgId = getTenantId();
+        return await this.poRepository.createQueryBuilder('po')
+            .leftJoinAndSelect('po.supplier', 'supplier')
+            .leftJoinAndSelect('po.created_by_user', 'user')
+            .where("(po.created_at AT TIME ZONE 'Africa/Addis_Ababa')::date BETWEEN :start AND :end", {
+                start: startDate.toISOString().split('T')[0],
+                end: endDate.toISOString().split('T')[0]
+            })
+            .andWhere('po.organization_id = :orgId', { orgId })
+            .orderBy('po.created_at', 'DESC')
+            .getMany();
+    }
+
     // ... existing generateSalesExcel ...
     async generateSalesExcel(startDate: Date, endDate: Date) {
         const sales = await this.getSalesReport(startDate, endDate);

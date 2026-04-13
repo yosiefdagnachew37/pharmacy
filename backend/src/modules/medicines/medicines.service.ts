@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Medicine } from './entities/medicine.entity';
+import { Medicine, ProductType } from './entities/medicine.entity';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
 import { scopeQuery, getTenantId } from '../../common/utils/tenant-query';
@@ -16,6 +16,7 @@ export class MedicinesService {
     async create(createMedicineDto: CreateMedicineDto): Promise<Medicine> {
         const medicine = this.medicinesRepository.create({
             ...createMedicineDto,
+            product_type: createMedicineDto.product_type as ProductType,
             organization_id: getTenantId(),
         });
         try {
@@ -28,12 +29,16 @@ export class MedicinesService {
         }
     }
 
-    async findAll() {
+    async findAll(product_type?: ProductType) {
         try {
             let qb = this.medicinesRepository.createQueryBuilder('m')
                 .leftJoin('m.batches', 'b', 'b.expiry_date >= :now AND b.deleted_at IS NULL', { now: new Date().toISOString().split('T')[0] });
             
             qb = scopeQuery(qb, 'm');
+
+            if (product_type) {
+                qb = qb.andWhere('m.product_type = :product_type', { product_type });
+            }
 
             const results = await qb
                 .select([
@@ -43,7 +48,9 @@ export class MedicinesService {
                     'm.category',
                     'm.unit',
                     'm.minimum_stock_level',
-                    'm.is_controlled'
+                    'm.is_controlled',
+                    'm.product_type',
+                    'm.preferred_supplier_id',
                 ])
                 .addSelect('SUM(COALESCE(b.quantity_remaining, 0))', 'total_stock')
                 .addSelect('MAX(b.selling_price)', 'selling_price')
@@ -55,6 +62,8 @@ export class MedicinesService {
                 .addGroupBy('m.unit')
                 .addGroupBy('m.minimum_stock_level')
                 .addGroupBy('m.is_controlled')
+                .addGroupBy('m.product_type')
+                .addGroupBy('m.preferred_supplier_id')
                 .getRawMany();
 
             return results.map(res => ({
@@ -65,6 +74,8 @@ export class MedicinesService {
                 unit: res.m_unit,
                 minimum_stock_level: res.m_minimum_stock_level,
                 is_controlled: String(res.m_is_controlled) === 'true',
+                product_type: res.m_product_type || ProductType.MEDICINE,
+                preferred_supplier_id: res.m_preferred_supplier_id,
                 total_stock: Number(res.total_stock || 0),
                 selling_price: Number(res.selling_price || 0)
             }));

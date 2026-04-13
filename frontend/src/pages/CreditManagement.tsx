@@ -22,7 +22,11 @@ const CreditManagement = () => {
     // Repayment form
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('CASH');
+    const [selectedPaymentAccount, setSelectedPaymentAccount] = useState('');
     const [referenceNumber, setReferenceNumber] = useState('');
+    
+    // Accounts
+    const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
 
     // ─── Column Filters ──────────────────────────────────────────
     const [customerFilters, setCustomerFilters] = useState<Record<string, string[]>>({
@@ -42,14 +46,16 @@ const CreditManagement = () => {
 
     const fetchData = async () => {
         try {
-            const [custRes, sumRes, recordRes] = await Promise.all([
+            const [custRes, sumRes, recordRes, accRes] = await Promise.all([
                 client.get('/credit/customers'),
                 client.get('/credit/summary'),
                 client.get('/credit/records'),
+                client.get('/payment-accounts')
             ]);
             setCustomers(custRes.data);
             setSummary(sumRes.data);
             setCreditRecords(recordRes.data);
+            setPaymentAccounts(accRes.data || []);
         } catch (err) {
             console.error('Failed to load credit data', err);
         } finally {
@@ -60,12 +66,18 @@ const CreditManagement = () => {
     useEffect(() => { fetchData(); }, []);
 
     const handleProcessPayment = async () => {
+        if (!selectedPaymentAccount) {
+            toastError('Validation', 'Please select a destination payment account.');
+            return;
+        }
+
         try {
             await client.post('/credit/payments', {
                 customerId: selectedCustomer.id,
                 amount: parseFloat(paymentAmount),
                 paymentMethod,
-                referenceNumber
+                referenceNumber,
+                payment_account_id: selectedPaymentAccount
             });
             setShowPayModal(false);
             resetForm();
@@ -92,6 +104,7 @@ const CreditManagement = () => {
     const resetForm = () => {
         setPaymentAmount('');
         setPaymentMethod('CASH');
+        setSelectedPaymentAccount('');
         setReferenceNumber('');
     };
 
@@ -474,6 +487,20 @@ const CreditManagement = () => {
                                     <option value="CHEQUE">Cheque</option>
                                     <option value="BANK_TRANSFER">Bank Transfer</option>
                                     <option value="MOBILE_PAYMENT">Mobile Payment</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Deposit Into Account *</label>
+                                <select
+                                    value={selectedPaymentAccount}
+                                    onChange={e => setSelectedPaymentAccount(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm font-medium border-l-4 border-l-indigo-500"
+                                >
+                                    <option value="">-- Select Destination Ledger --</option>
+                                    {paymentAccounts.filter(p => p.is_active).map(acc => (
+                                        <option key={acc.id} value={acc.id}>{acc.name} (Bal: ETB {Number(acc.balance).toLocaleString()})</option>
+                                    ))}
                                 </select>
                             </div>
 

@@ -57,9 +57,9 @@ export class CreditController {
         return this.creditService.updateCustomer(id, body);
     }
 
-    // Process Repayment
+    // Process Repayment - CASHIER and ADMIN only
     @Post('payments')
-    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
+    @Roles(UserRole.ADMIN, UserRole.CASHIER)
     processPayment(@Body() body: any, @Request() req: any) {
         return this.creditService.processPayment(body, req.user.userId);
     }

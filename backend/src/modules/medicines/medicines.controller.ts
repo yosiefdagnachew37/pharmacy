@@ -9,6 +9,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
+import { ProductType } from './entities/medicine.entity';
 
 @Controller('medicines')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,8 +35,8 @@ export class MedicinesController {
 
     @Get()
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER)
-    findAll() {
-        return this.medicinesService.findAll();
+    findAll(@Query('product_type') product_type?: ProductType) {
+        return this.medicinesService.findAll(product_type);
     }
 
     @Get(':id')

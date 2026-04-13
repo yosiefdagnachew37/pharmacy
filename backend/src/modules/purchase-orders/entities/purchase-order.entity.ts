@@ -11,6 +11,7 @@ export enum POStatus {
     PARTIALLY_RECEIVED = 'PARTIALLY_RECEIVED',
     COMPLETED = 'COMPLETED',
     CANCELLED = 'CANCELLED',
+    PENDING_PAYMENT = 'PENDING_PAYMENT',
 }
 
 export enum POPaymentMethod {
@@ -46,6 +47,26 @@ export class PurchaseOrder {
 
     @Column('decimal', { precision: 12, scale: 2, default: 0 })
     total_amount: number;
+
+    // ─── VAT Fields ───────────────────────────────────────────────
+    @Column({ default: false })
+    is_vat_inclusive: boolean;
+
+    @Column('decimal', { precision: 5, scale: 2, default: 15 })
+    vat_rate: number; // percentage, default 15%
+
+    @Column('decimal', { precision: 12, scale: 2, default: 0 })
+    vat_amount: number;
+
+    @Column('decimal', { precision: 12, scale: 2, default: 0 })
+    subtotal_before_vat: number;
+
+    // ─── PO Payment by Cashier ────────────────────────────────────
+    @Column({ nullable: true })
+    payment_account_id: string;
+
+    @Column({ nullable: true })
+    paid_by: string; // cashier user id
 
     @Column({ type: 'text', nullable: true })
     notes: string;

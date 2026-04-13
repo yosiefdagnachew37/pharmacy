@@ -9,6 +9,9 @@ export enum NotificationType {
     SALE = 'SALE',
     SYSTEM = 'SYSTEM',
     INFO = 'INFO',
+    PURCHASE_ORDER = 'PURCHASE_ORDER',
+    CREDIT_PAYMENT = 'CREDIT_PAYMENT',
+    REFUND = 'REFUND',
 }
 
 @Entity('notifications')

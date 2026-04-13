@@ -12,6 +12,9 @@ import { ForecastingModule } from '../forecasting/forecasting.module';
 import { StockModule } from '../stock/stock.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { SuppliersModule } from '../suppliers/suppliers.module';
+import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
+import { PaymentAccountTransaction } from '../payment-accounts/entities/payment-account-transaction.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
@@ -22,11 +25,14 @@ import { SuppliersModule } from '../suppliers/suppliers.module';
             Batch,
             StockTransaction,
             Medicine,
+            PaymentAccount,
+            PaymentAccountTransaction,
         ]),
         ForecastingModule,
         StockModule,
         OrganizationsModule,
         SuppliersModule,
+        NotificationsModule,
     ],
     controllers: [PurchaseOrdersController],
     providers: [PurchaseOrdersService],

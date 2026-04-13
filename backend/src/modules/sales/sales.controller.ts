@@ -108,7 +108,7 @@ export class SalesController {
     }
 
     @Post(':id/refund')
-    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    @Roles(UserRole.ADMIN, UserRole.CASHIER)
     async refund(
         @Param('id') id: string,
         @Body() createRefundDto: CreateRefundDto,

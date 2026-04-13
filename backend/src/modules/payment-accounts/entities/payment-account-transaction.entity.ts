@@ -13,6 +13,8 @@ export enum ReferenceType {
   EXPENSE = 'EXPENSE',
   REFUND = 'REFUND',
   MANUAL_ADJUSTMENT = 'MANUAL_ADJUSTMENT',
+  PURCHASE = 'PURCHASE',
+  CREDIT_REPAYMENT = 'CREDIT_REPAYMENT',
 }
 
 @Entity('payment_account_transactions')

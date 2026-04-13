@@ -24,4 +24,12 @@ export class CreateMedicineDto {
     @IsNumber()
     @IsOptional()
     minimum_stock_level?: number;
+
+    @IsString()
+    @IsOptional()
+    product_type?: string;
+
+    @IsString()
+    @IsOptional()
+    preferred_supplier_id?: string;
 }

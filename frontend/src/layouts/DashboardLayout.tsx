@@ -27,7 +27,8 @@ import {
   Pill as MedicineIcon,
   CheckCircle,
   AlertTriangle,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
@@ -46,6 +47,7 @@ interface MenuItem {
 const allMenuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
   { icon: Pill, label: 'Medicines', path: '/medicines', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
+  { icon: Sparkles, label: 'Cosmetics', path: '/cosmetics', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
   { icon: Package, label: 'Batches', path: '/batches', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
   { icon: ShoppingCart, label: 'POS / Sales', path: '/pos', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'SUPER_ADMIN'] },
   { icon: History, label: 'Sales', path: '/sales', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'] },
@@ -58,7 +60,7 @@ const allMenuItems: MenuItem[] = [
   { icon: BarChart2, label: 'Forecasting', path: '/forecasting', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'], requiredFeature: 'Intelligent Forecasting' },
   { icon: CheckCircle, label: 'Stock Audit', path: '/stock-audit', roles: ['ADMIN', 'PHARMACIST', 'SUPER_ADMIN'] },
   { icon: Wallet2, label: 'Expenses', path: '/expenses', roles: ['ADMIN', 'SUPER_ADMIN'], requiredFeature: 'Expenses' },
-  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'AUDITOR', 'SUPER_ADMIN'], requiredFeature: 'Credit' },
+  { icon: CreditCard, label: 'Credit Mgmt', path: '/credit', roles: ['ADMIN', 'PHARMACIST', 'CASHIER', 'AUDITOR', 'SUPER_ADMIN'], requiredFeature: 'Credit' },
   { icon: Wallet2, label: 'Payment Accounts', path: '/payment-accounts', roles: ['ADMIN', 'SUPER_ADMIN', 'CASHIER'] },
   { icon: Shield, label: 'System', path: '/system', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { icon: Shield, label: 'Super Admin Panel', path: '/super-admin', roles: ['SUPER_ADMIN'] },

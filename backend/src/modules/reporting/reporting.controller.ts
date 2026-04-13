@@ -30,6 +30,17 @@ export class ReportingController {
         return this.reportingService.getSalesReport(startDate, endDate);
     }
 
+    @Get('purchases')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER, UserRole.AUDITOR)
+    async getPurchasesReport(
+        @Query('start') start: string,
+        @Query('end') end: string,
+    ) {
+        const startDate = start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 30));
+        const endDate = end ? new Date(end) : new Date();
+        return this.reportingService.getPurchasesReport(startDate, endDate);
+    }
+
     @Get('profit-loss')
     @Roles(UserRole.ADMIN, UserRole.AUDITOR)
     async getProfitLoss(

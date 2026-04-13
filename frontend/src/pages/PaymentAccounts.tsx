@@ -223,7 +223,9 @@ export default function PaymentAccounts() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="px-3 py-1.5 flex items-center gap-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-black uppercase tracking-wide border border-transparent hover:border-rose-200 transition-all mr-1"><ArrowUpCircle className="w-3.5 h-3.5" /> Withdraw</button>
+                      {isAdmin && (
+                        <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="px-3 py-1.5 flex items-center gap-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-[10px] font-black uppercase tracking-wide border border-transparent hover:border-rose-200 transition-all mr-1"><ArrowUpCircle className="w-3.5 h-3.5" /> Withdraw</button>
+                      )}
 
                       {isAdmin && (
                         <>

@@ -31,7 +31,7 @@ import {
     Area
 } from 'recharts';
 
-type ReportTab = 'profit-loss' | 'sales' | 'inventory' | 'batches' | 'analytics';
+type ReportTab = 'profit-loss' | 'sales' | 'purchases' | 'inventory' | 'batches' | 'analytics';
 
 const Reports = () => {
     const [activeTab, setActiveTab] = useState<ReportTab>('profit-loss');
@@ -49,6 +49,7 @@ const Reports = () => {
     };
     const [profitLoss, setProfitLoss] = useState<any>(defaultProfitLoss);
     const [sales, setSales] = useState<any[]>([]);
+    const [purchases, setPurchases] = useState<any[]>([]);
     const [medicines, setMedicines] = useState<any[]>([]);
     const [batches, setBatches] = useState<any[]>([]);
     const [netProfitAnalytics, setNetProfitAnalytics] = useState<any[]>([]);
@@ -75,6 +76,9 @@ const Reports = () => {
             } else if (activeTab === 'sales') {
                 const res = await client.get(`/reporting/sales?start=${dateRange.start}&end=${dateRange.end}`);
                 setSales(res.data);
+            } else if (activeTab === 'purchases') {
+                const res = await client.get(`/reporting/purchases?start=${dateRange.start}&end=${dateRange.end}`);
+                setPurchases(res.data);
             } else if (activeTab === 'inventory') {
                 const res = await client.get('/reporting/medicines');
                 setMedicines(res.data);
@@ -189,6 +193,7 @@ const Reports = () => {
                 {[
                     { id: 'profit-loss', label: 'Profit & Loss', icon: TrendingUp },
                     { id: 'sales', label: 'Sales Report', icon: ShoppingCart },
+                    { id: 'purchases', label: 'Purchases', icon: FileText },
                     { id: 'inventory', label: 'Inventory', icon: Package },
                     { id: 'batches', label: 'Batches', icon: TableIcon },
                     { id: 'analytics', label: 'Advanced Analytics', icon: BarChart3 },
@@ -427,6 +432,45 @@ const Reports = () => {
                                                     <td className="px-6 py-4 text-sm text-gray-700 font-bold whitespace-nowrap">{sale.patient?.name || 'Walk-in'}</td>
                                                     <td className="px-6 py-4 italic text-sm text-gray-400 whitespace-nowrap">{sale.payment_method}</td>
                                                     <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">ETB {Number(sale.total_amount).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PURCHASES View */}
+                    {activeTab === 'purchases' && (
+                        <div className="space-y-6">
+                            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-800">Purchase Orders</h3>
+                                    <p className="text-sm text-gray-400 font-medium mt-1">Detailed log of all purchases within the selected period.</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                                            <tr>
+                                                <th className="px-6 py-4 whitespace-nowrap">PO Number</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Date & Time</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Supplier</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Creator</th>
+                                                <th className="px-6 py-4 text-right whitespace-nowrap">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {purchases.map((po) => (
+                                                <tr key={po.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 font-mono text-xs font-bold text-indigo-600 whitespace-nowrap">{po.po_number || 'PO-XXXX'}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 font-medium whitespace-nowrap">{new Date(po.created_at).toLocaleString()}</td>
+                                                    <td className="px-6 py-4 text-sm text-gray-700 font-bold whitespace-nowrap">{po.supplier?.name || 'Unknown Supplier'}</td>
+                                                    <td className="px-6 py-4 italic text-sm text-gray-400 whitespace-nowrap">{po.created_by_user?.username || 'System'}</td>
+                                                    <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">ETB {Number(po.total_amount).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

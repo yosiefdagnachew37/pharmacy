@@ -11,15 +11,17 @@ import { PurchaseOrder } from '../purchase-orders/entities/purchase-order.entity
 import { Patient } from '../patients/entities/patient.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
+import { PaymentAccountTransaction } from '../payment-accounts/entities/payment-account-transaction.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Customer, CreditRecord, CreditPayment, PurchaseOrder, ChequeRecord, Patient]),
+        TypeOrmModule.forFeature([Customer, CreditRecord, CreditPayment, PurchaseOrder, ChequeRecord, Patient, PaymentAccount, PaymentAccountTransaction]),
         NotificationsModule,
         OrganizationsModule,
     ],
     controllers: [CreditController],
     providers: [CreditService, AlertCronService],
-    exports: [CreditService, AlertCronService], // Exported because SalesService needs it for credit sales
+    exports: [CreditService, AlertCronService],
 })
 export class CreditModule { }

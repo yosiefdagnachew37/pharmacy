@@ -508,6 +508,12 @@ export class SalesService {
                 userId
             );
 
+            this.notificationsService.create({
+                title: 'Sale Refunded',
+                message: `Refund of ETB ${amount} processed for Sale ${sale.receipt_number || sale_id}.`,
+                type: NotificationType.REFUND,
+            }).catch(err => console.error('Error creating refund notification:', err));
+
             return savedRefund;
         });
     }

@@ -14,6 +14,11 @@ import { getTenantId } from '../../common/utils/tenant-query';
 import { tenantStorage } from '../../common/context/tenant.context';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
+import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
+import { PaymentAccountTransaction, TransactionType as PATransactionType, ReferenceType as PAReferenceType } from '../payment-accounts/entities/payment-account-transaction.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -31,6 +36,7 @@ export class PurchaseOrdersService {
         private forecastingService: ForecastingService,
         private expiryIntelligenceService: ExpiryIntelligenceService,
         private dataSource: DataSource,
+        private readonly notificationsService: NotificationsService,
     ) { }
 
     // ─── PO CRUD ──────────────────────────────────────
@@ -67,6 +73,8 @@ export class PurchaseOrdersService {
         notes?: string;
         expected_delivery?: string;
         payment_method?: POPaymentMethod;
+        is_vat_inclusive?: boolean;
+        vat_rate?: number;
         cheque_bank_name?: string;
         cheque_number?: string;
         cheque_issue_date?: string;
@@ -79,18 +87,26 @@ export class PurchaseOrdersService {
             const count = await manager.count(PurchaseOrder, { where: { organization_id } });
             const poNumber = `PO-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(count + 1).padStart(4, '0')}`;
 
-            // Calculate total
-            let totalAmount = 0;
+            // Calculate total + optional VAT
+            let subtotalBeforeVat = 0;
             const items = data.items.map(item => {
                 const subtotal = item.quantity_ordered * item.unit_price;
-                totalAmount += subtotal;
+                subtotalBeforeVat += subtotal;
                 return { ...item, subtotal };
             });
+
+            const vatRate = data.is_vat_inclusive ? (data.vat_rate ?? 15) : 0;
+            const vatAmount = data.is_vat_inclusive ? (subtotalBeforeVat * vatRate) / 100 : 0;
+            const totalAmount = subtotalBeforeVat + vatAmount;
 
             // Create PO
             const po = manager.create(PurchaseOrder, {
                 po_number: poNumber,
                 supplier_id: data.supplier_id,
+                subtotal_before_vat: subtotalBeforeVat,
+                vat_amount: vatAmount,
+                vat_rate: vatRate,
+                is_vat_inclusive: data.is_vat_inclusive || false,
                 total_amount: totalAmount,
                 notes: data.notes,
                 expected_delivery: data.expected_delivery ? new Date(data.expected_delivery) : undefined,
@@ -105,6 +121,14 @@ export class PurchaseOrdersService {
                 cheque_amount: data.cheque_amount || undefined,
             });
             const savedPO = await manager.save(po);
+
+            // Notify cashiers that a PO needs payment
+            this.notificationsService.create({
+                title: 'New Purchase Order',
+                message: `Purchase Order ${poNumber} has been created and requires cashier payment approval.`,
+                type: NotificationType.PURCHASE_ORDER,
+                organization_id,
+            }).catch(err => console.error('PO notification error:', err));
 
             // Phase 1.5: Expiry Risk Blocking - Pre-fetch risk data for all medicines
             const riskData = await this.expiryIntelligenceService.calculateExpiryRisk();
@@ -151,7 +175,8 @@ export class PurchaseOrdersService {
 
         // Validate status transitions
         const validTransitions: Record<POStatus, POStatus[]> = {
-            [POStatus.DRAFT]: [POStatus.APPROVED, POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED],
+            [POStatus.DRAFT]: [POStatus.APPROVED, POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED, POStatus.PENDING_PAYMENT],
+            [POStatus.PENDING_PAYMENT]: [POStatus.APPROVED, POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED],
             [POStatus.APPROVED]: [POStatus.SENT, POStatus.CONFIRMED, POStatus.CANCELLED],
             [POStatus.SENT]: [POStatus.CONFIRMED, POStatus.CANCELLED],
             [POStatus.CONFIRMED]: [POStatus.PARTIALLY_RECEIVED, POStatus.COMPLETED, POStatus.CANCELLED],
@@ -212,19 +237,41 @@ export class PurchaseOrdersService {
                     poItem.quantity_received += item.quantity_received;
                     await manager.save(poItem);
 
-                    // Auto-create batch
-                    const batch = manager.create(Batch, {
-                        batch_number: item.batch_number,
-                        medicine_id: poItem.medicine_id,
-                        expiry_date: new Date(item.expiry_date),
-                        purchase_price: poItem.unit_price,
-                        selling_price: item.selling_price || 0,
-                        initial_quantity: item.quantity_received,
-                        quantity_remaining: item.quantity_received,
-                        supplier_id: po.supplier_id,
-                        organization_id,
+                    // Auto-create batch OR update existing batch (upsert logic)
+                    const existingBatch = await manager.findOne(Batch, {
+                        where: {
+                            batch_number: item.batch_number,
+                            medicine_id: poItem.medicine_id,
+                            organization_id,
+                        }
                     });
-                    const savedBatch = await manager.save(batch);
+
+                    let savedBatch: Batch;
+                    if (existingBatch) {
+                        // Update existing batch quantities
+                        existingBatch.initial_quantity = Number(existingBatch.initial_quantity) + item.quantity_received;
+                        existingBatch.quantity_remaining = Number(existingBatch.quantity_remaining) + item.quantity_received;
+                        if (item.selling_price && item.selling_price > 0) {
+                            existingBatch.selling_price = item.selling_price;
+                        }
+                        // Update purchase price to latest
+                        existingBatch.purchase_price = poItem.unit_price;
+                        savedBatch = await manager.save(existingBatch);
+                    } else {
+                        // Create new batch
+                        const batch = manager.create(Batch, {
+                            batch_number: item.batch_number,
+                            medicine_id: poItem.medicine_id,
+                            expiry_date: new Date(item.expiry_date),
+                            purchase_price: poItem.unit_price,
+                            selling_price: item.selling_price || 0,
+                            initial_quantity: item.quantity_received,
+                            quantity_remaining: item.quantity_received,
+                            supplier_id: po.supplier_id,
+                            organization_id,
+                        });
+                        savedBatch = await manager.save(batch);
+                    }
 
                     // Record stock transaction
                     const tx = manager.create(StockTransaction, {
@@ -265,9 +312,6 @@ export class PurchaseOrdersService {
             });
         } catch (err) {
             if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
-                if (err.message.includes('batches')) {
-                    throw new BadRequestException('One or more batch numbers already exist for their respective medicines.');
-                }
                 if (err.message.includes('goods_receipts')) {
                     throw new BadRequestException('A collision occurred generating the GRN number. Please try again.');
                 }
@@ -298,11 +342,14 @@ export class PurchaseOrdersService {
             .andWhere('po.organization_id = :organization_id', { organization_id })
             .getRawOne();
 
+        const pendingPayment = await this.poRepo.count({ where: { status: POStatus.PENDING_PAYMENT, organization_id } });
+
         return {
             total_orders: total,
             draft_count: draft,
             pending_count: pending,
             confirmed_count: confirmed,
+            pending_payment_count: pendingPayment,
             total_value: parseFloat(totalValue?.total) || 0,
         };
     }
@@ -374,5 +421,79 @@ export class PurchaseOrdersService {
         }
 
         return { checked: chequePOs.length, alerts: alertsCreated };
+    }
+
+    // ─── Cashier Payment for PO ──────────────────────────────
+    async recordPayment(poId: string, data: {
+        payment_account_id: string;
+        amount: number;
+    }, cashierUserId: string) {
+        const organization_id = getTenantId();
+        return this.dataSource.transaction(async (manager) => {
+            const po = await manager.findOne(PurchaseOrder, {
+                where: { id: poId, organization_id },
+            });
+            if (!po) throw new NotFoundException('Purchase order not found');
+
+            const paymentAccount = await manager.findOne(PaymentAccount, {
+                where: { id: data.payment_account_id, organization_id },
+            });
+            if (!paymentAccount) throw new NotFoundException('Payment account not found');
+
+            const amount = Number(data.amount);
+            if (Number(paymentAccount.balance) < amount) {
+                throw new BadRequestException('Insufficient funds in the selected payment account');
+            }
+
+            // Deduct from payment account
+            paymentAccount.balance = Number(paymentAccount.balance) - amount;
+            await manager.save(paymentAccount);
+
+            // Log transaction
+            const tx = manager.create(PaymentAccountTransaction, {
+                payment_account_id: paymentAccount.id,
+                amount,
+                type: PATransactionType.DEBIT,
+                reference_type: PAReferenceType.PURCHASE,
+                reference_id: po.id,
+                description: `Payment for PO ${po.po_number}`,
+                created_by: cashierUserId,
+                organization_id,
+            });
+            await manager.save(tx);
+
+            // Update PO payment status
+            po.total_paid = Number(po.total_paid) + amount;
+            po.paid_by = cashierUserId;
+            po.payment_account_id = data.payment_account_id;
+            if (po.total_paid >= po.total_amount) {
+                po.payment_status = POPaymentStatus.PAID;
+            } else {
+                po.payment_status = POPaymentStatus.PARTIALLY_PAID;
+            }
+            await manager.save(po);
+
+            // Notify the PO creator
+            if (po.created_by) {
+                this.notificationsService.create({
+                    title: 'PO Payment Recorded',
+                    message: `Payment of ETB ${amount.toLocaleString()} recorded for PO ${po.po_number} via ${paymentAccount.name}.`,
+                    type: NotificationType.PURCHASE_ORDER,
+                    user_id: po.created_by,
+                    organization_id,
+                }).catch(err => console.error('PO payment notification error:', err));
+            }
+
+            return po;
+        });
+    }
+
+    async findPendingPayment() {
+        const organization_id = getTenantId();
+        return this.poRepo.find({
+            where: { organization_id, payment_status: POPaymentStatus.PENDING },
+            relations: ['supplier', 'created_by_user'],
+            order: { created_at: 'ASC' },
+        });
     }
 }
