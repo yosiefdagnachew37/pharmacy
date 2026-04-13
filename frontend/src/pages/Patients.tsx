@@ -51,6 +51,8 @@ const Patients = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PATIENTS_PER_PAGE = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
@@ -220,6 +222,9 @@ const Patients = () => {
     (p.phone?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredPatients.length / PATIENTS_PER_PAGE));
+  const paginatedPatients = filteredPatients.slice((currentPage - 1) * PATIENTS_PER_PAGE, currentPage * PATIENTS_PER_PAGE);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -243,53 +248,54 @@ const Patients = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      {/* Search */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by name or phone number..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Search by name or phone..."
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {loading ? (
               <div className="col-span-full py-12 text-center text-gray-500 italic">Finding patient records...</div>
             ) : filteredPatients.length === 0 ? (
               <div className="col-span-full py-12 text-center text-gray-500 italic">No patients found match your search.</div>
             ) : (
-              filteredPatients.map((patient) => (
+              paginatedPatients.map((patient) => (
                 <div
                   key={patient.id}
                   onClick={() => fetchHistory(patient.id)}
-                  className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden"
+                  className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer relative group overflow-hidden flex flex-col"
                 >
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <ChevronRight className="w-4 h-4 text-indigo-300" />
                   </div>
 
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-                        <User className="w-6 h-6" />
-                      </div>
+                    <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+                      <User className="w-5 h-5" />
                     </div>
                     <div className="flex items-center space-x-1">
-                      <button
-                        onClick={(e) => handleEdit(patient, e)}
-                        className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                        title="Edit Patient"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      {canCreate('patients') && (
+                        <button
+                          onClick={(e) => handleEdit(patient, e)}
+                          className="p-2 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Edit Patient"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
                       {canDelete('patients') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleteConfirm(patient.id); }}
-                          className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                          className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                           title="Delete Patient"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -298,46 +304,71 @@ const Patients = () => {
                     </div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-gray-800 mb-1">{patient.name}</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {patient.gender}, {patient.age} years old
-                    <span className="ml-2 px-1.5 py-0.5 bg-gray-50 text-[10px] font-bold text-gray-400 border border-gray-100 rounded">
-                      #{patient.id.slice(0, 8)}
-                    </span>
-                  </p>
+                  <div className="flex-grow">
+                    <h3 className="text-base font-bold text-gray-800 mb-1 truncate">{patient.name}</h3>
+                    <p className="text-xs text-gray-500 mb-4">
+                      {patient.gender}, {patient.age} years old
+                      <span className="ml-2 px-1.5 py-0.5 bg-gray-50 text-[10px] font-bold text-gray-400 border border-gray-100 rounded">
+                        #{patient.id.slice(0, 6)}
+                      </span>
+                    </p>
 
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="w-4 h-4 mr-3 text-gray-400" />
-                      {patient.phone || 'No phone recorded'}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600 truncate">
-                      <MapPin className="w-4 h-4 mr-3 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">{patient.address || 'Address not provided'}</span>
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-600 truncate">
+                        <Phone className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
+                        <span className="truncate">{patient.phone || 'No phone'}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600 truncate">
+                        <MapPin className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
+                        <span className="truncate">{patient.address || 'Address not provided'}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
+                  <div className="pt-3 border-t border-gray-50 flex items-center justify-between mt-auto">
                     <div>
-                      <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Allergies</p>
-                      <div className="flex flex-wrap gap-1">
-                        {patient.allergies?.length > 0 ? (
-                          patient.allergies.map(a => (
+                      {patient.allergies?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {patient.allergies.slice(0, 2).map(a => (
                             <span key={a} className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[10px] font-medium border border-red-100">{a}</span>
-                          ))
-                        ) : (
-                          <span className="text-[10px] text-green-600 font-medium italic">None recorded</span>
-                        )}
-                      </div>
+                          ))}
+                          {patient.allergies.length > 2 && <span className="text-[10px] text-gray-400">+{patient.allergies.length - 2}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-green-600 font-medium italic">No allergies</span>
+                      )}
                     </div>
-                    <div className="text-xs font-bold text-indigo-600 flex items-center">
-                      View History <ChevronRight className="w-3 h-3 ml-1" />
+                    <div className="text-xs font-bold text-indigo-600 flex items-center group-hover:underline">
+                      View History <ChevronRight className="w-3 h-3 ml-0.5" />
                     </div>
                   </div>
                 </div>
               ))
             )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-all"
+              >
+                Prev
+              </button>
+              <span className="text-xs text-gray-500 font-medium">
+                Page {currentPage} of {totalPages} · {filteredPatients.length} patients
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-all"
+              >
+                Next
+              </button>
+            </div>
+          )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* MODALS                                                        */}

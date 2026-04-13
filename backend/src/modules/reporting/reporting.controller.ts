@@ -26,7 +26,7 @@ export class ReportingController {
         @Query('end') end: string,
     ) {
         const startDate = start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 30));
-        const endDate = end ? new Date(end) : new Date();
+        const endDate = end ? new Date(`${end}T23:59:59`) : new Date();
         return this.reportingService.getSalesReport(startDate, endDate);
     }
 
@@ -37,7 +37,7 @@ export class ReportingController {
         @Query('end') end: string,
     ) {
         const startDate = start ? new Date(start) : new Date(new Date().setDate(new Date().getDate() - 30));
-        const endDate = end ? new Date(end) : new Date();
+        const endDate = end ? new Date(`${end}T23:59:59`) : new Date();
         return this.reportingService.getPurchasesReport(startDate, endDate);
     }
 

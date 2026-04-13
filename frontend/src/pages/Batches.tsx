@@ -71,7 +71,8 @@ const Batches = () => {
     setLoading(true);
     try {
       const response = await client.get('/batches');
-      setBatches(response.data);
+      // Only show batches for medicines (not cosmetics)
+      setBatches(response.data.filter((b: any) => b.medicine?.product_type !== 'COSMETIC'));
     } catch (error) {
       console.error('Error fetching batches:', error);
     } finally {
@@ -81,7 +82,7 @@ const Batches = () => {
 
   const fetchMedicines = async () => {
     try {
-      const response = await client.get('/medicines');
+      const response = await client.get('/medicines?product_type=MEDICINE');
       setMedicines(response.data);
     } catch (error) {
       console.error('Error fetching medicines:', error);

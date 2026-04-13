@@ -61,7 +61,7 @@ const Medicines = () => {
   const fetchMedicines = async () => {
     setLoading(true);
     try {
-      const response = await client.get('/medicines');
+      const response = await client.get('/medicines?product_type=MEDICINE');
       setMedicines(response.data);
     } catch (error) {
       console.error('Error fetching medicines:', error);
