@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Plus, Search, User, Phone, MapPin, Save, Trash2, FileText,
   ShoppingCart, Loader2, Calendar, ChevronRight, Clock,
-  ClipboardCheck, ExternalLink, Edit2
+  ClipboardCheck, ExternalLink, Edit2, Package
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -19,7 +19,7 @@ interface Patient {
   gender: string;
   address: string;
   allergies: string[];
-  prescriptions?: any[];
+  reminders?: any[];
   sales?: any[];
 }
 
@@ -28,19 +28,15 @@ interface Medicine {
   name: string;
 }
 
-interface PrescriptionItem {
-  medicine_id: string;
-  medicine: { name: string };
-  dosage: string;
-  duration: string;
-}
-
-interface Prescription {
+interface PatientReminder {
   id: string;
-  patient_name: string;
-  patient: { name: string };
-  doctor_name: string;
-  items: PrescriptionItem[];
+  patient_id: string;
+  medication_name: string;
+  last_purchase_date: string;
+  dispensed_quantity: number;
+  expected_duration_days: number;
+  depletion_date: string;
+  is_resolved: boolean;
   created_at: string;
 }
 
@@ -70,17 +66,18 @@ const Patients = () => {
     allergies: []
   });
 
-  // ─── Prescription State ─────────────────────────────────────────
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [prescriptionLoading, setPrescriptionLoading] = useState(true);
-  const [prescriptionSearch, setPrescriptionSearch] = useState('');
-  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  // ─── Reminder State ─────────────────────────────────────────
+  const [reminders, setReminders] = useState<PatientReminder[]>([]);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
 
-  const [rxFormData, setRxFormData] = useState({
+  const [reminderFormData, setReminderFormData] = useState({
     patient_id: '',
-    doctor_name: '',
-    items: [{ medicine_id: '', dosage: '', duration: '' }]
+    medication_name: '',
+    last_purchase_date: new Date().toISOString().split('T')[0],
+    dispensed_quantity: '',
+    expected_duration_days: '',
+    depletion_date: ''
   });
 
   // ─── Data Fetching ──────────────────────────────────────────────
@@ -96,16 +93,13 @@ const Patients = () => {
     }
   };
 
-  const fetchPrescriptions = async () => {
-    setPrescriptionLoading(true);
-    try {
-      const response = await client.get('/prescriptions');
-      setPrescriptions(response.data);
-    } catch (err) {
-      console.error('Error fetching prescriptions:', err);
-    } finally {
-      setPrescriptionLoading(false);
-    }
+  const calculateDepletionDate = (startDate: string, durationStr: string) => {
+    if (!startDate || !durationStr) return '';
+    const duration = parseInt(durationStr);
+    if (isNaN(duration)) return '';
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + duration);
+    return date.toISOString().split('T')[0];
   };
 
   const fetchMedicines = async () => {
@@ -132,7 +126,6 @@ const Patients = () => {
 
   useEffect(() => {
     fetchPatients();
-    fetchPrescriptions();
     fetchMedicines();
   }, []);
 
@@ -144,7 +137,7 @@ const Patients = () => {
       fetchPatients();
       toastSuccess('Patient record deleted.');
     } catch (err) {
-      toastError('Delete failed', 'Patient may be linked to sales or prescriptions.');
+      toastError('Delete failed', 'Patient may be linked to sales or reminders.');
     }
   };
 
@@ -183,36 +176,31 @@ const Patients = () => {
     }
   };
 
-  // ─── Prescription Handlers ─────────────────────────────────────
-  const addRxItem = () => {
-    setRxFormData({
-      ...rxFormData,
-      items: [...rxFormData.items, { medicine_id: '', dosage: '', duration: '' }]
-    });
-  };
-
-  const removeRxItem = (index: number) => {
-    setRxFormData({
-      ...rxFormData,
-      items: rxFormData.items.filter((_, i) => i !== index)
-    });
-  };
-
-  const handleRxSubmit = async (e: React.FormEvent) => {
+  // ─── Reminder Handlers ─────────────────────────────────────
+  const handleReminderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await client.post('/prescriptions', rxFormData);
-      setIsPrescriptionModalOpen(false);
-      fetchPrescriptions();
-      setRxFormData({
+      const payload = {
+        ...reminderFormData,
+        dispensed_quantity: Number(reminderFormData.dispensed_quantity),
+        expected_duration_days: Number(reminderFormData.expected_duration_days)
+      };
+      await client.post(`/patients/${reminderFormData.patient_id}/reminders`, payload);
+      setIsReminderModalOpen(false);
+      toastSuccess('Medication reminder scheduled.');
+      if (selectedHistory) fetchHistory(selectedHistory.id); // Refresh history
+      setReminderFormData({
         patient_id: '',
-        doctor_name: '',
-        items: [{ medicine_id: '', dosage: '', duration: '' }]
+        medication_name: '',
+        last_purchase_date: new Date().toISOString().split('T')[0],
+        dispensed_quantity: '',
+        expected_duration_days: '',
+        depletion_date: ''
       });
     } catch (err: any) {
-      console.error('Error creating prescription:', err.response?.data || err.message);
-      const msg = extractErrorMessage(err, 'Error creating prescription. Ensure all fields are filled.');
-      toastError('Prescription failed', msg);
+      console.error('Error creating reminder:', err.response?.data || err.message);
+      const msg = extractErrorMessage(err, 'Error creating reminder. Ensure all fields are filled.');
+      toastError('Reminder failed', msg);
     }
   };
 
@@ -479,15 +467,15 @@ const Patients = () => {
             <span className="text-sm font-medium text-gray-600 flex items-center">
               <FileText className="w-4 h-4 mr-2" /> Medical & Purchase Records
             </span>
-            {canCreate('prescriptions') && (
+            {canCreate('patients') && (
               <button
                 onClick={() => {
-                  setRxFormData({ ...rxFormData, patient_id: selectedHistory?.id || '' });
-                  setIsPrescriptionModalOpen(true);
+                  setReminderFormData({ ...reminderFormData, patient_id: selectedHistory?.id || '', last_purchase_date: new Date().toISOString().split('T')[0] });
+                  setIsReminderModalOpen(true);
                 }}
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-indigo-700 transition shadow-sm"
               >
-                <Plus className="w-4 h-4 mr-2" /> Add Prescription
+                <Clock className="w-4 h-4 mr-2" /> Set Reminder
               </button>
             )}
         </div>
@@ -497,29 +485,29 @@ const Patients = () => {
               <Loader2 className="w-8 h-8 animate-spin mb-3 text-indigo-500" />
               <p>Retrieving complete medical history...</p>
             </div>
-          ) : !selectedHistory || (selectedHistory.prescriptions?.length === 0 && selectedHistory.sales?.length === 0) ? (
+          ) : !selectedHistory || (selectedHistory.reminders?.length === 0 && selectedHistory.sales?.length === 0) ? (
             <div className="py-12 text-center text-gray-400 italic border-2 border-dashed border-gray-100 rounded-2xl">
               No medical or purchase history found for this patient.
             </div>
           ) : (
             <div className="space-y-8 py-4">
               {[
-                ...(selectedHistory.prescriptions || []).map(p => ({ ...p, type: 'PRESCRIPTION' })),
+                ...(selectedHistory.reminders || []).map(p => ({ ...p, type: 'REMINDER' })),
                 ...(selectedHistory.sales || []).map(s => ({ ...s, type: 'SALE' }))
               ]
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .map((item) => (
                   <div key={`${item.type}-${item.id}`} className="relative pl-8 pb-2">
                     <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-gray-100 last:hidden" />
-                    <div className={`absolute left-0 top-1 p-1.5 rounded-full z-10 ${item.type === 'PRESCRIPTION' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'
+                    <div className={`absolute left-0 top-1 p-1.5 rounded-full z-10 ${item.type === 'REMINDER' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
                       }`}>
-                      {item.type === 'PRESCRIPTION' ? <FileText className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
+                      {item.type === 'REMINDER' ? <Clock className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
                     </div>
 
                     <div className="flex flex-col">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex flex-col">
-                          <span className={`text-[10px] font-extrabold uppercase tracking-widest ${item.type === 'PRESCRIPTION' ? 'text-indigo-500' : 'text-green-500'
+                          <span className={`text-[10px] font-extrabold uppercase tracking-widest ${item.type === 'REMINDER' ? 'text-amber-500' : 'text-green-500'
                             }`}>
                             {item.type}
                           </span>
@@ -543,10 +531,11 @@ const Patients = () => {
                                 <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
                                 <div>
                                   <p className="text-sm font-bold text-gray-800">{detail.medicine?.name || 'Unknown'}</p>
-                                  {item.type === 'PRESCRIPTION' && (
-                                    <div className="flex items-center text-[11px] text-gray-500 space-x-3 mt-0.5">
-                                      <span className="flex items-center"><Clock className="w-3 h-3 mr-1 text-gray-300" /> {detail.dosage}</span>
-                                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-gray-300" /> {detail.duration}</span>
+                                  {item.type === 'REMINDER' && (
+                                    <div className="flex flex-col text-[11px] text-gray-500 mt-1">
+                                      <span className="font-medium text-gray-700 mb-0.5">Medication: {item.medication_name}</span>
+                                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-gray-400" /> Start: {new Date(item.last_purchase_date).toLocaleDateString()}</span>
+                                      <span className="flex items-center"><Package className="w-3 h-3 mr-1 text-gray-400" /> Qty: {item.dispensed_quantity} (for {item.expected_duration_days} days)</span>
                                     </div>
                                   )}
                                   {item.type === 'SALE' && (
@@ -562,9 +551,10 @@ const Patients = () => {
                             </div>
                           ))}
                         </div>
-                        {item.type === 'PRESCRIPTION' && item.doctor_name && (
-                          <div className="mt-4 pt-4 border-t border-gray-50 flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-tight">
-                            Prescribed By: <span className="text-indigo-600 ml-1">Dr. {item.doctor_name}</span>
+                        {item.type === 'REMINDER' && (
+                          <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-[10px] uppercase font-bold tracking-tight">
+                            <span className="text-gray-400">Depletion Date</span>
+                            <span className={`px-2 py-0.5 rounded ${new Date(item.depletion_date) <= new Date() ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>{new Date(item.depletion_date).toLocaleDateString()}</span>
                           </div>
                         )}
                       </div>
@@ -576,114 +566,98 @@ const Patients = () => {
         </div>
       </Modal>
 
-      {/* New Prescription Modal */}
-      <Modal isOpen={isPrescriptionModalOpen} onClose={() => setIsPrescriptionModalOpen(false)} title="Issue New Prescription">
-        <form onSubmit={handleRxSubmit} className="space-y-6">
-          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
+      {/* Generate Reminder Modal */}
+      <Modal isOpen={isReminderModalOpen} onClose={() => setIsReminderModalOpen(false)} title="Set Follow-up Reminder">
+        <form onSubmit={handleReminderSubmit} className="space-y-6">
+          <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
             <div>
-              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">Patient</p>
-              <p className="text-base font-bold text-indigo-900">{selectedHistory?.name}</p>
+              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">Patient</p>
+              <p className="text-base font-bold text-amber-900">{selectedHistory?.name}</p>
             </div>
             <div className="text-right">
-               <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">Patient ID</p>
-               <p className="text-xs font-mono font-bold text-indigo-600">#{selectedHistory?.id.slice(0, 8)}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor Name</label>
-              <input
-                required
-                type="text"
-                placeholder="Name of the prescribing doctor"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={rxFormData.doctor_name}
-                onChange={(e) => setRxFormData({ ...rxFormData, doctor_name: e.target.value })}
-              />
+               <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">Patient ID</p>
+               <p className="text-xs font-mono font-bold text-amber-600">#{selectedHistory?.id.slice(0, 8)}</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-gray-800">Prescribed Medications</h4>
-              <button
-                type="button"
-                onClick={addRxItem}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center"
-              >
-                <Plus className="w-3 h-3 mr-1" /> Add Medicine
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Medication Name</label>
+              <input
+                required
+                type="text"
+                placeholder="e.g. Insulin, Metformin"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500 text-sm"
+                value={reminderFormData.medication_name}
+                onChange={(e) => setReminderFormData(prev => ({ ...prev, medication_name: e.target.value }))}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Purchase Date</label>
+                <input
+                  required
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500 text-sm"
+                  value={reminderFormData.last_purchase_date}
+                  onChange={(e) => setReminderFormData(prev => ({ ...prev, last_purchase_date: e.target.value, depletion_date: calculateDepletionDate(e.target.value, prev.expected_duration_days) }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Total Qty Dispensed</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 30"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500 text-sm"
+                  value={reminderFormData.dispensed_quantity}
+                  onChange={(e) => setReminderFormData(prev => ({ ...prev, dispensed_quantity: e.target.value }))}
+                />
+              </div>
             </div>
 
-            {rxFormData.items.map((item, idx) => (
-              <div key={idx} className="p-4 bg-gray-50 rounded-xl border border-gray-200 relative">
-                {rxFormData.items.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeRxItem(idx)}
-                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 gap-3">
-                  <select
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={item.medicine_id}
-                    onChange={(e) => {
-                      const newItems = [...rxFormData.items];
-                      newItems[idx].medicine_id = e.target.value;
-                      setRxFormData({ ...rxFormData, items: newItems });
-                    }}
-                  >
-                    <option value="">Select Medicine...</option>
-                    {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      required
-                      placeholder="Dosage (e.g. 1x3)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      value={item.dosage}
-                      onChange={(e) => {
-                        const newItems = [...rxFormData.items];
-                        newItems[idx].dosage = e.target.value;
-                        setRxFormData({ ...rxFormData, items: newItems });
-                      }}
-                    />
-                    <input
-                      required
-                      placeholder="Duration (e.g. 5 days)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      value={item.duration}
-                      onChange={(e) => {
-                        const newItems = [...rxFormData.items];
-                        newItems[idx].duration = e.target.value;
-                        setRxFormData({ ...rxFormData, items: newItems });
-                      }}
-                    />
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expected Duration (Days)</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 30"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500 text-sm"
+                  value={reminderFormData.expected_duration_days}
+                  onChange={(e) => setReminderFormData(prev => ({ ...prev, expected_duration_days: e.target.value, depletion_date: calculateDepletionDate(prev.last_purchase_date, e.target.value) }))}
+                />
               </div>
-            ))}
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-1 flex items-center"><Calendar className="w-4 h-4 mr-1"/> Est. Depletion Date</label>
+                <input
+                  required
+                  type="date"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-bold text-rose-600 focus:outline-none focus:ring-0"
+                  value={reminderFormData.depletion_date}
+                  onChange={(e) => setReminderFormData(prev => ({ ...prev, depletion_date: e.target.value }))}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="pt-4 flex justify-end space-x-3">
             <button
               type="button"
-              onClick={() => setIsPrescriptionModalOpen(false)}
+              onClick={() => setIsReminderModalOpen(false)}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-md"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 flex items-center shadow-lg shadow-indigo-100"
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-500 border border-transparent rounded-md hover:bg-amber-600 flex items-center shadow-lg shadow-amber-100"
             >
-              <Save className="w-4 h-4 mr-2" />
-              Issue Prescription
+              <Clock className="w-4 h-4 mr-2" />
+              Schedule Reminder
             </button>
           </div>
         </form>

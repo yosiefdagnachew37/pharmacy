@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Re
 import { PatientsService } from './patients.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { CreatePatientReminderDto } from './dto/create-patient-reminder.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -49,6 +50,12 @@ export class PatientsController {
         return this.patientsService.findOne(id);
     }
 
+    @Patch('reminders/:id/resolve')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    resolveReminder(@Param('id') id: string) {
+        return this.patientsService.resolveReminder(id);
+    }
+
     @Patch(':id')
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     async update(@Param('id') id: string, @Body() updatePatientDto: UpdatePatientDto, @Request() req: any) {
@@ -81,5 +88,11 @@ export class PatientsController {
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     getHistory(@Param('id') id: string) {
         return this.patientsService.getHistory(id);
+    }
+
+    @Post(':id/reminders')
+    @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
+    createReminder(@Param('id') id: string, @Body() createReminderDto: CreatePatientReminderDto, @Request() req: any) {
+        return this.patientsService.createReminder(id, createReminderDto, req.user.userId);
     }
 }

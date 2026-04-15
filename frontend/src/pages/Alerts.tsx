@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
-import { CheckCircle2, Clock, Package, Filter } from 'lucide-react';
+import { CheckCircle2, Clock, Package, HeartPulse } from 'lucide-react';
 
 interface Alert {
   id: string;
@@ -13,6 +13,7 @@ interface Alert {
 const Alerts = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState('ALL');
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -42,10 +43,16 @@ const Alerts = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">System Alerts</h1>
         <div className="flex w-full sm:w-auto">
-          <button className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter Alerts
-          </button>
+          <select 
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          >
+            <option value="ALL">All Alerts</option>
+            <option value="LOW_STOCK">Low Stock</option>
+            <option value="EXPIRY">Expiring / Expired</option>
+            <option value="PATIENT_FOLLOW_UP">Patient Follow-ups</option>
+          </select>
         </div>
       </div>
 
@@ -58,11 +65,17 @@ const Alerts = () => {
             <p className="text-gray-500 font-medium">No active alerts. Everything is running smoothly!</p>
           </div>
         ) : (
-          alerts.map((alert) => (
-            <div key={alert.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-orange-200 transition-all">
+          alerts
+            .filter(a => filterType === 'ALL' || (filterType === 'EXPIRY' && (a.type === 'EXPIRY' || a.type === 'EXPIRED')) || a.type === filterType)
+            .map((alert) => (
+            <div key={alert.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-indigo-100 transition-all">
               <div className="flex items-center space-x-4">
-                <div className={`p-4 rounded-2xl flex-shrink-0 ${alert.type === 'LOW_STOCK' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-                  {alert.type === 'LOW_STOCK' ? <Package className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                <div className={`p-4 rounded-2xl flex-shrink-0 ${
+                    alert.type === 'LOW_STOCK' ? 'bg-rose-50 text-rose-600' :
+                    alert.type === 'PATIENT_FOLLOW_UP' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'
+                  }`}>
+                  {alert.type === 'LOW_STOCK' ? <Package className="w-6 h-6" /> : 
+                   alert.type === 'PATIENT_FOLLOW_UP' ? <HeartPulse className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-800 leading-none mb-1">{alert.type.replace('_', ' ')}</h3>

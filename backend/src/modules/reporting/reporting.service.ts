@@ -14,6 +14,7 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, Headi
 import { PurchaseOrder, POPaymentStatus } from '../purchase-orders/entities/purchase-order.entity';
 import { CreditRecord } from '../credit/entities/credit-record.entity';
 import { Refund } from '../sales/entities/refund.entity';
+import { PatientReminder } from '../patients/entities/patient-reminder.entity';
 import { getTenantId, TenantQuery } from '../../common/utils/tenant-query';
 
 @Injectable()
@@ -39,6 +40,8 @@ export class ReportingService {
         private readonly creditRecordRepository: Repository<CreditRecord>,
         @InjectRepository(Refund)
         private readonly refundRepository: Repository<Refund>,
+        @InjectRepository(PatientReminder)
+        private readonly patientRemindersRepository: Repository<PatientReminder>,
     ) { }
 
     async getDashboardStats() {
@@ -76,6 +79,12 @@ export class ReportingService {
                 where: { status: AlertStatus.ACTIVE, organization_id: orgId }
             });
 
+            const patientsNeedingContact = await this.patientRemindersRepository.createQueryBuilder('r')
+                .where('r.is_resolved = false')
+                .andWhere('r.organization_id = :orgId', { orgId })
+                .andWhere("r.depletion_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '3 days'")
+                .getCount();
+
             const recentSales = await this.salesRepository.find({
                 where: { organization_id: orgId },
                 relations: ['patient'],
@@ -110,6 +119,7 @@ export class ReportingService {
                 expiringSoonBatches: expiringSoon,
                 expiredBatchesCount: expiredBatches,
                 activeAlertsCount: activeAlerts,
+                patientsNeedingContact,
                 recentSales,
                 inventorySummary: inventorySummaryRaw.map(item => ({
                     id: item.id,

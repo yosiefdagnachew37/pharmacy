@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Patient, Gender } from './entities/patient.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { CreatePatientReminderDto } from './dto/create-patient-reminder.dto';
+import { PatientReminder } from './entities/patient-reminder.entity';
 import { getTenantId, TenantQuery } from '../../common/utils/tenant-query';
 
 @Injectable()
@@ -11,6 +13,8 @@ export class PatientsService {
     constructor(
         @InjectRepository(Patient)
         private readonly patientsRepository: Repository<Patient>,
+        @InjectRepository(PatientReminder)
+        private readonly remindersRepository: Repository<PatientReminder>,
     ) { }
 
     async create(createPatientDto: CreatePatientDto): Promise<Patient> {
@@ -66,11 +70,13 @@ export class PatientsService {
                 'prescriptions.items.medicine',
                 'sales',
                 'sales.items',
-                'sales.items.medicine'
+                'sales.items.medicine',
+                'reminders'
             ],
             order: {
                 prescriptions: { created_at: 'DESC' },
-                sales: { created_at: 'DESC' }
+                sales: { created_at: 'DESC' },
+                reminders: { created_at: 'DESC' }
             }
         });
 
@@ -78,5 +84,25 @@ export class PatientsService {
             throw new NotFoundException(`Patient with ID ${id} not found`);
         }
         return patient;
+    }
+
+    async createReminder(patientId: string, reminderDto: CreatePatientReminderDto, userId: string): Promise<PatientReminder> {
+        const patient = await this.findOne(patientId);
+        const reminder = this.remindersRepository.create({
+            ...reminderDto,
+            organization_id: getTenantId(),
+            patient_id: patientId,
+            created_by_id: userId
+        });
+        return await this.remindersRepository.save(reminder);
+    }
+
+    async resolveReminder(id: string): Promise<PatientReminder> {
+        const reminder = await this.remindersRepository.findOne({ where: { id, organization_id: getTenantId() } });
+        if (!reminder) {
+            throw new NotFoundException(`Reminder with ID ${id} not found`);
+        }
+        reminder.is_resolved = true;
+        return await this.remindersRepository.save(reminder);
     }
 }

@@ -4,6 +4,7 @@ import { Repository, DataSource, LessThan, MoreThanOrEqual } from 'typeorm';
 import { Alert, AlertType, AlertStatus } from './entities/alert.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { Batch } from '../batches/entities/batch.entity';
+import { PatientReminder } from '../patients/entities/patient-reminder.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
@@ -30,18 +31,45 @@ export class AlertsService {
         });
     }
 
-    async findActive(): Promise<Alert[]> {
-        return await this.alertsRepository.find({
-            where: { status: AlertStatus.ACTIVE, organization_id: getTenantId() },
+    async findActive(): Promise<any[]> {
+        const orgId = getTenantId();
+        const baseAlerts = await this.alertsRepository.find({
+            where: { status: AlertStatus.ACTIVE, organization_id: orgId },
             order: { created_at: 'DESC' },
         });
+
+        const activeReminders = await this.dataSource.getRepository(PatientReminder).createQueryBuilder('r')
+            .leftJoinAndSelect('r.patient', 'patient')
+            .where('r.is_resolved = false')
+            .andWhere('r.organization_id = :orgId', { orgId })
+            .andWhere("r.depletion_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '3 days'")
+            .orderBy('r.created_at', 'DESC')
+            .getMany();
+
+        const virtualAlerts = activeReminders.map(r => ({
+            id: `reminder_${r.id}`,
+            type: 'PATIENT_FOLLOW_UP',
+            message: `Patient ${r.patient?.name || 'Unknown'} expected to run out of ${r.medication_name} on ${new Date(r.depletion_date).toLocaleDateString()}`,
+            status: AlertStatus.ACTIVE,
+            created_at: r.created_at
+        }));
+
+        return [...virtualAlerts, ...baseAlerts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
 
     async resolve(id: string): Promise<void> {
-        await this.alertsRepository.update(
-            { id, organization_id: getTenantId() },
-            { status: AlertStatus.RESOLVED }
-        );
+        if (id.startsWith('reminder_')) {
+            const actualId = id.replace('reminder_', '');
+            await this.dataSource.getRepository(PatientReminder).update(
+                { id: actualId, organization_id: getTenantId() },
+                { is_resolved: true }
+            );
+        } else {
+            await this.alertsRepository.update(
+                { id, organization_id: getTenantId() },
+                { status: AlertStatus.RESOLVED }
+            );
+        }
     }
 
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)

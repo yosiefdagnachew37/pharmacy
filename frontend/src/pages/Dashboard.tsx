@@ -42,6 +42,7 @@ const Dashboard = () => {
     expiringSoonBatches: 0,
     expiredBatchesCount: 0,
     activeAlertsCount: 0,
+    patientsNeedingContact: 0,
     recentSales: [] as any[],
     inventorySummary: [] as any[],
     totalMedicines: 0
@@ -175,15 +176,33 @@ const Dashboard = () => {
               <card.icon className="w-6 h-6" />
             </div>
 
-            <div className="z-10">
-              <p className="text-xs font-bold uppercase text-gray-400 mb-1">{card.label}</p>
-              <h3 className="text-2xl font-bold text-gray-800">{card.value}</h3>
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-xs text-gray-500 font-medium">{card.desc}</p>
+            <div className="z-10 w-full relative">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold uppercase text-gray-400">{card.label}</p>
                 <div className={`w-6 h-6 rounded-full ${card.secondaryColor} flex items-center justify-center ${card.textColor} group-hover:translate-x-1 transition-transform`}>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
+
+              {card.label === 'Active Alerts' ? (
+                <div className="flex justify-between items-center mt-3 bg-gray-50/50 rounded-xl p-2 border border-gray-100">
+                  <div className="flex-1 border-r border-dashed border-gray-200 pr-2">
+                    <h3 className="text-xl font-black text-indigo-600 leading-none">{stats.activeAlertsCount || 0}</h3>
+                    <p className="text-[9px] text-indigo-400 font-bold uppercase mt-1 tracking-tighter">System</p>
+                  </div>
+                  <div className="flex-1 pl-3 text-right">
+                    <h3 className="text-xl font-black text-amber-500 leading-none">{stats.patientsNeedingContact || 0}</h3>
+                    <p className="text-[9px] text-amber-500 font-bold uppercase mt-1 tracking-tighter">Follow-ups</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-bold text-gray-800">{card.value}</h3>
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-xs text-gray-500 font-medium">{card.desc}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}

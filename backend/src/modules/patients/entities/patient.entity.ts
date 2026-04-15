@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Prescription } from '../../prescriptions/entities/prescription.entity';
 import { Sale } from '../../sales/entities/sale.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { PatientReminder } from './patient-reminder.entity';
 
 export enum Gender {
     MALE = 'MALE',
@@ -54,6 +55,9 @@ export class Patient {
 
     @OneToMany(() => Sale, (sale) => sale.patient)
     sales: Sale[];
+
+    @OneToMany(() => PatientReminder, (reminder) => reminder.patient)
+    reminders: PatientReminder[];
 
     @UpdateDateColumn()
     updated_at: Date;
