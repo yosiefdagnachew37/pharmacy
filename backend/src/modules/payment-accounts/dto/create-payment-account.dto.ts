@@ -25,4 +25,12 @@ export class CreatePaymentAccountDto {
   @IsBoolean()
   @IsOptional()
   is_active?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  is_visible_to_cashier?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  allow_transfer?: boolean;
 }

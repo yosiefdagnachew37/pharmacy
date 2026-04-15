@@ -32,6 +32,12 @@ export class PaymentAccount {
   @Column({ default: true })
   is_active: boolean;
 
+  @Column({ default: true })
+  is_visible_to_cashier: boolean;
+
+  @Column({ default: true })
+  allow_transfer: boolean;
+
   /** Running balance — incremented each time a cashier confirms payment to this account */
   @Column('decimal', { precision: 14, scale: 2, default: 0 })
   balance: number;

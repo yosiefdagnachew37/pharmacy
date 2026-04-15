@@ -14,15 +14,50 @@ import { UserRole } from '../../common/enums/user-role.enum';
 export class PaymentAccountsController {
   constructor(private readonly service: PaymentAccountsService) {}
 
-  /** All authenticated users can fetch active accounts — needed by cashier at checkout */
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Request() req: any) {
+    return this.service.findAll(req.user?.role);
   }
 
   @Get('active')
   findActive() {
     return this.service.findActive();
+  }
+
+  // --- TRANSFERS ---
+
+  @Post('transfer-request')
+  @Roles(UserRole.ADMIN, UserRole.CASHIER, UserRole.SUPER_ADMIN)
+  createTransferRequest(
+    @Body() body: { from_account_id: string; to_account_id: string; amount: number; reason: string },
+    @Request() req: any
+  ) {
+    return this.service.createTransferRequest(
+      body.from_account_id,
+      body.to_account_id,
+      body.amount,
+      body.reason || '',
+      req.user.userId,
+      req.user.role
+    );
+  }
+
+  @Get('transfer-request')
+  @Roles(UserRole.ADMIN, UserRole.CASHIER, UserRole.SUPER_ADMIN)
+  getTransferRequests(@Request() req: any) {
+    return this.service.getTransferRequests(req.user.role, req.user.userId);
+  }
+
+  @Post('transfer-request/:id/approve')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  approveTransferRequest(@Param('id') id: string, @Request() req: any) {
+    return this.service.approveTransferRequest(id, req.user.userId);
+  }
+
+  @Post('transfer-request/:id/reject')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  rejectTransferRequest(@Param('id') id: string) {
+    return this.service.rejectTransferRequest(id);
   }
 
   @Get('transactions')

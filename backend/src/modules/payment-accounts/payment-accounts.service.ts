@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, SelectQueryBuilder } from 'typeorm';
 import { PaymentAccount, PaymentAccountType } from './entities/payment-account.entity';
 import { PaymentAccountTransaction, TransactionType, ReferenceType } from './entities/payment-account-transaction.entity';
+import { TransferRequest, TransferRequestStatus } from './entities/transfer-request.entity';
 import { CreatePaymentAccountDto } from './dto/create-payment-account.dto';
+import { UserRole } from '../../common/enums/user-role.enum';
 import { getTenantId } from '../../common/utils/tenant-query';
 import { Request } from 'express';
 
@@ -14,12 +16,18 @@ export class PaymentAccountsService {
     private readonly repo: Repository<PaymentAccount>,
     @InjectRepository(PaymentAccountTransaction)
     private readonly transactionRepo: Repository<PaymentAccountTransaction>,
+    @InjectRepository(TransferRequest)
+    private readonly transferRepo: Repository<TransferRequest>,
     private readonly dataSource: DataSource,
   ) {}
 
-  async findAll(): Promise<PaymentAccount[]> {
+  async findAll(userRole?: string): Promise<PaymentAccount[]> {
+    const whereClause: any = { organization_id: getTenantId() };
+    if (userRole === UserRole.CASHIER) {
+      whereClause.is_visible_to_cashier = true;
+    }
     return this.repo.find({
-      where: { organization_id: getTenantId() },
+      where: whereClause,
       order: { name: 'ASC' },
     });
   }
@@ -47,6 +55,8 @@ export class PaymentAccountsService {
         ...dto,
         type: dto.type ?? PaymentAccountType.CASH,
         is_active: dto.is_active ?? true,
+        is_visible_to_cashier: dto.is_visible_to_cashier ?? true,
+        allow_transfer: dto.allow_transfer ?? true,
         organization_id: getTenantId(),
         balance: dto.initial_balance || 0,
       });
@@ -134,6 +144,136 @@ export class PaymentAccountsService {
       });
 
       return manager.save(transaction);
+    });
+  }
+
+  // --- TRANSFERS ---
+
+  async createTransferRequest(fromAccountId: string, toAccountId: string, amount: number, reason: string, userId: string, role: string): Promise<TransferRequest> {
+    if (amount <= 0) throw new BadRequestException('Amount must be positive');
+    if (fromAccountId === toAccountId) throw new BadRequestException('Cannot transfer to the same account');
+
+    const fromAccount = await this.repo.findOne({ where: { id: fromAccountId, organization_id: getTenantId() } });
+    if (!fromAccount) throw new NotFoundException('Source account not found');
+
+    const toAccount = await this.repo.findOne({ where: { id: toAccountId, organization_id: getTenantId() } });
+    if (!toAccount) throw new NotFoundException('Destination account not found');
+
+    if (role === UserRole.CASHIER && !fromAccount.allow_transfer) {
+      throw new BadRequestException('You do not have permission to transfer from this account');
+    }
+
+    if (Number(fromAccount.balance || 0) < amount) {
+      throw new BadRequestException('Insufficient funds in the source account');
+    }
+
+    const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
+
+    const request = this.transferRepo.create({
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
+      amount,
+      reason,
+      status: TransferRequestStatus.PENDING,
+      requested_by: userId,
+      organization_id: getTenantId(),
+    });
+
+    const savedRequest = await this.transferRepo.save(request);
+
+    if (isAdmin) {
+      await this.processTransfer(savedRequest.id, userId);
+    }
+
+    const result = await this.transferRepo.findOne({ where: { id: savedRequest.id }, relations: ['from_account', 'to_account'] });
+    if (!result) throw new NotFoundException('Transfer request not found');
+    return result;
+  }
+
+  async getTransferRequests(role: string, userId: string): Promise<TransferRequest[]> {
+    const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
+    const where: any = { organization_id: getTenantId() };
+    
+    if (!isAdmin) {
+      where.requested_by = userId;
+    }
+
+    return this.transferRepo.find({
+      where,
+      relations: ['from_account', 'to_account'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async approveTransferRequest(requestId: string, adminId: string): Promise<TransferRequest> {
+    return this.processTransfer(requestId, adminId);
+  }
+
+  async rejectTransferRequest(requestId: string): Promise<TransferRequest> {
+    const request = await this.transferRepo.findOne({ where: { id: requestId, organization_id: getTenantId() } });
+    if (!request) throw new NotFoundException('Transfer request not found');
+    if (request.status !== TransferRequestStatus.PENDING) {
+      throw new BadRequestException(`Cannot reject a request that is already ${request.status}`);
+    }
+
+    request.status = TransferRequestStatus.REJECTED;
+    return this.transferRepo.save(request);
+  }
+
+  private async processTransfer(requestId: string, adminId: string): Promise<TransferRequest> {
+    return this.dataSource.transaction(async (manager) => {
+      const request = await manager.findOne(TransferRequest, {
+        where: { id: requestId, organization_id: getTenantId() },
+        relations: ['from_account', 'to_account']
+      });
+
+      if (!request) throw new NotFoundException('Transfer request not found');
+      if (request.status === TransferRequestStatus.APPROVED && request.approved_by !== adminId) {
+          // If already approved (by the auto-approve flow), we just proceed since we lock and update its state as well.
+      } else if (request.status !== TransferRequestStatus.PENDING) {
+         throw new BadRequestException(`Cannot process a request that is ${request.status}`);
+      }
+
+      if (Number(request.from_account.balance || 0) < Number(request.amount)) {
+        throw new BadRequestException('Insufficient funds in the source account to process this transfer');
+      }
+
+      // Deduct
+      request.from_account.balance = Number(request.from_account.balance || 0) - Number(request.amount);
+      await manager.save(request.from_account);
+
+      const debitTx = manager.create(PaymentAccountTransaction, {
+        payment_account_id: request.from_account_id,
+        amount: request.amount,
+        type: TransactionType.DEBIT,
+        reference_type: ReferenceType.MANUAL_ADJUSTMENT,
+        reference_id: request.id,
+        description: `Transfer out to ${request.to_account.name}`,
+        created_by: adminId,
+        organization_id: getTenantId(),
+      });
+      await manager.save(debitTx);
+
+      // Add
+      request.to_account.balance = Number(request.to_account.balance || 0) + Number(request.amount);
+      await manager.save(request.to_account);
+
+      const creditTx = manager.create(PaymentAccountTransaction, {
+        payment_account_id: request.to_account_id,
+        amount: request.amount,
+        type: TransactionType.CREDIT,
+        reference_type: ReferenceType.MANUAL_ADJUSTMENT,
+        reference_id: request.id,
+        description: `Transfer in from ${request.from_account.name}`,
+        created_by: adminId,
+        organization_id: getTenantId(),
+      });
+      await manager.save(creditTx);
+
+      // Update request
+      request.status = TransferRequestStatus.APPROVED;
+      request.approved_by = adminId;
+      return manager.save(request);
     });
   }
 }
