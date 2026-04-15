@@ -56,7 +56,7 @@ const Alerts = () => {
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div>
         {loading ? (
           <div className="p-12 text-center text-gray-400">Monitoring system status...</div>
         ) : alerts.length === 0 ? (
@@ -65,7 +65,8 @@ const Alerts = () => {
             <p className="text-gray-500 font-medium">No active alerts. Everything is running smoothly!</p>
           </div>
         ) : (
-          alerts
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {alerts
             .filter(a => filterType === 'ALL' || (filterType === 'EXPIRY' && (a.type === 'EXPIRY' || a.type === 'EXPIRED')) || a.type === filterType)
             .map((alert) => (
             <div key={alert.id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group hover:border-indigo-100 transition-all">
@@ -93,7 +94,8 @@ const Alerts = () => {
                 Resolve Alert
               </button>
             </div>
-          ))
+          ))}
+          </div>
         )}
       </div>
     </div>
