@@ -90,7 +90,9 @@ const PharmacistPOS = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [patientId, setPatientId] = useState('');
-  const [cartDiscount, setCartDiscount] = useState<number>(0);
+  const [cartDiscount, setCartDiscount] = useState<number | string>('');
+  const [cartDiscountValue, setCartDiscountValue] = useState<number | string>('');
+  const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [loading, setLoading] = useState(false);
   const [orgInfo, setOrgInfo] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products');
@@ -268,7 +270,11 @@ const PharmacistPOS = () => {
   };
 
   const subtotal = cart.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const discountAmount = subtotal * (cartDiscount / 100);
+  let rawDiscountAmount = discountType === 'PERCENTAGE'
+    ? subtotal * ((Number(cartDiscount) || 0) / 100)
+    : (Number(cartDiscountValue) || 0);
+  const isDiscountExceeding = rawDiscountAmount > subtotal;
+  let discountAmount = isDiscountExceeding ? subtotal : rawDiscountAmount; // Ensure bounded calculation
   const total = subtotal - discountAmount;
   const hasControlledItems = cart.some(i => medicines.find(m => m.id === i.medicine_id)?.is_controlled);
   const filteredMedicines = medicines.filter(m =>
@@ -360,7 +366,7 @@ const PharmacistPOS = () => {
           onClick={() => { setSentOrder(null); setPollingOrder(null); setCart([]); setPatientId(''); setCartDiscount(0); setPrescriptionUrl(null); fetchData(); }}
           className="mt-8 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 active:scale-95 transition-all"
         >
-          {isConfirmed || isCancelled ? 'New Transaction' : 'Cancel Order & Start New'}
+          {isConfirmed || isCancelled ? 'New Transaction' : 'Start New Sale Order'}
         </button>
       </div>
     );
@@ -491,28 +497,36 @@ const PharmacistPOS = () => {
 
           {/* Discount + Totals */}
           <div className="pt-2 border-t border-dashed border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-center text-gray-500 dark:text-slate-400 mb-1">
+            <div className="flex justify-between items-center text-gray-800 dark:text-slate-200 mb-1">
               <span className="text-[10px] font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Discount</span>
-              <div className="relative w-16">
-                <input type="number" min="0" max="100" className="w-full text-right bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none focus:border-indigo-400" value={cartDiscount} onChange={e => setCartDiscount(parseFloat(e.target.value) || 0)} />
-                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
+              <div className="flex items-center gap-2">
+                <div className="relative w-16">
+                  <input type="number" min="0" max="100" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'PERCENTAGE' ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-gray-200 dark:border-slate-700'} rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none`} value={discountType === 'PERCENTAGE' ? cartDiscount : ''} onChange={e => { setCartDiscount(e.target.value); setDiscountType('PERCENTAGE'); }} placeholder="0" />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
+                </div>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">OR</span>
+                <div className="relative w-20">
+                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">ETB</span>
+                  <input type="number" min="0" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'FIXED' ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-gray-200 dark:border-slate-700'} rounded-md pl-6 pr-1 py-0.5 text-xs font-bold focus:outline-none`} value={discountType === 'FIXED' ? cartDiscountValue : ''} onChange={e => { setCartDiscountValue(e.target.value); setDiscountType('FIXED'); }} placeholder="0.00" />
+                </div>
               </div>
             </div>
-            <div className="flex justify-between items-center text-gray-400 dark:text-slate-500 mb-1">
+            <div className="flex justify-between items-center text-gray-800 dark:text-slate-200 mb-1">
               <span className="text-[10px] font-bold uppercase">Subtotal</span>
               <span className="text-xs font-bold">ETB {subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-end text-gray-900 dark:text-slate-100 mt-1">
               <div className="flex flex-col">
-                {discountAmount > 0 && <span className="text-[10px] font-bold text-rose-500 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
-                <span className="text-[10px] font-black uppercase leading-none text-gray-400 dark:text-slate-500">Total Due</span>
+                {isDiscountExceeding && <span className="text-[10px] font-bold text-rose-600 uppercase">Exceeds limits!</span>}
+                {!isDiscountExceeding && discountAmount > 0 && <span className="text-[10px] font-bold text-emerald-600 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
+                <span className="text-[10px] font-black uppercase leading-none text-gray-800 dark:text-slate-200 mt-0.5">Total Due</span>
               </div>
               <span className="text-xl font-black leading-none text-indigo-700 dark:text-indigo-400">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
-            disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl)}
+            disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl) || isDiscountExceeding}
             onClick={handleSendToCashier}
             className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1 flex items-center justify-center gap-2"
           >
@@ -653,39 +667,39 @@ const CashierPOS = () => {
 
   const handleConfirm = async () => {
     if (!selectedOrder) return;
-    
+
     // Validations
     if (paymentMode === 'CASH' && !selectedAccount) return toastError('Error', 'Please select a payment account for cash receipt.');
     if (paymentMode === 'CREDIT' && !selectedOrder.patient) return toastError('Error', 'Patient is required for credit transactions.');
     if (paymentMode === 'SPLIT') {
-       if (!selectedAccount) return toastError('Error', 'Please select a payment account for the upfront portion.');
-       if (!selectedOrder.patient) return toastError('Error', 'Patient is required for the credit portion.');
-       if (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder.total_amount) return toastError('Error', 'Invalid upfront amount.');
+      if (!selectedAccount) return toastError('Error', 'Please select a payment account for the upfront portion.');
+      if (!selectedOrder.patient) return toastError('Error', 'Patient is required for the credit portion.');
+      if (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder.total_amount) return toastError('Error', 'Invalid upfront amount.');
     }
 
     setConfirmLoading(true);
     try {
       const payload: any = { payment_method: paymentMode };
-      
+
       if (paymentMode === 'CASH') {
-         payload.payment_account_id = selectedAccount?.id;
-         payload.payment_account_name = selectedAccount?.name;
+        payload.payment_account_id = selectedAccount?.id;
+        payload.payment_account_name = selectedAccount?.name;
       } else if (paymentMode === 'SPLIT') {
-         payload.payment_account_id = selectedAccount?.id;
-         payload.payment_account_name = selectedAccount?.name;
-         payload.amount_paid = Number(amountPaid);
+        payload.payment_account_id = selectedAccount?.id;
+        payload.payment_account_name = selectedAccount?.name;
+        payload.amount_paid = Number(amountPaid);
       }
 
       const res = await client.post(`/sales/orders/${selectedOrder.id}/confirm`, payload);
       setConfirmedSale(res.data);
-      
+
       let msg = '';
       if (paymentMode === 'CASH') msg = `ETB ${Number(selectedOrder.total_amount).toFixed(2)} received via ${selectedAccount?.name || 'Account'}.`;
       else if (paymentMode === 'CREDIT') msg = `Credit sale recorded for ${selectedOrder.patient?.name}.`;
       else msg = `ETB ${amountPaid} received via ${selectedAccount?.name}, remainder passed to credit.`;
-      
+
       toastSuccess('Payment Confirmed', msg);
-      
+
       setShowPaymentModal(false);
       fetchOrders();
     } catch (err: any) {
@@ -831,25 +845,25 @@ const CashierPOS = () => {
 
           <div>
             <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
-               <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CASH' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
-               <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
-               <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
+              <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CASH' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
+              <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
+              <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
             </div>
 
             {paymentMode !== 'CASH' && !selectedOrder?.patient && (
-               <div className="bg-rose-50 text-rose-600 border border-rose-200 p-3 rounded-xl text-xs font-bold mb-4 flex items-center gap-2">
-                 <AlertTriangle className="w-4 h-4" /> Cannot issue credit: No patient attached to this order.
-               </div>
+              <div className="bg-rose-50 text-rose-600 border border-rose-200 p-3 rounded-xl text-xs font-bold mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" /> Cannot issue credit: No patient attached to this order.
+              </div>
             )}
 
             {paymentMode === 'SPLIT' && (
-               <div className="mb-4">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upfront Amount Paid (ETB)</label>
-                  <input type="number" step="0.01" min="0" max={selectedOrder?.total_amount} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-lg font-black text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-all outline-none mb-1" placeholder="0.00" />
-                  {amountPaid && amountPaid > 0 && amountPaid < selectedOrder!.total_amount && (
-                     <p className="text-xs font-bold text-indigo-600 ml-1 mt-1">Remaining ETB {(selectedOrder!.total_amount - (amountPaid as number)).toFixed(2)} will be credited.</p>
-                  )}
-               </div>
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upfront Amount Paid (ETB)</label>
+                <input type="number" step="0.01" min="0" max={selectedOrder?.total_amount} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-lg font-black text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-all outline-none mb-1" placeholder="0.00" />
+                {amountPaid && amountPaid > 0 && amountPaid < selectedOrder!.total_amount && (
+                  <p className="text-xs font-bold text-indigo-600 ml-1 mt-1">Remaining ETB {(selectedOrder!.total_amount - (amountPaid as number)).toFixed(2)} will be credited.</p>
+                )}
+              </div>
             )}
 
             {paymentMode !== 'CREDIT' && (
@@ -884,10 +898,10 @@ const CashierPOS = () => {
             <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all">Cancel</button>
             <button
               disabled={
-                 confirmLoading || 
-                 (paymentMode !== 'CREDIT' && !selectedAccount) || 
-                 (paymentMode !== 'CASH' && !selectedOrder?.patient) ||
-                 (paymentMode === 'SPLIT' && (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder!.total_amount))
+                confirmLoading ||
+                (paymentMode !== 'CREDIT' && !selectedAccount) ||
+                (paymentMode !== 'CASH' && !selectedOrder?.patient) ||
+                (paymentMode === 'SPLIT' && (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder!.total_amount))
               }
               onClick={handleConfirm}
               className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
