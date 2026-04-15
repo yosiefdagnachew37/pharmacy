@@ -68,19 +68,19 @@ const Alerts = () => {
           alerts
             .filter(a => filterType === 'ALL' || (filterType === 'EXPIRY' && (a.type === 'EXPIRY' || a.type === 'EXPIRED')) || a.type === filterType)
             .map((alert) => (
-            <div key={alert.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-indigo-100 transition-all">
-              <div className="flex items-center space-x-4">
-                <div className={`p-4 rounded-2xl flex-shrink-0 ${
+            <div key={alert.id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group hover:border-indigo-100 transition-all">
+              <div className="flex items-center space-x-3 w-full sm:w-auto flex-1">
+                <div className={`p-2.5 rounded-xl flex-shrink-0 ${
                     alert.type === 'LOW_STOCK' ? 'bg-rose-50 text-rose-600' :
                     alert.type === 'PATIENT_FOLLOW_UP' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'
                   }`}>
-                  {alert.type === 'LOW_STOCK' ? <Package className="w-6 h-6" /> : 
-                   alert.type === 'PATIENT_FOLLOW_UP' ? <HeartPulse className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                  {alert.type === 'LOW_STOCK' ? <Package className="w-5 h-5" /> : 
+                   alert.type === 'PATIENT_FOLLOW_UP' ? <HeartPulse className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-800 leading-none mb-1">{alert.type.replace('_', ' ')}</h3>
-                  <p className="text-sm text-gray-500 leading-tight">{alert.message}</p>
-                  <p className="text-[10px] text-gray-400 mt-2 uppercase font-bold tracking-tight bg-gray-50 inline-block px-1.5 py-0.5 rounded">
+                  <h3 className="font-extrabold text-gray-900 leading-none mb-1 text-sm">{alert.type.replace(/_/g, ' ')}</h3>
+                  <p className="text-sm font-bold text-gray-700 leading-tight">{alert.message}</p>
+                  <p className="text-[9px] text-gray-400 mt-1.5 uppercase font-bold tracking-tight bg-gray-50 inline-block px-1.5 py-0.5 rounded border border-gray-100">
                     Detected: {new Date(alert.created_at).toLocaleString()}
                   </p>
                 </div>
@@ -88,7 +88,7 @@ const Alerts = () => {
 
               <button
                 onClick={() => resolveAlert(alert.id)}
-                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm opacity-100 sm:opacity-0 group-hover:opacity-100"
+                className="w-full sm:w-auto px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm opacity-100 sm:opacity-0 group-hover:opacity-100 whitespace-nowrap"
               >
                 Resolve Alert
               </button>
