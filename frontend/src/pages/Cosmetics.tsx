@@ -9,6 +9,7 @@ import { toastSuccess, toastError } from '../components/Toast';
 import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import Modal from '../components/Modal';
+import ColumnFilter from '../components/ColumnFilter';
 
 const COSMETIC_CATEGORIES = [
     'Skin Care',
@@ -32,7 +33,9 @@ const Cosmetics = () => {
     const [submitting, setSubmitting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<any>(null);
-    const [categoryFilter, setCategoryFilter] = useState('');
+    const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
+        sku: [], name: [], category: [], unit: [], status: [],
+    });
 
     // Form state
     const [form, setForm] = useState<{
@@ -157,16 +160,39 @@ const Cosmetics = () => {
         }
     };
 
+    const uniqueSkus = useMemo(() => [...new Set(cosmetics.map(c => c.sku).filter(Boolean))].sort(), [cosmetics]);
+    const uniqueNames = useMemo(() => [...new Set(cosmetics.map(c => c.name).filter(Boolean))].sort(), [cosmetics]);
     const uniqueCategories = useMemo(() => [...new Set(cosmetics.map(c => c.category).filter(Boolean))].sort(), [cosmetics]);
+    const uniqueUnits = useMemo(() => [...new Set(cosmetics.map(c => c.unit).filter(Boolean))].sort(), [cosmetics]);
+    const statusOptions = ['In Stock', 'Low Stock', 'Out of Stock'];
+
+    const getStatus = (c: any) => {
+        if ((c.total_stock || 0) <= 0) return 'Out of Stock';
+        if ((c.total_stock || 0) <= (c.minimum_stock_level || 5)) return 'Low Stock';
+        return 'In Stock';
+    };
 
     const filtered = useMemo(() => {
         return cosmetics.filter(c => {
             const matchesSearch = c.name?.toLowerCase().includes(search.toLowerCase()) ||
-                c.category?.toLowerCase().includes(search.toLowerCase());
-            const matchesCategory = !categoryFilter || c.category === categoryFilter;
-            return matchesSearch && matchesCategory;
+                c.category?.toLowerCase().includes(search.toLowerCase()) ||
+                c.sku?.toLowerCase().includes(search.toLowerCase());
+
+            const matchesSku = columnFilters.sku.length === 0 || columnFilters.sku.includes(c.sku);
+            const matchesName = columnFilters.name.length === 0 || columnFilters.name.includes(c.name);
+            const matchesCategory = columnFilters.category.length === 0 || columnFilters.category.includes(c.category);
+            const matchesUnit = columnFilters.unit.length === 0 || columnFilters.unit.includes(c.unit);
+            const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(getStatus(c));
+
+            return matchesSearch && matchesSku && matchesName && matchesCategory && matchesUnit && matchesStatus;
         });
-    }, [cosmetics, search, categoryFilter]);
+    }, [cosmetics, search, columnFilters]);
+
+    const updateFilter = (column: string, values: string[]) => {
+        setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
     // Summary stats
     const totalItems = cosmetics.length;
@@ -251,29 +277,29 @@ const Cosmetics = () => {
                             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                         />
                     </div>
-                    <select
-                        value={categoryFilter}
-                        onChange={e => setCategoryFilter(e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
-                    >
-                        <option value="">All Categories</option>
-                        {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
+                    {activeFilterCount > 0 && (
+                        <button
+                            onClick={() => setColumnFilters({ sku: [], name: [], category: [], unit: [], status: [] })}
+                            className="px-3 py-2 bg-pink-50 text-pink-600 text-[11px] font-bold rounded-xl border border-pink-100 hover:bg-pink-100 transition-colors"
+                        >
+                            Clear {activeFilterCount} Filters
+                        </button>
+                    )}
                 </div>
 
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
+                         <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
                             <tr>
-                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Item ID</th>
-                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Product</th>
-                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">UoM</th>
-                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</th>
-                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock</th>
+                                <ColumnFilter label="Item ID" options={uniqueSkus} selectedValues={columnFilters.sku} onFilterChange={vals => updateFilter('sku', vals)} className="px-5 py-3 text-left text-[10px]" />
+                                <ColumnFilter label="Product" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={vals => updateFilter('name', vals)} className="px-5 py-3 text-left text-[10px]" />
+                                <ColumnFilter label="UoM" options={uniqueUnits} selectedValues={columnFilters.unit} onFilterChange={vals => updateFilter('unit', vals)} align="center" className="px-5 py-3 text-center text-[10px]" />
+                                <ColumnFilter label="Category" options={uniqueCategories} selectedValues={columnFilters.category} onFilterChange={vals => updateFilter('category', vals)} className="px-5 py-3 text-left text-[10px]" />
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest text-left">Stock</th>
                                 <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Min</th>
                                 <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Expiry</th>
                                 <th className="px-5 py-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</th>
-                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                <ColumnFilter label="Status" options={statusOptions} selectedValues={columnFilters.status} onFilterChange={vals => updateFilter('status', vals)} align="center" className="px-5 py-3 text-center text-[10px]" />
                                 <th className="px-5 py-3.5 text-right">Actions</th>
                             </tr>
                         </thead>

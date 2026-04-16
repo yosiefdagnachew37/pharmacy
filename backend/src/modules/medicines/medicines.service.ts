@@ -45,12 +45,13 @@ export class MedicinesService {
         }
 
         // Auto-create first batch if batch info provided
-        if (batch_number && initial_quantity !== undefined && initial_quantity > 0) {
+        if (batch_number) {
+            const qty = initial_quantity !== undefined ? Number(initial_quantity) : 0;
             const batchData: any = {
                 medicine_id: savedMedicine.id,
                 batch_number,
-                initial_quantity,
-                quantity_remaining: initial_quantity,
+                initial_quantity: qty,
+                quantity_remaining: qty,
                 selling_price: selling_price ?? 0,
                 purchase_price: purchase_price ?? 0,
                 organization_id: getTenantId(),
@@ -68,7 +69,7 @@ export class MedicinesService {
     async findAll(product_type?: ProductType) {
         try {
             let qb = this.medicinesRepository.createQueryBuilder('m')
-                .leftJoin('m.batches', 'b', 'b.deleted_at IS NULL AND (b.expiry_date IS NULL OR b.expiry_date >= :now)', { now: new Date().toISOString().split('T')[0] });
+                .leftJoin('m.batches', 'b', 'b.deleted_at IS NULL');
             
             qb = scopeQuery(qb, 'm');
 
@@ -125,7 +126,10 @@ export class MedicinesService {
                 product_type: res.m_product_type || ProductType.MEDICINE,
                 preferred_supplier_id: res.m_preferred_supplier_id,
                 total_stock: Number(res.total_stock || 0),
-                selling_price: Number(res.selling_price || 0)
+                selling_price: Number(res.selling_price || 0),
+                purchase_price: Number(res.purchase_price || 0),
+                expiry_date: res.expiry_date,
+                batch_number: res.batch_number
             }));
         } catch (error) {
             console.error('Error in MedicinesService.findAll:', error);
