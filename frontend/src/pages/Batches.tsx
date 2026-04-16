@@ -67,6 +67,9 @@ const Batches = () => {
 
   const [filterMedicine, setFilterMedicine] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterBatchNumber, setFilterBatchNumber] = useState<string[]>([]);
+  const [medicineSearch, setMedicineSearch] = useState('');
+  const [medicineDropdownOpen, setMedicineDropdownOpen] = useState(false);
 
   const fetchBatches = async () => {
     setLoading(true);
@@ -101,6 +104,7 @@ const Batches = () => {
 
   const handleEdit = (batch: Batch) => {
     setEditingBatchId(batch.id);
+    setMedicineSearch(batch.medicine?.name || '');
     setFormData({
       medicine_id: batch.medicine_id,
       batch_number: batch.batch_number,
@@ -114,6 +118,11 @@ const Batches = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.medicine_id) {
+      toastError('Validation Error', 'Please select a valid medicine from the dropdown list.');
+      return;
+    }
 
     // Create a clean payload object, ensuring numeric fields are numbers and optional fields are undefined if empty
     const payload = {
@@ -199,6 +208,7 @@ const Batches = () => {
 
   // ─── Unique Options ──────────────────────────────────────────
   const uniqueMedicineNames = useMemo(() => [...new Set(batches.map(b => b.medicine?.name).filter(Boolean))].sort(), [batches]);
+  const uniqueBatchNumbers = useMemo(() => [...new Set(batches.map(b => b.batch_number).filter(Boolean))].sort(), [batches]);
   const statusOptions = ['Good', 'Expiring Soon', 'Expired'];
 
   const filteredBatches = useMemo(() => {
@@ -209,10 +219,11 @@ const Batches = () => {
 
       const matchesMedicine = filterMedicine.length === 0 || filterMedicine.includes(b.medicine?.name);
       const matchesStatus = filterStatus.length === 0 || filterStatus.includes(getStatus(b.expiry_date));
+      const matchesBatchNumber = filterBatchNumber.length === 0 || filterBatchNumber.includes(b.batch_number);
 
-      return matchesSearch && matchesMedicine && matchesStatus;
+      return matchesSearch && matchesMedicine && matchesStatus && matchesBatchNumber;
     });
-  }, [batches, searchTerm, filterMedicine, filterStatus]);
+  }, [batches, searchTerm, filterMedicine, filterStatus, filterBatchNumber]);
 
 
 
@@ -248,7 +259,10 @@ const Batches = () => {
                 {importing ? 'Importing...' : 'Import Excel'}
               </button>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setMedicineSearch('');
+                  setIsModalOpen(true);
+                }}
                 className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300 active:scale-95"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -283,7 +297,13 @@ const Batches = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-30 shadow-sm">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-widest hidden sm:table-cell">Details</th>
+                <ColumnFilter
+                  label="Batch Number"
+                  options={uniqueBatchNumbers}
+                  selectedValues={filterBatchNumber}
+                  onFilterChange={setFilterBatchNumber}
+                  className="hidden sm:table-cell"
+                />
                 <ColumnFilter
                   label="Medicine"
                   options={uniqueMedicineNames}
@@ -489,19 +509,47 @@ const Batches = () => {
         title={editingBatchId ? "Edit Batch" : "Add New Batch"}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">Medicine</label>
-            <select
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              value={formData.medicine_id}
-              onChange={(e) => setFormData({ ...formData, medicine_id: e.target.value })}
-            >
-              <option value="">Select a medicine...</option>
-              {medicines.map(med => (
-                <option key={med.id} value={med.id}>{med.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Select or search medicine..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white"
+                value={medicineSearch}
+                onChange={(e) => {
+                  setMedicineSearch(e.target.value);
+                  setMedicineDropdownOpen(true);
+                  if (formData.medicine_id) setFormData({ ...formData, medicine_id: '' });
+                }}
+                onFocus={() => setMedicineDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setMedicineDropdownOpen(false), 200)}
+              />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
+            {medicineDropdownOpen && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {medicines.filter(med => (med.name || '').toLowerCase().includes(medicineSearch.toLowerCase())).map(med => (
+                  <div
+                    key={med.id}
+                    className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 transition-colors border-b border-gray-50 last:border-0"
+                    onClick={() => {
+                      setFormData({ ...formData, medicine_id: med.id });
+                      setMedicineSearch(med.name);
+                      setMedicineDropdownOpen(false);
+                    }}
+                  >
+                    {med.name}
+                  </div>
+                ))}
+                {medicines.filter(med => (med.name || '').toLowerCase().includes(medicineSearch.toLowerCase())).length === 0 && (
+                  <div className="px-3 py-3 text-sm text-gray-500 italic text-center">No matching medicines found</div>
+                )}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

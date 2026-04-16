@@ -275,7 +275,7 @@ const Medicines = () => {
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
               <tr>
                 <ColumnFilter label="Item ID" options={uniqueSkus} selectedValues={columnFilters.sku} onFilterChange={(v) => updateFilter('sku', v)} />
-                <ColumnFilter label="Medicine Name" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={(v) => updateFilter('name', v)} />
+                <ColumnFilter label="Product Name" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={(v) => updateFilter('name', v)} />
                 <ColumnFilter label="Dosage Form" options={uniqueDosageForms} selectedValues={columnFilters.dosage_form} onFilterChange={(v) => updateFilter('dosage_form', v)} className="hidden sm:table-cell" />
                 <ColumnFilter label="Stock Level" options={uniqueStockLevels} selectedValues={columnFilters.stock} onFilterChange={(v) => updateFilter('stock', v)} />
                 <th className="px-6 py-3 whitespace-nowrap hidden md:table-cell">Min. Level</th>
