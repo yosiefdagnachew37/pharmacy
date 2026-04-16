@@ -6,6 +6,7 @@ import {
 import { useRef } from 'react';
 import client from '../api/client';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import Modal from '../components/Modal';
 
@@ -264,25 +265,26 @@ const Cosmetics = () => {
                     <table className="w-full text-left">
                         <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
                             <tr>
-                                <th className="px-5 py-3.5">Item ID</th>
-                                <th className="px-5 py-3.5">Product Name</th>
-                                <th className="px-5 py-3.5 text-center">Unit</th>
-                                <th className="px-5 py-3.5">Category</th>
-                                <th className="px-5 py-3.5 text-center">In Stock</th>
-                                <th className="px-5 py-3.5 text-center">Min Level</th>
-                                <th className="px-5 py-3.5 text-right">Selling Price</th>
-                                <th className="px-5 py-3.5 text-center">Status</th>
+                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Item ID</th>
+                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Product</th>
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">UoM</th>
+                                <th className="px-5 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</th>
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Stock</th>
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Min</th>
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Expiry</th>
+                                <th className="px-5 py-3 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Price</th>
+                                <th className="px-5 py-3 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
                                 <th className="px-5 py-3.5 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {loading ? (
-                                <tr><td colSpan={7} className="py-16 text-center">
+                                <tr><td colSpan={10} className="py-16 text-center">
                                     <Loader2 className="w-8 h-8 text-pink-400 animate-spin mx-auto mb-2" />
                                     <p className="text-sm text-gray-400">Loading cosmetics...</p>
                                 </td></tr>
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={7} className="py-16 text-center">
+                                <tr><td colSpan={10} className="py-16 text-center">
                                     <Sparkles className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                                     <p className="text-sm font-semibold text-gray-400">No cosmetic products found</p>
                                     <p className="text-xs text-gray-300 mt-1">Register your first cosmetic product to get started</p>
@@ -301,7 +303,10 @@ const Cosmetics = () => {
                                                     <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center shrink-0">
                                                         <ShoppingBag className="w-4 h-4 text-pink-500" />
                                                     </div>
-                                                    <p className="font-bold text-sm text-gray-900">{item.name}</p>
+                                                    <div>
+                                                        <p className="font-bold text-sm text-gray-900">{item.name}</p>
+                                                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">Batch: {item.batch_number || '—'}</p>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
@@ -318,8 +323,15 @@ const Cosmetics = () => {
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3.5 text-center text-sm text-gray-500 font-semibold">{item.minimum_stock_level}</td>
-                                            <td className="px-5 py-3.5 text-right font-bold text-sm text-indigo-700">
-                                                {item.selling_price > 0 ? `ETB ${Number(item.selling_price).toFixed(2)}` : '—'}
+                                            <td className="px-5 py-3.5 text-center whitespace-nowrap">
+                                                <span className="text-xs font-bold text-gray-600 block">{item.expiry_date ? formatDate(item.expiry_date) : '—'}</span>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-right font-bold text-xs text-indigo-700 whitespace-nowrap">
+                                                <div className="flex flex-col">
+                                                    <span className="text-gray-400 text-[10px]">Buy: ETB {Number(item.purchase_price || 0).toFixed(2)}</span>
+                                                    <span className="text-indigo-600">Sell: ETB {Number(item.selling_price || 0).toFixed(2)}</span>
+                                                    <span className="text-[10px] text-gray-400 mt-0.5">{item.expiry_date ? formatDate(item.expiry_date) : ''}</span>
+                                                </div>
                                             </td>
                                             <td className="px-5 py-3.5 text-center">
                                                 {isOut ? (
@@ -381,6 +393,7 @@ const Cosmetics = () => {
                                             </div>
                                             <div>
                                                 <h3 className="font-bold text-sm text-gray-900">{item.name}</h3>
+                                                <p className="text-[10px] text-gray-500 font-mono">Batch: {item.batch_number || '—'}</p>
                                                 <span className="inline-block px-2.5 py-0.5 mt-1 bg-pink-50 text-pink-700 rounded-full text-[10px] font-bold border border-pink-100">
                                                     {item.category || '—'}
                                                 </span>
@@ -403,9 +416,13 @@ const Cosmetics = () => {
                                         </div>
                                         <div className="text-right">
                                             <span className="text-gray-400 text-[11px] uppercase tracking-wider font-bold">Price</span>
-                                            <p className="font-black text-indigo-700">
-                                                {item.selling_price > 0 ? `ETB ${Number(item.selling_price).toFixed(2)}` : '—'}
-                                            </p>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-gray-400 text-[9px]">Buy: ETB {Number(item.purchase_price || 0).toFixed(2)}</span>
+                                                <p className="font-black text-indigo-700">
+                                                    Sell: ETB {Number(item.selling_price || 0).toFixed(2)}
+                                                </p>
+                                                <span className="text-[9px] text-gray-400">{item.expiry_date ? formatDate(item.expiry_date) : ''}</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="border-t border-gray-50 pt-3 mt-1 flex justify-end gap-2">
