@@ -78,10 +78,13 @@ export class MedicinesController {
     @Post('import')
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     @UseInterceptors(FileInterceptor('file'))
-    async importExcel(@UploadedFile() file: Express.Multer.File) {
+    async importExcel(
+        @UploadedFile() file: Express.Multer.File,
+        @Query('product_type') productType?: ProductType
+    ) {
         if (!file) {
             return { created: 0, errors: [{ row: 0, message: 'No file uploaded' }] };
         }
-        return this.medicinesService.importFromExcel(file.buffer);
+        return this.medicinesService.importFromExcel(file.buffer, productType);
     }
 }

@@ -154,11 +154,14 @@ export class MedicinesService {
     }
 
     async remove(id: string): Promise<void> {
-        const medicine = await this.findOne(id);
-        await this.medicinesRepository.softRemove(medicine);
+        // Use a hard delete to prevent unique constraint conflicts (allowing re-registration of the same SKU/Name)
+        const deleteResult = await this.medicinesRepository.delete({ id, organization_id: getTenantId() });
+        if (deleteResult.affected === 0) {
+            throw new NotFoundException(`Medicine with ID ${id} not found`);
+        }
     }
 
-    async importFromExcel(buffer: Buffer): Promise<{ created: number; errors: { row: number; message: string }[] }> {
+    async importFromExcel(buffer: Buffer, productType: ProductType = ProductType.MEDICINE): Promise<{ created: number; errors: { row: number; message: string }[] }> {
         const ExcelJS = await import('exceljs');
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer as any);
@@ -174,21 +177,62 @@ export class MedicinesService {
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // skip header
 
-            const name = row.getCell(1).value?.toString()?.trim();
-            const generic_name = row.getCell(2).value?.toString()?.trim() || '';
-            const dosage_form = row.getCell(3).value?.toString()?.trim() || '';
-            const unit = row.getCell(4).value?.toString()?.trim() || 'TAB';
-            const minimum_stock_level = parseInt(row.getCell(5).value?.toString() || '10') || 10;
-            const is_expirable = !['false', 'no', '0'].includes((row.getCell(6).value?.toString()?.trim() || '').toLowerCase());
-            const sku = row.getCell(7).value?.toString()?.trim() || '';
+            const isCosmetic = productType === ProductType.COSMETIC;
+            
+            const sku = row.getCell(1).value?.toString()?.trim() || '';
+            const name = row.getCell(2).value?.toString()?.trim();
+
+            let category = '';
+            let unit = isCosmetic ? 'PCS' : 'TAB';
+            let minimum_stock_level: number;
+            let generic_name = '';
+            let dosage_form = '';
+            let is_expirable = true;
+            
+            // Batch related fields (optional)
+            let batch_number = '';
+            let initial_quantity: number | undefined;
+            let purchase_price: number | undefined;
+            let selling_price: number | undefined;
+            let expiry_date: string | undefined;
+
+            if (isCosmetic) {
+                // Cosmetics Order: SKU, Name, Category, Unit, Min Stock, Batch, Qty, Purchase, Selling, Expiry
+                category = row.getCell(3).value?.toString()?.trim() || '';
+                unit = row.getCell(4).value?.toString()?.trim() || 'PCS';
+                minimum_stock_level = parseInt(row.getCell(5).value?.toString() || '5') || 5;
+                batch_number = row.getCell(6).value?.toString()?.trim() || '';
+                initial_quantity = parseInt(row.getCell(7).value?.toString() || '') || undefined;
+                purchase_price = parseFloat(row.getCell(8).value?.toString() || '') || undefined;
+                selling_price = parseFloat(row.getCell(9).value?.toString() || '') || undefined;
+                
+                const expVal = row.getCell(10).value;
+                expiry_date = expVal instanceof Date ? expVal.toISOString().split('T')[0] : expVal?.toString()?.trim();
+            } else {
+                // Medicines Order: SKU, Name, Generic, Dosage, Batch, Expirable, Expiry, Unit, Qty, Min Stock, Selling
+                generic_name = row.getCell(3).value?.toString()?.trim() || '';
+                dosage_form = row.getCell(4).value?.toString()?.trim() || '';
+                batch_number = row.getCell(5).value?.toString()?.trim() || '';
+                is_expirable = !['false', 'no', '0'].includes((row.getCell(6).value?.toString()?.trim() || '').toLowerCase());
+                
+                const expVal = row.getCell(7).value;
+                expiry_date = expVal instanceof Date ? expVal.toISOString().split('T')[0] : expVal?.toString()?.trim();
+                
+                unit = row.getCell(8).value?.toString()?.trim() || 'TAB';
+                initial_quantity = parseInt(row.getCell(9).value?.toString() || '') || undefined;
+                minimum_stock_level = parseInt(row.getCell(10).value?.toString() || '10') || 10;
+                selling_price = parseFloat(row.getCell(11).value?.toString() || '') || undefined;
+            }
 
             if (!name) {
-                errors.push({ row: rowNumber, message: 'Medicine name is required' });
+                errors.push({ row: rowNumber, message: 'Product name is required' });
                 return;
             }
 
             created.push({ 
-                name, generic_name, dosage_form, unit, minimum_stock_level, is_expirable, sku,
+                name, generic_name, dosage_form, unit, minimum_stock_level, is_expirable, sku, category,
+                product_type: productType,
+                batch_number, initial_quantity, purchase_price, selling_price, expiry_date,
                 organization_id: getTenantId()
             });
         });
@@ -196,13 +240,13 @@ export class MedicinesService {
         let savedCount = 0;
         for (let i = 0; i < created.length; i++) {
             try {
-                const medicine = this.medicinesRepository.create(created[i]);
-                await this.medicinesRepository.save(medicine);
+                // Use the main create method which handles batch creation, pricing, etc.
+                await this.create(created[i] as any);
                 savedCount++;
             } catch (err: any) {
                 let message = err.message || 'Failed to save';
-                if (err.message?.includes('unique constraint') || err.code === '23505') {
-                    message = `Medicine "${created[i].name}" already exists.`;
+                if (err.message?.includes('already used') || err.message?.includes('already exists')) {
+                    message = `SKU or Name already exists for row ${i + 2}`;
                 }
                 errors.push({ row: i + 2, message });
             }
