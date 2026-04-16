@@ -11,6 +11,7 @@ import { extractErrorMessage } from '../utils/errorUtils';
 interface Medicine {
   id: string;
   name: string;
+  is_expirable: boolean;
 }
 
 interface Batch {
@@ -94,12 +95,16 @@ const Batches = () => {
     fetchMedicines();
   }, []);
 
+  // Determine if selected medicine is expirable
+  const selectedMedicine = medicines.find(m => m.id === formData.medicine_id);
+  const isSelectedExpirable = selectedMedicine?.is_expirable !== false; // default true
+
   const handleEdit = (batch: Batch) => {
     setEditingBatchId(batch.id);
     setFormData({
       medicine_id: batch.medicine_id,
       batch_number: batch.batch_number,
-      expiry_date: batch.expiry_date.split('T')[0], // Extract date part for input
+      expiry_date: batch.expiry_date ? batch.expiry_date.split('T')[0] : '',
       purchase_price: batch.purchase_price,
       selling_price: batch.selling_price,
       initial_quantity: batch.initial_quantity,
@@ -181,15 +186,16 @@ const Batches = () => {
     }
   };
 
-  const isExpired = (date: string) => new Date(date) < new Date();
-  const isExpiringSoon = (date: string) => {
+  const isExpired = (date: string | null) => !!date && new Date(date) < new Date();
+  const isExpiringSoon = (date: string | null) => {
+    if (!date) return false;
     const d = new Date(date);
     const today = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
     return d > today && d < thirtyDaysFromNow;
   };
-  const getStatus = (date: string) => isExpired(date) ? 'Expired' : isExpiringSoon(date) ? 'Expiring Soon' : 'Good';
+  const getStatus = (date: string | null) => !date ? 'Good' : isExpired(date) ? 'Expired' : isExpiringSoon(date) ? 'Expiring Soon' : 'Good';
 
   // ─── Unique Options ──────────────────────────────────────────
   const uniqueMedicineNames = useMemo(() => [...new Set(batches.map(b => b.medicine?.name).filter(Boolean))].sort(), [batches]);
@@ -333,12 +339,22 @@ const Batches = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center text-gray-700">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-300" />
-                        <span className="font-bold text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
+                        {batch.expiry_date ? (
+                          <>
+                            <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-300" />
+                            <span className="font-bold text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">N/A (Non-expirable)</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {isExpired(batch.expiry_date) ? (
+                      {!batch.expiry_date ? (
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold border border-gray-100 uppercase tracking-wide">
+                          N/A
+                        </div>
+                      ) : isExpired(batch.expiry_date) ? (
                         <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-bold border border-red-100 uppercase tracking-wide">
                           <AlertTriangle className="w-3 h-3 mr-1.5" /> Expired
                         </div>
@@ -421,10 +437,14 @@ const Batches = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Expiry</span>
-                  <div className="flex items-center text-gray-700 font-bold">
-                    <Calendar className="w-3 h-3 mr-1 text-gray-400" />
-                    {new Date(batch.expiry_date).toLocaleDateString()}
-                  </div>
+                  {batch.expiry_date ? (
+                    <div className="flex items-center text-gray-700 font-bold">
+                      <Calendar className="w-3 h-3 mr-1 text-gray-400" />
+                      {new Date(batch.expiry_date).toLocaleDateString()}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">N/A</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Buy Price</span>
@@ -495,16 +515,23 @@ const Batches = () => {
                 onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-              <input
-                required
-                type="date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                value={formData.expiry_date}
-                onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
-              />
-            </div>
+            {isSelectedExpirable && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                <input
+                  required={isSelectedExpirable}
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  value={formData.expiry_date}
+                  onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                />
+              </div>
+            )}
+            {!isSelectedExpirable && (
+              <div className="flex items-center mt-6">
+                <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-3 py-2 rounded-md italic">No expiry date — non-expirable item</span>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>

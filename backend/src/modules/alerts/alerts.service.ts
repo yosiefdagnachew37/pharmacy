@@ -106,7 +106,7 @@ export class AlertsService {
                 .select('SUM(b.quantity_remaining)', 'total')
                 .where('b.medicine_id = :id', { id: medicine.id })
                 .andWhere('b.organization_id = :orgId', { orgId })
-                .andWhere('b.expiry_date >= :now', { now: new Date().toISOString().split('T')[0] })
+                .andWhere('(b.expiry_date IS NULL OR b.expiry_date >= :now)', { now: new Date().toISOString().split('T')[0] })
                 .getRawOne();
 
             const totalStock = parseInt(stock.total, 10) || 0;
@@ -124,17 +124,18 @@ export class AlertsService {
         const now = new Date();
         const orgId = getTenantId();
         const expiringSoonDate = new Date();
-        expiringSoonDate.setDate(expiringSoonDate.getDate() + 30); // 30 days window
+        expiringSoonDate.setDate(expiringSoonDate.getDate() + 30);
 
-        // 1. Check Already Expired
-        const expiredBatches = await this.dataSource.getRepository(Batch).find({
-            where: {
-                expiry_date: LessThan(now),
-                quantity_remaining: MoreThanOrEqual(1),
-                organization_id: orgId,
-            },
-            relations: ['medicine'],
-        });
+        // 1. Check Already Expired (only expirable medicines)
+        const expiredBatches = await this.dataSource.getRepository(Batch)
+            .createQueryBuilder('b')
+            .leftJoinAndSelect('b.medicine', 'm')
+            .where('b.expiry_date IS NOT NULL')
+            .andWhere('b.expiry_date < :now', { now })
+            .andWhere('b.quantity_remaining >= 1')
+            .andWhere('b.organization_id = :orgId', { orgId })
+            .andWhere('m.is_expirable = true')
+            .getMany();
 
         for (const batch of expiredBatches) {
             await this.createAlert(
@@ -144,12 +145,14 @@ export class AlertsService {
             );
         }
 
-        // 2. Check Expiring Soon (not yet expired)
+        // 2. Check Expiring Soon (only expirable medicines)
         const soonExpiringBatches = await this.dataSource.getRepository(Batch).createQueryBuilder('b')
             .leftJoinAndSelect('b.medicine', 'm')
-            .where('b.expiry_date BETWEEN :now AND :soon', { now: now.toISOString().split('T')[0], soon: expiringSoonDate.toISOString().split('T')[0] })
+            .where('b.expiry_date IS NOT NULL')
+            .andWhere('b.expiry_date BETWEEN :now AND :soon', { now: now.toISOString().split('T')[0], soon: expiringSoonDate.toISOString().split('T')[0] })
             .andWhere('b.quantity_remaining >= 1')
             .andWhere('b.organization_id = :orgId', { orgId })
+            .andWhere('m.is_expirable = true')
             .getMany();
 
         for (const batch of soonExpiringBatches) {

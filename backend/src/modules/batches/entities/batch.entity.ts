@@ -3,7 +3,6 @@ import { Medicine } from '../../medicines/entities/medicine.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 
 @Entity('batches')
-@Unique(['medicine_id', 'batch_number', 'organization_id'])
 export class Batch {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -19,7 +18,7 @@ export class Batch {
     medicine_id: string; // Foreign key column
 
     @Index()
-    @Column({ type: 'date' })
+    @Column({ type: 'date', nullable: true })
     expiry_date: Date;
 
     @Column('decimal', { precision: 10, scale: 2, nullable: true })

@@ -34,10 +34,16 @@ export class Medicine {
     @Column({ default: false })
     is_controlled: boolean; // For controlled substances
 
+    @Column({ default: true })
+    is_expirable: boolean; // Whether this item has an expiry date
+
+    @Column({ nullable: true })
+    dosage_form: string; // e.g. Tablet, Capsule, Syrup, Injection
+
     @Column({ nullable: true })
     barcode: string; // EAN/UPC barcode
 
-    @Column({ nullable: true })
+    @Column()
     sku: string; // Internal stock-keeping unit
 
     @Column({ nullable: true })

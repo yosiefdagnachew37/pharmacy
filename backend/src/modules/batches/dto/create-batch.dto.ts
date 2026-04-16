@@ -10,8 +10,8 @@ export class CreateBatchDto {
     batch_number: string;
 
     @IsDateString()
-    @IsNotEmpty()
-    expiry_date: string;
+    @IsOptional()
+    expiry_date?: string;
 
     @IsNumber()
     @IsOptional()

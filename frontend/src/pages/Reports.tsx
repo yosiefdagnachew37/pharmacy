@@ -693,7 +693,7 @@ const Reports = () => {
                                             <tr>
                                                 <th className="px-6 py-4 whitespace-nowrap">Medicine</th>
                                                 <th className="px-6 py-4 whitespace-nowrap">Generic</th>
-                                                <th className="px-6 py-4 whitespace-nowrap">Category</th>
+                                                <th className="px-6 py-4 whitespace-nowrap">Dosage Form</th>
                                                 <th className="px-6 py-4 whitespace-nowrap">Stock</th>
                                                 <th className="px-6 py-4 whitespace-nowrap">Status</th>
                                             </tr>
@@ -705,7 +705,7 @@ const Reports = () => {
                                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{m.generic_name || '-'}</td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">
-                                                            {m.category || 'General'}
+                                                            {m.dosage_form || '—'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">{m.total_stock} {m.unit}</td>
@@ -737,7 +737,7 @@ const Reports = () => {
                                                     <p className="font-bold text-gray-800">{m.name}</p>
                                                     <p className="text-[10px] text-gray-500">{m.generic_name || '-'}</p>
                                                 </div>
-                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">{m.category || 'General'}</span>
+                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">{m.dosage_form || '—'}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <div className="text-sm font-bold text-gray-900">{m.total_stock} {m.unit}</div>

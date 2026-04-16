@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
 import { Batch } from './entities/batch.entity';
 import { Medicine } from '../medicines/entities/medicine.entity';
 import { CreateBatchDto } from './dto/create-batch.dto';
@@ -29,14 +29,7 @@ export class BatchesService {
             ...batchData,
             organization_id: getTenantId(),
         });
-        try {
-            return await this.batchesRepository.save(batch);
-        } catch (err) {
-            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
-                throw new BadRequestException(`Batch number '${createBatchDto.batch_number}' already exists for this medicine.`);
-            }
-            throw err;
-        }
+        return await this.batchesRepository.save(batch);
     }
 
     async findAll(): Promise<Batch[]> {
@@ -47,10 +40,13 @@ export class BatchesService {
     }
 
     async findByMedicine(medicineId: string): Promise<Batch[]> {
-        return await this.batchesRepository.find({
-            where: { medicine_id: medicineId, organization_id: getTenantId() },
-            order: { expiry_date: 'ASC' },
-        });
+        return await this.batchesRepository
+            .createQueryBuilder('b')
+            .where('b.medicine_id = :medicineId', { medicineId })
+            .andWhere('b.organization_id = :orgId', { orgId: getTenantId() })
+            .orderBy('CASE WHEN b.expiry_date IS NULL THEN 1 ELSE 0 END', 'ASC')
+            .addOrderBy('b.expiry_date', 'ASC')
+            .getMany();
     }
 
     async findOne(id: string): Promise<Batch> {
@@ -67,14 +63,7 @@ export class BatchesService {
     async update(id: string, updateBatchDto: UpdateBatchDto): Promise<Batch> {
         const batch = await this.findOne(id);
         const updated = Object.assign(batch, updateBatchDto);
-        try {
-            return await this.batchesRepository.save(updated);
-        } catch (err) {
-            if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
-                throw new BadRequestException(`Batch number '${updateBatchDto.batch_number || batch.batch_number}' already exists for this medicine.`);
-            }
-            throw err;
-        }
+        return await this.batchesRepository.save(updated);
     }
 
     async remove(id: string): Promise<void> {
@@ -86,25 +75,27 @@ export class BatchesService {
         const date = new Date();
         date.setDate(date.getDate() + days);
 
-        return await this.batchesRepository.find({
-            where: {
-                expiry_date: LessThan(date),
-                quantity_remaining: MoreThanOrEqual(1),
-                organization_id: getTenantId(),
-            },
-            relations: ['medicine'],
-            order: { expiry_date: 'ASC' },
-        });
+        return await this.batchesRepository
+            .createQueryBuilder('b')
+            .leftJoinAndSelect('b.medicine', 'm')
+            .where('b.expiry_date IS NOT NULL')
+            .andWhere('b.expiry_date < :date', { date })
+            .andWhere('b.quantity_remaining >= 1')
+            .andWhere('b.organization_id = :orgId', { orgId: getTenantId() })
+            .andWhere('m.is_expirable = true')
+            .orderBy('b.expiry_date', 'ASC')
+            .getMany();
     }
 
     async findExpired(): Promise<Batch[]> {
-        return await this.batchesRepository.find({
-            where: {
-                expiry_date: LessThan(new Date()),
-                organization_id: getTenantId(),
-            },
-            relations: ['medicine'],
-        });
+        return await this.batchesRepository
+            .createQueryBuilder('b')
+            .leftJoinAndSelect('b.medicine', 'm')
+            .where('b.expiry_date IS NOT NULL')
+            .andWhere('b.expiry_date < :now', { now: new Date() })
+            .andWhere('b.organization_id = :orgId', { orgId: getTenantId() })
+            .andWhere('m.is_expirable = true')
+            .getMany();
     }
 
     async importFromExcel(buffer: Buffer): Promise<{ created: number; errors: { row: number; message: string }[] }> {
@@ -171,9 +162,6 @@ export class BatchesService {
                 savedCount++;
             } catch (err: any) {
                 let message = err.message || 'Failed to save';
-                if (err instanceof QueryFailedError && err.message.includes('unique constraint')) {
-                    message = `Batch number '${toCreate[i].batch_number}' already exists for this medicine.`;
-                }
                 errors.push({ row: i + 2, message });
             }
         }

@@ -64,15 +64,21 @@ export class ReportingService {
                 .getRawMany();
 
             const expiringSoon = await this.batchesRepository.createQueryBuilder('b')
-                .where("b.expiry_date BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date AND ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '30 days')")
+                .leftJoin('b.medicine', 'm')
+                .where("b.expiry_date IS NOT NULL")
+                .andWhere("b.expiry_date BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date AND ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date + interval '30 days')")
                 .andWhere('b.quantity_remaining > 0')
                 .andWhere('b.organization_id = :orgId', { orgId })
+                .andWhere('m.is_expirable = true')
                 .getCount();
 
             const expiredBatches = await this.batchesRepository.createQueryBuilder('b')
-                .where("b.expiry_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
+                .leftJoin('b.medicine', 'm')
+                .where("b.expiry_date IS NOT NULL")
+                .andWhere("b.expiry_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Addis_Ababa')::date")
                 .andWhere('b.quantity_remaining > 0')
                 .andWhere('b.organization_id = :orgId', { orgId })
+                .andWhere('m.is_expirable = true')
                 .getCount();
 
             const activeAlerts = await this.alertsRepository.count({

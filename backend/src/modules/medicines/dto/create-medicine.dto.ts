@@ -1,9 +1,13 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateMedicineDto {
     @IsString()
     @IsNotEmpty()
-    name: string;
+    sku: string; // Item ID
+
+    @IsString()
+    @IsNotEmpty()
+    name: string; // Product Name
 
     @IsString()
     @IsOptional()
@@ -11,11 +15,19 @@ export class CreateMedicineDto {
 
     @IsString()
     @IsOptional()
+    dosage_form?: string; // e.g. Tablet, Capsule, Syrup
+
+    @IsString()
+    @IsOptional()
     category?: string;
 
     @IsString()
     @IsOptional()
-    unit?: string;
+    unit?: string; // UoM
+
+    @IsBoolean()
+    @IsOptional()
+    is_expirable?: boolean;
 
     @IsBoolean()
     @IsOptional()
@@ -23,6 +35,7 @@ export class CreateMedicineDto {
 
     @IsNumber()
     @IsOptional()
+    @Min(0)
     minimum_stock_level?: number;
 
     @IsString()
@@ -32,4 +45,28 @@ export class CreateMedicineDto {
     @IsString()
     @IsOptional()
     preferred_supplier_id?: string;
+
+    // ─── First-Batch Fields (optional, for combined creation) ────
+    @IsString()
+    @IsOptional()
+    batch_number?: string;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    initial_quantity?: number;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    selling_price?: number;
+
+    @IsNumber()
+    @IsOptional()
+    @Min(0)
+    purchase_price?: number;
+
+    @IsDateString()
+    @IsOptional()
+    expiry_date?: string;
 }
