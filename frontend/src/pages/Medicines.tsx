@@ -63,7 +63,7 @@ const Medicines = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
-    name: [], dosage_form: [], stock: [], status: [],
+    sku: [], name: [], dosage_form: [], stock: [], status: [],
   });
 
   const fetchMedicines = async () => {
@@ -183,6 +183,7 @@ const Medicines = () => {
     }
   };
 
+  const uniqueSkus = useMemo(() => [...new Set(medicines.map(m => m.sku).filter(Boolean))].sort(), [medicines]);
   const uniqueNames = useMemo(() => [...new Set(medicines.map(m => m.name).filter(Boolean))].sort(), [medicines]);
   const uniqueDosageForms = useMemo(() => [...new Set(medicines.map(m => m.dosage_form).filter(Boolean))].sort(), [medicines]);
   const uniqueStockLevels = useMemo(() => [...new Set(medicines.map(m => String(m.total_stock)).filter(Boolean))].sort((a, b) => Number(a) - Number(b)), [medicines]);
@@ -197,12 +198,13 @@ const Medicines = () => {
         (m.generic_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (m.sku?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
+      const matchesSku = columnFilters.sku.length === 0 || columnFilters.sku.includes(m.sku);
       const matchesName = columnFilters.name.length === 0 || columnFilters.name.includes(m.name);
       const matchesDosage = columnFilters.dosage_form.length === 0 || columnFilters.dosage_form.includes(m.dosage_form);
       const matchesStock = columnFilters.stock.length === 0 || columnFilters.stock.includes(String(m.total_stock));
       const matchesStatus = columnFilters.status.length === 0 || columnFilters.status.includes(getStatus(m));
 
-      return matchesSearch && matchesName && matchesDosage && matchesStock && matchesStatus;
+      return matchesSearch && matchesSku && matchesName && matchesDosage && matchesStock && matchesStatus;
     });
   }, [medicines, searchTerm, columnFilters]);
 
@@ -260,7 +262,7 @@ const Medicines = () => {
           </div>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => setColumnFilters({ name: [], dosage_form: [], stock: [], status: [] })}
+              onClick={() => setColumnFilters({ sku: [], name: [], dosage_form: [], stock: [], status: [] })}
               className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
             >
               Clear All Filters ({activeFilterCount})
@@ -272,7 +274,7 @@ const Medicines = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
               <tr>
-                <th className="px-6 py-3 whitespace-nowrap">Item ID</th>
+                <ColumnFilter label="Item ID" options={uniqueSkus} selectedValues={columnFilters.sku} onFilterChange={(v) => updateFilter('sku', v)} />
                 <ColumnFilter label="Medicine Name" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={(v) => updateFilter('name', v)} />
                 <ColumnFilter label="Dosage Form" options={uniqueDosageForms} selectedValues={columnFilters.dosage_form} onFilterChange={(v) => updateFilter('dosage_form', v)} className="hidden sm:table-cell" />
                 <ColumnFilter label="Stock Level" options={uniqueStockLevels} selectedValues={columnFilters.stock} onFilterChange={(v) => updateFilter('stock', v)} />
@@ -436,14 +438,15 @@ const Medicines = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Dosage Form</label>
-              <select
+              <input
+                type="text" list="dosage_forms" placeholder="e.g. Tablet, Syrup..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 value={formData.dosage_form}
                 onChange={(e) => setFormData({ ...formData, dosage_form: e.target.value })}
-              >
-                <option value="">Select form...</option>
+              />
+              <datalist id="dosage_forms">
                 {DOSAGE_FORMS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
+              </datalist>
             </div>
           </div>
 
