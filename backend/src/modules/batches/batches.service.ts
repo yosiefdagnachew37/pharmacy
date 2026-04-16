@@ -20,16 +20,19 @@ export class BatchesService {
         const { quantity_remaining, initial_quantity } = createBatchDto;
 
         // Default quantity_remaining to initial_quantity if not provided
-        const batchData = {
+        const batchData: any = {
             ...createBatchDto,
             quantity_remaining: quantity_remaining ?? initial_quantity,
+            expiry_date: (createBatchDto.expiry_date && createBatchDto.expiry_date !== "") 
+                ? new Date(createBatchDto.expiry_date) 
+                : null,
         };
 
         const batch = this.batchesRepository.create({
             ...batchData,
             organization_id: getTenantId(),
         });
-        return await this.batchesRepository.save(batch);
+        return await this.batchesRepository.save(batch as any);
     }
 
     async findAll(): Promise<Batch[]> {
@@ -62,6 +65,14 @@ export class BatchesService {
 
     async update(id: string, updateBatchDto: UpdateBatchDto): Promise<Batch> {
         const batch = await this.findOne(id);
+        
+        // Convert empty string expiry_date to null, or string to Date object
+        if (updateBatchDto.expiry_date === "" || !updateBatchDto.expiry_date) {
+            updateBatchDto.expiry_date = null as any;
+        } else if (typeof updateBatchDto.expiry_date === 'string') {
+            updateBatchDto.expiry_date = new Date(updateBatchDto.expiry_date) as any;
+        }
+
         const updated = Object.assign(batch, updateBatchDto);
         return await this.batchesRepository.save(updated);
     }

@@ -44,19 +44,20 @@ export class MedicinesService {
             throw err;
         }
 
-        // Auto-create first batch if batch info provided
-        if (batch_number) {
+        // Auto-create first batch if stock quantity or batch number is provided
+        if (batch_number || (initial_quantity !== undefined && Number(initial_quantity) > 0)) {
             const qty = initial_quantity !== undefined ? Number(initial_quantity) : 0;
+            const final_batch_number = batch_number || `GEN-${new Date().getTime().toString().slice(-6)}`;
             const batchData: any = {
                 medicine_id: savedMedicine.id,
-                batch_number,
+                batch_number: final_batch_number,
                 initial_quantity: qty,
                 quantity_remaining: qty,
                 selling_price: selling_price ?? 0,
                 purchase_price: purchase_price ?? 0,
                 organization_id: getTenantId(),
             };
-            if (expiry_date) {
+            if (expiry_date && expiry_date.trim() !== "") {
                 batchData.expiry_date = new Date(expiry_date);
             }
             const batch = this.batchesRepository.create(batchData);

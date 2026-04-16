@@ -101,13 +101,21 @@ const Cosmetics = () => {
         setSubmitting(true);
         try {
             const payload: any = { ...form, product_type: 'COSMETIC' };
-            if (!payload.batch_number) {
-                delete payload.batch_number; delete payload.expiry_date; delete payload.purchase_price;
-                delete payload.selling_price; delete payload.initial_quantity;
-            } else {
-                payload.initial_quantity = Number(payload.initial_quantity);
-                if (payload.purchase_price) payload.purchase_price = Number(payload.purchase_price);
-                if (payload.selling_price) payload.selling_price = Number(payload.selling_price);
+            
+            // Convert numeric fields if present
+            if (payload.initial_quantity !== undefined && payload.initial_quantity !== '') payload.initial_quantity = Number(payload.initial_quantity);
+            if (payload.purchase_price !== undefined && payload.purchase_price !== '') payload.purchase_price = Number(payload.purchase_price);
+            if (payload.selling_price !== undefined && payload.selling_price !== '') payload.selling_price = Number(payload.selling_price);
+
+            // If it's a new item but no batch/stock info provided at all, clean up
+            if (!editItem && !payload.batch_number && !payload.initial_quantity && !payload.selling_price) {
+                delete payload.batch_number; 
+                delete payload.expiry_date; 
+                delete payload.purchase_price;
+                delete payload.selling_price; 
+                delete payload.initial_quantity;
+            } else if (!payload.expiry_date || payload.expiry_date === "") {
+                delete payload.expiry_date;
             }
 
             if (editItem) {

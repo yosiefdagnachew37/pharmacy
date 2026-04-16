@@ -19,7 +19,7 @@ export class Batch {
 
     @Index()
     @Column({ type: 'date', nullable: true })
-    expiry_date: Date;
+    expiry_date: Date | null;
 
     @Column('decimal', { precision: 10, scale: 2, nullable: true })
     purchase_price: number;

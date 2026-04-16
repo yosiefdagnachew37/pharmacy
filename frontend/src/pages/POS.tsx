@@ -175,7 +175,11 @@ const PharmacistPOS = () => {
   }, [medicines]);
 
   const openBatchPicker = async (med: Medicine) => {
-    if (med.total_stock <= 0) return;
+    // If no stock, we can't sell it
+    if (med.total_stock <= 0) {
+      toastError('Out of Stock', `"${med.name}" has no recorded inventory.`);
+      return;
+    }
     setBatchLoading(true);
     setPendingMedForBatch(med);
     setShowBatchModal(true);

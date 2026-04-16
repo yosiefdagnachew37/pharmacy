@@ -42,8 +42,9 @@ export class BatchesController {
             .andWhere('b.quantity_remaining > 0')
             .andWhere('b.is_locked = :locked', { locked: false })
             .andWhere('b.is_quarantined = :quarantined', { quarantined: false })
-            .andWhere('b.expiry_date > :tomorrow', { tomorrow })
-            .orderBy('b.expiry_date', 'ASC')
+            .andWhere('(b.expiry_date IS NULL OR b.expiry_date > :tomorrow)', { tomorrow })
+            .orderBy('CASE WHEN b.expiry_date IS NULL THEN 1 ELSE 0 END', 'ASC')
+            .addOrderBy('b.expiry_date', 'ASC')
             .addOrderBy('b.created_at', 'ASC')
             .getMany();
     }

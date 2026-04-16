@@ -136,13 +136,13 @@ const Medicines = () => {
       minimum_stock_level: formData.minimum_stock_level !== undefined ? Number(formData.minimum_stock_level) : undefined,
     };
 
-    // Only add batch fields on create
-    if (!editingMed && formData.batch_number && formData.initial_quantity) {
-      payload.batch_number = formData.batch_number;
-      payload.initial_quantity = Number(formData.initial_quantity);
-      payload.selling_price = formData.selling_price ? Number(formData.selling_price) : 0;
-      payload.purchase_price = formData.purchase_price ? Number(formData.purchase_price) : 0;
-      payload.expiry_date = formData.is_expirable ? formData.expiry_date : undefined;
+    // Add batch fields on create if any are provided
+    if (!editingMed && (formData.batch_number || formData.initial_quantity !== undefined || formData.selling_price !== undefined || formData.purchase_price !== undefined)) {
+      payload.batch_number = formData.batch_number || undefined;
+      payload.initial_quantity = formData.initial_quantity !== undefined ? Number(formData.initial_quantity) : undefined;
+      payload.selling_price = formData.selling_price !== undefined ? Number(formData.selling_price) : 0;
+      payload.purchase_price = formData.purchase_price !== undefined ? Number(formData.purchase_price) : 0;
+      payload.expiry_date = formData.is_expirable && formData.expiry_date ? formData.expiry_date : undefined;
     }
 
     try {

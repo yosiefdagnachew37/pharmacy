@@ -1,4 +1,4 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateIf } from 'class-validator';
 
 export class CreateBatchDto {
     @IsUUID()
@@ -9,8 +9,10 @@ export class CreateBatchDto {
     @IsNotEmpty()
     batch_number: string;
 
-    @IsDateString()
+    @IsString()
     @IsOptional()
+    @ValidateIf((o) => o.expiry_date !== "" && o.expiry_date !== null && o.expiry_date !== undefined)
+    @IsDateString()
     expiry_date?: string;
 
     @IsNumber()
