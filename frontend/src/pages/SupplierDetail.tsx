@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { toastSuccess, toastError } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatDate } from '../utils/dateUtils';
 
 const SupplierDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -275,7 +276,7 @@ const SupplierDetail = () => {
                                         <span className="text-xs font-bold text-indigo-600">{c.discount_percentage}% discount</span>
                                     </div>
                                     <p className="text-sm text-gray-600">
-                                        <span className="font-bold">Period:</span> {new Date(c.effective_date).toLocaleDateString()} → {new Date(c.expiry_date).toLocaleDateString()}
+                                        <span className="font-bold">Period:</span> {formatDate(c.effective_date)} → {formatDate(c.expiry_date)}
                                     </p>
                                     {c.return_policy && <p className="text-xs text-gray-500 mt-1">Return Policy: {c.return_policy}</p>}
                                     {c.notes && <p className="text-xs text-gray-400 mt-1 italic">{c.notes}</p>}

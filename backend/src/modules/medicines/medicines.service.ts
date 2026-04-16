@@ -207,7 +207,23 @@ export class MedicinesService {
                 selling_price = parseFloat(row.getCell(9).value?.toString() || '') || undefined;
                 
                 const expVal = row.getCell(10).value;
-                expiry_date = expVal instanceof Date ? expVal.toISOString().split('T')[0] : expVal?.toString()?.trim();
+                if (expVal instanceof Date) {
+                    expiry_date = expVal.toISOString().split('T')[0];
+                } else if (typeof expVal === 'string' && expVal.includes('-')) {
+                    // Handle MM-DD-YYYY
+                    const parts = expVal.split('-');
+                    if (parts.length === 3) {
+                        expiry_date = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                } else if (typeof expVal === 'string' && expVal.includes('/')) {
+                    // Handle MM/DD/YYYY
+                    const parts = expVal.split('/');
+                    if (parts.length === 3) {
+                        expiry_date = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                } else {
+                    expiry_date = expVal?.toString()?.trim();
+                }
             } else {
                 // Medicines Order: SKU, Name, Generic, Dosage, Batch, Expirable, Expiry, Unit, Qty, Min Stock, Selling
                 generic_name = row.getCell(3).value?.toString()?.trim() || '';
@@ -216,7 +232,23 @@ export class MedicinesService {
                 is_expirable = !['false', 'no', '0'].includes((row.getCell(6).value?.toString()?.trim() || '').toLowerCase());
                 
                 const expVal = row.getCell(7).value;
-                expiry_date = expVal instanceof Date ? expVal.toISOString().split('T')[0] : expVal?.toString()?.trim();
+                if (expVal instanceof Date) {
+                    expiry_date = expVal.toISOString().split('T')[0];
+                } else if (typeof expVal === 'string' && expVal.includes('-')) {
+                    // Handle MM-DD-YYYY
+                    const parts = expVal.split('-');
+                    if (parts.length === 3) {
+                        expiry_date = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                } else if (typeof expVal === 'string' && expVal.includes('/')) {
+                    // Handle MM/DD/YYYY
+                    const parts = expVal.split('/');
+                    if (parts.length === 3) {
+                        expiry_date = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                } else {
+                    expiry_date = expVal?.toString()?.trim();
+                }
                 
                 unit = row.getCell(8).value?.toString()?.trim() || 'TAB';
                 initial_quantity = parseInt(row.getCell(9).value?.toString() || '') || undefined;

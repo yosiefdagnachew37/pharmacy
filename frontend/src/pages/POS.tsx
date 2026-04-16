@@ -9,6 +9,7 @@ import {
 import Modal from '../components/Modal';
 import PrescriptionAttachment from '../components/PrescriptionAttachment';
 import { toastError, toastWarning, toastSuccess } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -69,12 +70,6 @@ interface SaleOrder {
 }
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
-const formatExpiry = (date: string) => {
-  if (!date) return 'N/A';
-  const d = new Date(date);
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
-};
-
 const expiryColor = (date: string) => {
   const days = Math.floor((new Date(date).getTime() - Date.now()) / 86400000);
   if (days < 30) return 'text-rose-600 bg-rose-50 border-rose-200';
@@ -443,7 +438,7 @@ const PharmacistPOS = () => {
                           <Layers className="w-2.5 h-2.5" /> {item.batch_number}
                         </span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${expiryColor(item.expiry_date!)}`}>
-                          <Calendar className="w-2.5 h-2.5" /> Exp: {formatExpiry(item.expiry_date!)}
+                          <Calendar className="w-2.5 h-2.5" /> Exp: {formatDate(item.expiry_date!)}
                         </span>
                         {!item.is_fefo_default && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">Override</span>}
                       </div>
@@ -560,7 +555,7 @@ const PharmacistPOS = () => {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-500">
                         <span className={`font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${expiryColor(batch.expiry_date)}`}>
-                          <Calendar className="w-3 h-3" /> Exp: {formatExpiry(batch.expiry_date)}
+                          <Calendar className="w-3 h-3" /> Exp: {formatDate(batch.expiry_date)}
                         </span>
                         <span className="font-semibold">Qty: <strong className="text-gray-800">{batch.quantity_remaining}</strong></span>
                       </div>
@@ -777,7 +772,7 @@ const CashierPOS = () => {
                     <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-0.5">Pending Order</p>
                     <p className="font-black text-gray-900 text-base">{order.order_number}</p>
                   </div>
-                  <span className="text-xs text-gray-400">{new Date(order.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-xs text-gray-400">{formatDate(order.created_at)}</span>
                 </div>
 
                 {order.patient && (

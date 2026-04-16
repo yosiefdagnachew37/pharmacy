@@ -20,6 +20,7 @@ import {
   approveSubscriptionRequest, 
   rejectSubscriptionRequest 
 } from '../../api/superAdminService';
+import { formatDate } from '../../utils/dateUtils';
 import Modal from '../../components/Modal';
 import ColumnFilter from '../../components/ColumnFilter';
 import { toastSuccess, toastError } from '../../components/Toast';
@@ -297,7 +298,7 @@ export default function SuperAdminBilling() {
                     </td>
                     <td className="px-6 py-2 whitespace-nowrap">
                       <div className="text-[10px] font-bold flex items-center gap-2">
-                         <span className="text-gray-500">{tenant.subscription_expiry_date ? new Date(tenant.subscription_expiry_date).toLocaleDateString() : '—'}</span>
+                         <span className="text-gray-500">{tenant.subscription_expiry_date ? formatDate(tenant.subscription_expiry_date) : '—'}</span>
                          {tenant.subscription_status && (
                            <span className={`px-1.5 py-0.5 rounded uppercase text-[8px] font-black ${
                              tenant.subscription_status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
@@ -434,7 +435,7 @@ export default function SuperAdminBilling() {
               <div className="bg-gray-50 p-4 rounded-2xl">
                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Next Invoice</div>
                 <div className="text-lg font-bold text-gray-900">
-                  {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString()}
+                  {formatDate(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString())}
                 </div>
               </div>
             </div>
@@ -442,9 +443,9 @@ export default function SuperAdminBilling() {
             <div className="space-y-3">
               <div className="text-xs font-bold text-gray-900 uppercase tracking-wider">Billing Events</div>
               {[
-                { date: 'Today', event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
-                { date: 'Last Month', event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
-                { date: 'Initial Onboarding', event: 'Account Activated', amount: 0 },
+                { date: new Date().toISOString(), event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
+                { date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), event: 'Subscription Renewed', amount: PLAN_PRICES[selectedTenant.subscription_plan as keyof typeof PLAN_PRICES] },
+                { date: selectedTenant.created_at || new Date().toISOString(), event: 'Account Activated', amount: 0 },
               ].map((ev, i) => (
                 <div key={i} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
@@ -453,7 +454,7 @@ export default function SuperAdminBilling() {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-gray-900">{ev.event}</div>
-                      <div className="text-[10px] text-gray-400 uppercase">{ev.date}</div>
+                      <div className="text-[10px] text-gray-400 uppercase">{formatDate(ev.date)}</div>
                     </div>
                   </div>
                   <div className="text-xs font-black text-gray-900">

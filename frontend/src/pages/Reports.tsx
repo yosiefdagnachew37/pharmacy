@@ -19,6 +19,7 @@ import {
     RefreshCcw,
     AlertCircle
 } from 'lucide-react';
+import { formatDate } from '../utils/dateUtils';
 import {
     BarChart,
     Bar,
@@ -59,7 +60,7 @@ const PurchaseRow = ({ po }: { po: any }) => {
                         {po.status?.replace('_', ' ')}
                     </span>
                     <span className="text-sm font-bold text-gray-800">{po.supplier?.name || 'Unknown Supplier'}</span>
-                    <span className="text-xs text-gray-400">{new Date(po.created_at).toLocaleDateString()}</span>
+                    <span className="text-xs text-gray-400">{formatDate(po.created_at)}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                     <span className="text-lg font-black text-gray-900">ETB {Number(po.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>

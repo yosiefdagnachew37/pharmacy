@@ -4,6 +4,7 @@ import { Search, Calendar, ChevronRight, RotateCcw, FileText, User, Printer, Loc
 import Modal from '../components/Modal';
 import ColumnFilter from '../components/ColumnFilter';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Sale {
@@ -84,7 +85,7 @@ const SalesHistory = () => {
 
     // ─── Unique Options ──────────────────────────────────────────
     const uniqueReceipts = useMemo(() => [...new Set(sales.map(s => s.receipt_number))].sort(), [sales]);
-    const uniqueDates = useMemo(() => [...new Set(sales.map(s => new Date(s.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [sales]);
+    const uniqueDates = useMemo(() => [...new Set(sales.map(s => formatDate(s.created_at)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [sales]);
     const uniquePatients = useMemo(() => [...new Set(sales.map(s => s.patient?.name || 'Walk-in'))].sort(), [sales]);
     const uniqueMethods = useMemo(() => [...new Set(sales.map(s => s.payment_method).filter(Boolean))].sort(), [sales]);
     const uniqueUsers = useMemo(() => [...new Set(sales.map(s => s.user?.name || s.user?.username || 'System'))].sort(), [sales]);
@@ -98,7 +99,7 @@ const SalesHistory = () => {
 
             const patientName = sale.patient?.name || 'Walk-in';
             const userName = sale.user?.name || sale.user?.username || 'System';
-            const saleDate = new Date(sale.created_at).toLocaleDateString();
+            const saleDate = formatDate(sale.created_at);
             const saleStatus = sale.is_refunded ? 'Refunded' : 'Completed';
 
             const matchesReceipt = columnFilters.receipt.length === 0 || columnFilters.receipt.includes(sale.receipt_number);
@@ -260,7 +261,7 @@ const SalesHistory = () => {
                                     <tr key={sale.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
                                         <td className="px-3 py-3 font-mono text-xs text-gray-700 whitespace-nowrap">{sale.receipt_number}</td>
                                         <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
-                                            {new Date(sale.created_at).toLocaleDateString()}
+                                            {formatDate(sale.created_at)}
                                         </td>
                                         <td className="px-3 py-3 text-xs font-semibold text-gray-800 truncate max-w-[140px] hidden md:table-cell" title={sale.patient?.name || 'Walk-in'}>
                                             {sale.patient?.name || 'Walk-in'}
@@ -325,7 +326,7 @@ const SalesHistory = () => {
                                         <p className="font-bold text-gray-800 text-sm mt-0.5">{sale.patient?.name || 'Walk-in'}</p>
                                         <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 font-medium">
                                             <Calendar className="w-3.5 h-3.5" />
-                                            {new Date(sale.created_at).toLocaleDateString()}
+                                            {formatDate(sale.created_at)}
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-end gap-1.5">
@@ -373,7 +374,7 @@ const SalesHistory = () => {
                             </div>
                             <div>
                                 <p className="text-gray-500 text-[10px] font-bold uppercase">Date & Time</p>
-                                <p>{new Date(selectedSale.created_at).toLocaleString()}</p>
+                                <p>{formatDate(selectedSale.created_at)} {new Date(selectedSale.created_at).toLocaleTimeString()}</p>
                             </div>
                             <div>
                                 <p className="text-gray-500 text-[10px] font-bold uppercase">Cashier</p>

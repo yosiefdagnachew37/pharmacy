@@ -6,6 +6,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import ColumnFilter from '../components/ColumnFilter';
 
@@ -141,12 +142,12 @@ const Expenses = () => {
     const uniqueNames = useMemo(() => [...new Set(expenses.map(e => e.name))].sort(), [expenses]);
     const uniqueCategories = useMemo(() => [...new Set(expenses.map(e => e.category))].sort(), [expenses]);
     const uniqueFrequencies = useMemo(() => [...new Set(expenses.map(e => e.frequency))].sort(), [expenses]);
-    const uniqueDates = useMemo(() => [...new Set(expenses.map(e => new Date(e.expense_date).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [expenses]);
+    const uniqueDates = useMemo(() => [...new Set(expenses.map(e => formatDate(e.expense_date)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [expenses]);
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(e => {
             const matchesSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase());
-            const eDate = new Date(e.expense_date).toLocaleDateString();
+            const eDate = formatDate(e.expense_date);
 
             const matchesName = columnFilters.name.length === 0 || columnFilters.name.includes(e.name);
             const matchesCategory = columnFilters.category.length === 0 || columnFilters.category.includes(e.category);
@@ -297,7 +298,7 @@ const Expenses = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-gray-500 text-xs font-medium">
-                                        {new Date(e.expense_date).toLocaleDateString()}
+                                        {formatDate(e.expense_date)}
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-2">
                                         {role === 'ADMIN' && (

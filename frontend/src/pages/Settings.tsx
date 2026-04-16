@@ -33,6 +33,7 @@ import {
   changePassword
 } from '../api/tenantService';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 
 type SettingsTab = 'profile' | 'appearance' | 'subscription' | 'notifications' | 'security' | 'preferences';
@@ -449,7 +450,7 @@ export default function Settings() {
                     <div className="flex items-end justify-between">
                       <div>
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 block mb-0.5">Expiry</span>
-                        <div className="text-sm font-bold">{subscription.organization.expiry_date ? new Date(subscription.organization.expiry_date).toLocaleDateString() : 'N/A'}</div>
+                        <div className="text-sm font-bold">{subscription.organization.expiry_date ? formatDate(subscription.organization.expiry_date) : 'N/A'}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-black tracking-tight">ETB {subscription.currentPlan?.costs || 0}</div>

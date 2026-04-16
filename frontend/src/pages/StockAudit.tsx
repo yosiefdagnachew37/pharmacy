@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatDate } from '../utils/dateUtils';
 
 interface AuditItem {
     id: string;
@@ -215,7 +216,7 @@ const StockAudit = () => {
                         {isSummary && activeSession.completed_at && (
                             <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3 text-emerald-500" /> 
-                                Completed on {new Date(activeSession.completed_at).toLocaleString()}
+                                Completed on {formatDate(activeSession.completed_at)}
                             </p>
                         )}
                     </div>

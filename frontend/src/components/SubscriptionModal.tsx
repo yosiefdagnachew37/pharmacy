@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Modal from './Modal';
 import client from '../api/client';
+import { formatDate } from '../utils/dateUtils';
 import { toastSuccess, toastError } from './Toast';
 
 interface SubscriptionModalProps {
@@ -156,7 +157,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
                       </div>
                       <div className="text-xl font-black">
                         {data.organization.expiry_date 
-                          ? new Date(data.organization.expiry_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                          ? formatDate(data.organization.expiry_date)
                           : 'Perpetual License'}
                       </div>
                     </div>

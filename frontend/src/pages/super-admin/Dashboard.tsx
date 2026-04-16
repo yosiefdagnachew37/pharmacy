@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { superAdminService, type Tenant, getPlatformStats } from '../../api/superAdminService';
+import { formatDate } from '../../utils/dateUtils';
 import { 
   BuildingOffice2Icon, 
   CheckCircleIcon, 
@@ -161,6 +162,7 @@ export default function SuperAdminDashboard() {
                 <th className="px-6 py-4 text-left">Plan</th>
                 <th className="px-6 py-4 text-left">Status</th>
                 <th className="px-6 py-4 text-left">Onboarding Date</th>
+                <th className="px-6 py-4 text-left">Expiry Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -185,6 +187,9 @@ export default function SuperAdminDashboard() {
                   </td>
                   <td className="px-6 py-2 whitespace-nowrap text-[10px] text-gray-500 font-medium">
                     {new Date(tenant.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-gray-500">
+                    {formatDate(tenant.expiry_date)}
                   </td>
                 </tr>
               ))}

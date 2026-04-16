@@ -21,6 +21,7 @@ import {
   updateTenantSubscription
 } from '../../api/superAdminService';
 import { CheckIcon, PlusIcon, PencilSquareIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { formatDate } from '../../utils/dateUtils';
 import { toastSuccess, toastError } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import Modal from '../../components/Modal';
@@ -283,6 +284,10 @@ export default function TenantDetails() {
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Detailed Address</span>
                 <div className="font-medium text-gray-800">{tenant.address || 'Not provided'}</div>
               </div>
+              <div className="md:col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">License Number</span>
+                <div className="font-medium text-gray-800">{tenant.license_number || 'Not provided'}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -302,7 +307,11 @@ export default function TenantDetails() {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Next Renewal</span>
-                <span className="font-medium">{tenant.subscription_expiry_date ? new Date(tenant.subscription_expiry_date).toLocaleDateString() : 'N/A'}</span>
+                <span className="font-medium">{tenant.subscription_expiry_date ? formatDate(tenant.subscription_expiry_date) : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Member Since</span>
+                <span className="font-medium">{tenant.created_at ? formatDate(tenant.created_at) : 'N/A'}</span>
               </div>
             </div>
             <button 

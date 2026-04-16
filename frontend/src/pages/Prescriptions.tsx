@@ -13,6 +13,7 @@ import {
   Trash2
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import { formatDate } from '../utils/dateUtils';
 
 interface Medicine {
   id: string;
@@ -162,7 +163,7 @@ const Prescriptions = () => {
                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">Prescribed On</p>
                     <div className="flex items-center text-sm font-medium text-gray-700">
                       <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-                      {new Date(prescription.created_at).toLocaleDateString()}
+                      {formatDate(prescription.created_at)}
                     </div>
                   </div>
                   <button className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">

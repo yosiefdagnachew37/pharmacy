@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
     Plus, Search, ShoppingBag, Eye, PackageCheck,
-    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign, History
+    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign, History, Calendar
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { toastSuccess, toastError, toastWarning } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import ColumnFilter from '../components/ColumnFilter';
 
@@ -185,13 +186,6 @@ const PharmacistPurchases = () => {
         }
     };
 
-    const fetchPaymentHistory = async (po: any) => {
-        // We probably don't have supplier/payments endpoint since the backend is unified against POs or Transactions now.
-        // Wait, the backend has /suppliers/payments ? Let's use the old if it still exists or just omit. 
-        // Or we might fetch it from payment transations. For now, since Cashiers manage it, we keep history if it exists.
-        toastWarning('History feature currently being upgraded to unified accounts.', '');
-    };
-
     const resetForm = () => {
         setSupplierId('');
         setNotes('');
@@ -226,7 +220,7 @@ const PharmacistPurchases = () => {
     const uniqueSuppliers = useMemo(() => [...new Set(purchases.map(po => po.supplier?.name))].sort(), [purchases]);
     const uniqueStatuses = useMemo(() => [...new Set(purchases.map(po => po.status))].sort(), [purchases]);
     const uniquePaymentStatuses = useMemo(() => [...new Set(purchases.map(po => po.payment_status))].sort(), [purchases]);
-    const uniqueDates = useMemo(() => [...new Set(purchases.map(po => new Date(po.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [purchases]);
+    const uniqueDates = useMemo(() => [...new Set(purchases.map(po => formatDate(po.purchase_date)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [purchases]);
 
     const filteredPO = useMemo(() => {
         return purchases.filter(po => {
@@ -236,7 +230,7 @@ const PharmacistPurchases = () => {
             if (activeTab === 'PENDING_PAYMENT') matchesTab = po.status === 'PENDING_PAYMENT';
             
             const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-            const poDate = new Date(po.created_at).toLocaleDateString();
+            const poDate = formatDate(po.purchase_date);
 
             const matchesPONumber = columnFilters.poNumber.length === 0 || columnFilters.poNumber.includes(po.po_number);
             const matchesSupplier = columnFilters.supplier.length === 0 || columnFilters.supplier.includes(po.supplier?.name);
@@ -406,7 +400,7 @@ const PharmacistPurchases = () => {
                                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{po.payment_method}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-xs font-bold text-gray-500">{new Date(po.created_at).toLocaleDateString()}</span>
+                                        <span className="text-xs font-bold text-gray-500">{formatDate(po.purchase_date)}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-1.5 pr-6">
                                         {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
@@ -483,7 +477,7 @@ const PharmacistPurchases = () => {
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="font-bold text-gray-500">Date</span>
-                            <span className="text-gray-700 font-medium">{new Date(po.created_at).toLocaleDateString()}</span>
+                            <span className="text-gray-700 font-medium">{formatDate(po.purchase_date)}</span>
                         </div>
                         <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
                             <button onClick={() => { setSelectedPO(po); setShowHistoryModal(true); }}
@@ -940,7 +934,7 @@ const PharmacistPurchases = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5 text-xs font-bold text-gray-600">
-                                                {item.batch?.expiry_date ? new Date(item.batch.expiry_date).toLocaleDateString() : 'N/A'}
+                                                {item.batch?.expiry_date ? formatDate(item.batch.expiry_date) : 'N/A'}
                                             </td>
                                         </tr>
                                     ))}

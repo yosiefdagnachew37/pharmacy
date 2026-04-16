@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import client from '../api/client';
 import { Bell, Check, CheckCheck, Trash2, AlertTriangle, ShoppingCart, Package, Info, X } from 'lucide-react';
+import { formatDate } from '../utils/dateUtils';
 
 interface Notification {
     id: string;
@@ -17,17 +18,6 @@ const typeConfig: Record<string, { icon: any; color: string; bg: string }> = {
     SALE: { icon: ShoppingCart, color: 'text-green-500', bg: 'bg-green-50' },
     SYSTEM: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-50' },
     INFO: { icon: Info, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-};
-
-const timeAgo = (date: string) => {
-    const now = new Date();
-    const d = new Date(date);
-    const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return d.toLocaleDateString();
 };
 
 const NotificationBell = () => {
@@ -196,7 +186,7 @@ const NotificationBell = () => {
                                                 )}
                                             </div>
                                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                                            <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{timeAgo(n.created_at)}</p>
+                                            <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{formatDate(n.created_at)}</p>
                                         </div>
                                         <div className="flex flex-col gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                             {!n.is_read && (

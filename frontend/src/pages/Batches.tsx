@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import ColumnFilter from '../components/ColumnFilter';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Medicine {
@@ -362,7 +363,7 @@ const Batches = () => {
                         {batch.expiry_date ? (
                           <>
                             <Calendar className="w-3.5 h-3.5 mr-1.5 text-gray-300" />
-                            <span className="font-bold text-sm">{new Date(batch.expiry_date).toLocaleDateString()}</span>
+                            <span className="font-bold text-sm">{formatDate(batch.expiry_date)}</span>
                           </>
                         ) : (
                           <span className="text-xs text-gray-400 italic">N/A (Non-expirable)</span>
@@ -460,7 +461,7 @@ const Batches = () => {
                   {batch.expiry_date ? (
                     <div className="flex items-center text-gray-700 font-bold">
                       <Calendar className="w-3 h-3 mr-1 text-gray-400" />
-                      {new Date(batch.expiry_date).toLocaleDateString()}
+                      {formatDate(batch.expiry_date)}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400 italic">N/A</span>

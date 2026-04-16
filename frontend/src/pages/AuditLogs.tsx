@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import client from '../api/client';
 import { User, Clock, ShieldCheck, Search } from 'lucide-react';
 import ColumnFilter from '../components/ColumnFilter';
+import { formatDate } from '../utils/dateUtils';
 
 interface AuditLog {
   id: string;
@@ -43,12 +44,12 @@ const AuditLogs = () => {
   const uniqueUsers = useMemo(() => [...new Set(logs.map(l => l.user?.username || 'Unknown'))].sort(), [logs]);
   const uniqueActions = useMemo(() => [...new Set(logs.map(l => l.action))].sort(), [logs]);
   const uniqueComponents = useMemo(() => [...new Set(logs.map(l => l.entity))].sort(), [logs]);
-  const uniqueDates = useMemo(() => [...new Set(logs.map(l => new Date(l.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [logs]);
+  const uniqueDates = useMemo(() => [...new Set(logs.map(l => formatDate(l.created_at)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [logs]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
       const username = log.user?.username || 'Unknown';
-      const logDate = new Date(log.created_at).toLocaleDateString();
+      const logDate = formatDate(log.created_at);
       const matchesSearch = username.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             log.entity.toLowerCase().includes(searchTerm.toLowerCase());
@@ -142,9 +143,14 @@ const AuditLogs = () => {
               ) : (
                 filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-xs font-medium text-gray-600 flex items-center">
-                      <Clock className="w-3.5 h-3.5 mr-2 text-gray-300" />
-                      {new Date(log.created_at).toLocaleString()}
+                    <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                      <div className="flex items-center">
+                        <Clock className="w-3.5 h-3.5 mr-2 text-gray-300" />
+                        <div className="flex flex-col">
+                          <span className="font-bold">{formatDate(log.created_at)}</span>
+                          <span className="text-[10px] text-gray-400">{new Date(log.created_at).toLocaleTimeString()}</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center text-sm font-bold text-gray-800">

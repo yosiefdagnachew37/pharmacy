@@ -6,6 +6,7 @@ import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { toastSuccess, toastError } from '../components/Toast';
 import { extractErrorMessage } from '../utils/errorUtils';
+import { formatDate } from '../utils/dateUtils';
 import ColumnFilter from '../components/ColumnFilter';
 
 const CreditManagement = () => {
@@ -111,7 +112,7 @@ const CreditManagement = () => {
     // ─── Unique Options & Filtering ──────────────────────────────
     const uniqueCustomerNames = useMemo(() => [...new Set(customers.map(c => c.name))].sort(), [customers]);
     const uniqueCustomerPhones = useMemo(() => [...new Set(customers.map(c => c.phone || 'N/A'))].sort(), [customers]);
-    const uniqueCustomerLastActivities = useMemo(() => [...new Set(customers.map(c => new Date(c.updated_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [customers]);
+    const uniqueCustomerLastActivities = useMemo(() => [...new Set(customers.map(c => formatDate(c.updated_at)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [customers]);
     const uniqueCustomerStatuses = useMemo(() => ['DEBT', 'CLEARED'], []);
 
     const filteredCustomers = useMemo(() => {
@@ -119,7 +120,7 @@ const CreditManagement = () => {
             const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search));
             const cStatus = Number(c.total_credit) > 0 ? 'DEBT' : 'CLEARED';
             const cPhone = c.phone || 'N/A';
-            const cDate = new Date(c.updated_at).toLocaleDateString();
+            const cDate = formatDate(c.updated_at);
 
             const matchesName = customerFilters.name.length === 0 || customerFilters.name.includes(c.name);
             const matchesPhone = customerFilters.phone.length === 0 || customerFilters.phone.includes(cPhone);
@@ -130,19 +131,19 @@ const CreditManagement = () => {
         });
     }, [customers, search, customerFilters]);
 
-    const uniqueRecordDates = useMemo(() => [...new Set(creditRecords.map(r => new Date(r.created_at).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
+    const uniqueRecordDates = useMemo(() => [...new Set(creditRecords.map(r => formatDate(r.created_at)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
     const uniqueRecordReceipts = useMemo(() => [...new Set(creditRecords.map(r => r.sale?.receipt_number || 'N/A'))].sort(), [creditRecords]);
     const uniqueRecordCustomers = useMemo(() => [...new Set(creditRecords.map(r => r.customer?.name))].sort(), [creditRecords]);
-    const uniqueRecordDueDates = useMemo(() => [...new Set(creditRecords.map(r => new Date(r.due_date).toLocaleDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
+    const uniqueRecordDueDates = useMemo(() => [...new Set(creditRecords.map(r => formatDate(r.due_date)))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime()), [creditRecords]);
     const uniqueRecordStatuses = useMemo(() => [...new Set(creditRecords.map(r => r.status))].sort(), [creditRecords]);
 
     const filteredRecordsMemo = useMemo(() => {
         return creditRecords.filter(r => {
             const matchesSearch = r.customer?.name.toLowerCase().includes(search.toLowerCase()) || (r.sale?.receipt_number && r.sale.receipt_number.toLowerCase().includes(search.toLowerCase()));
-            const rDate = new Date(r.created_at).toLocaleDateString();
+            const rDate = formatDate(r.created_at);
             const rReceipt = r.sale?.receipt_number || 'N/A';
             const rCustomer = r.customer?.name;
-            const rDueDate = new Date(r.due_date).toLocaleDateString();
+            const rDueDate = formatDate(r.due_date);
 
             const matchesDate = recordFilters.date.length === 0 || recordFilters.date.includes(rDate);
             const matchesReceipt = recordFilters.receipt.length === 0 || recordFilters.receipt.includes(rReceipt);
@@ -299,7 +300,7 @@ const CreditManagement = () => {
                                             
                                             {/* 3. Activity */}
                                             <td className="px-6 py-4 text-gray-500 text-xs font-medium">
-                                                {new Date(c.updated_at).toLocaleDateString()}
+                                                {formatDate(c.updated_at)}
                                             </td>
                                             
                                             {/* 4. Balance */}
@@ -393,7 +394,7 @@ const CreditManagement = () => {
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Last Activity</p>
-                                                <p className="font-bold text-gray-700 text-sm">{new Date(c.updated_at).toLocaleDateString()}</p>
+                                                <p className="font-bold text-gray-700 text-sm">{formatDate(c.updated_at)}</p>
                                             </div>
                                         </div>
                                         {hasDebt && (role === 'ADMIN' || role === 'PHARMACIST' || role === 'CASHIER') && (
@@ -459,7 +460,7 @@ const CreditManagement = () => {
                                 {filteredRecordsMemo.map((r) => (
                                     <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 text-gray-500 text-xs font-medium">
-                                            {new Date(r.created_at).toLocaleDateString()}
+                                            {formatDate(r.created_at)}
                                         </td>
                                         <td className="px-6 py-4 font-mono font-bold text-indigo-600">
                                             {r.sale?.receipt_number || 'N/A'}

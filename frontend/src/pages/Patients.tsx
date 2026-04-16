@@ -9,6 +9,7 @@ import {
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import { toastSuccess, toastError } from '../components/Toast';
+import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 
 interface Patient {
@@ -21,6 +22,7 @@ interface Patient {
   allergies: string[];
   reminders?: any[];
   sales?: any[];
+  created_at: string;
 }
 
 interface Medicine {
