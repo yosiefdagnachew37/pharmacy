@@ -517,8 +517,8 @@ const PurchaseManager = () => {
             {/* CREATE PO MODAL */}
 
             {showCreateModal && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl border border-white/20">
+                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-[95vw] lg:max-w-7xl h-[96vh] overflow-hidden shadow-2xl border border-white/20 flex flex-col">
                         {/* Modal Header */}
                         <div className="flex justify-between items-center mb-5">
                             <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
@@ -554,9 +554,9 @@ const PurchaseManager = () => {
                             </button>
                         </div>
 
-                        <div className="flex flex-col h-full max-h-[85vh]">
+                        <div className="flex flex-col flex-1 min-h-0">
                             {/* Supplier & Header Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-3xl border border-gray-100 flex-shrink-0">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100 flex-shrink-0">
                                 <div className="md:col-span-1">
                                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Supplier *</label>
                                     <select
@@ -613,7 +613,7 @@ const PurchaseManager = () => {
                             </div>
 
                             {/* Line Items Table with Scrollable Area */}
-                            <div className="mt-6 flex-1 min-h-0 overflow-hidden flex flex-col bg-white rounded-3xl border border-gray-100 shadow-sm relative">
+                            <div className="mt-2 flex-1 min-h-0 overflow-hidden flex flex-col bg-white rounded-xl border border-gray-100 shadow-sm relative">
                                 <div className="overflow-x-auto overflow-y-auto flex-1">
                                     <table className="w-full text-sm text-left border-collapse">
                                         <thead className="bg-gray-50/80 text-gray-500 font-black uppercase tracking-widest text-[10px] border-b sticky top-0 z-10 backdrop-blur-sm">
@@ -786,10 +786,10 @@ const PurchaseManager = () => {
                             </div>
 
                             {/* Summary & Payment Logic - Sticky Footer */}
-                            <div className="mt-auto pt-3 border-t-2 border-gray-100 bg-white z-20 sticky bottom-0">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    <div className="bg-gray-50 p-4 rounded-[1.5rem] border border-gray-100 shadow-sm">
-                                        <div className="flex flex-col gap-5">
+                            <div className="mt-2 pt-2 border-t-2 border-gray-100 bg-white z-20 sticky bottom-0">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                                    <div className="bg-gray-50 p-2 rounded-xl border border-gray-100 shadow-sm">
+                                        <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="checkbox"
@@ -874,7 +874,7 @@ const PurchaseManager = () => {
                                         </div>
                                     </div>
 
-                                    <div className="bg-white p-5 rounded-[1.5rem] border-2 border-indigo-50 shadow-2xl shadow-indigo-100 flex flex-col gap-3">
+                                    <div className="bg-white p-3 rounded-xl border-2 border-indigo-50 shadow-2xl shadow-indigo-100 flex flex-col gap-1">
                                         <div className="flex justify-between items-center text-sm font-black text-gray-400 uppercase tracking-widest">
                                             <span>Subtotal</span>
                                             <span className="text-gray-900 border-b-2 border-indigo-50 pb-1">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
