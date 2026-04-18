@@ -878,7 +878,7 @@ export class ReportingService {
         batches.forEach(b => ws.addRow({
             medicine: b.medicine?.name,
             batch_number: b.batch_number,
-            expiry_date: new Date(b.expiry_date).toLocaleDateString(),
+            expiry_date: b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : 'Non-Exp',
             quantity_remaining: b.quantity_remaining,
             purchase_price: Number(b.purchase_price),
             selling_price: Number(b.selling_price)
@@ -908,7 +908,7 @@ export class ReportingService {
             const y = doc.y;
             doc.text(b.medicine?.name || '-', 50, y, { width: 120 });
             doc.text(b.batch_number, 180, y);
-            doc.text(new Date(b.expiry_date).toLocaleDateString(), 280, y);
+            doc.text(b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : 'Non-Exp', 280, y);
             doc.text(`${b.quantity_remaining}`, 380, y);
             doc.text(`$${Number(b.purchase_price).toFixed(2)}`, 430, y);
             doc.text(`$${Number(b.selling_price).toFixed(2)}`, 500, y);
@@ -941,7 +941,7 @@ export class ReportingService {
                                 children: [
                                     new TableCell({ children: [new Paragraph(b.medicine?.name || "-")] }),
                                     new TableCell({ children: [new Paragraph(b.batch_number)] }),
-                                    new TableCell({ children: [new Paragraph(new Date(b.expiry_date).toLocaleDateString())] }),
+                                    new TableCell({ children: [new Paragraph(b.expiry_date ? new Date(b.expiry_date).toLocaleDateString() : 'Non-Exp')] }),
                                     new TableCell({ children: [new Paragraph(String(b.quantity_remaining))] }),
                                 ]
                             }))
@@ -1113,6 +1113,7 @@ export class ReportingService {
 
             // Find if there was an earlier non-expired batch available at the time of sale
             const availableBatches = item.medicine.batches.filter(b =>
+                b.expiry_date && item.batch.expiry_date &&
                 new Date(b.expiry_date) > new Date(item.sale.created_at) &&
                 new Date(b.expiry_date) < new Date(item.batch.expiry_date) &&
                 b.id !== item.batch.id

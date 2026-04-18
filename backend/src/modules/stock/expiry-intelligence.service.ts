@@ -97,10 +97,9 @@ export class ExpiryIntelligenceService {
         const results: ExpiryRiskResult[] = [];
 
         for (const batch of batches) {
-            const daysUntilExpiry = Math.max(
-                1,
-                Math.ceil((new Date(batch.expiry_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
-            );
+            const daysUntilExpiry = batch.expiry_date 
+                ? Math.max(1, Math.ceil((new Date(batch.expiry_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+                : 9999;
 
             // Calculate average daily sales for this medicine (last 30 days)
             const avgDailySales = await this.getAvgDailySales(batch.medicine_id, 30);
@@ -174,7 +173,7 @@ export class ExpiryIntelligenceService {
 
         // Predicted loss: critical items likely to expire
         const predictedLoss30Days = risks
-            .filter(r => r.days_until_expiry <= 30 && (r.risk_status === 'HIGH_RISK' || r.risk_status === 'CRITICAL'))
+            .filter(r => r.days_until_expiry <= 30 && r.days_until_expiry > 0 && (r.risk_status === 'HIGH_RISK' || r.risk_status === 'CRITICAL'))
             .reduce((sum, r) => sum + r.estimated_loss_value, 0);
 
         return {

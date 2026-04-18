@@ -10,7 +10,13 @@ import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import ColumnFilter from '../components/ColumnFilter';
 
-const PharmacistPurchases = () => {
+const ProductType = {
+    MEDICINE: 'MEDICINE' as const,
+    COSMETIC: 'COSMETIC' as const,
+};
+type ProductType = typeof ProductType[keyof typeof ProductType];
+
+const PurchaseManager = () => {
     const { role } = useAuth();
     const [purchases, setPurchases] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -34,23 +40,30 @@ const PharmacistPurchases = () => {
         paymentStatus: [],
         date: [],
     });
-    const [activeTab, setActiveTab] = useState<'ALL' | 'PLANNED' | 'PENDING_PAYMENT'>('ALL');
+    const [activeTab, setActiveTab] = useState<'ALL'>('ALL');
 
     // Form states
     const [supplierId, setSupplierId] = useState('');
-    const [orderItems, setOrderItems] = useState([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
+    const [orderItems, setOrderItems] = useState<Array<{
+        medicine_id: string; sku: string; name: string; quantity: number; unit_price: number; 
+        selling_price: number; batch_number: string; expiry_date: string; item_found: boolean; product_type: ProductType;
+    }>>([
+        { medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.MEDICINE }
+    ]);
     const [notes, setNotes] = useState('');
     const [isVatInclusive, setIsVatInclusive] = useState(false);
     const [vatRate, setVatRate] = useState(15);
     const [poModalTab, setPoModalTab] = useState<'MEDICINE' | 'COSMETIC'>('MEDICINE');
-
-    // Receive items state
+    
+    // Receipt/History states
     const [receiveData, setReceiveData] = useState<any[]>([]);
 
-    // Payment state
+    // Payment during registration
+    const [payNow, setPayNow] = useState(false);
+    const [amountPaidNow, setAmountPaidNow] = useState(0);
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [selectedPaymentAccount, setSelectedPaymentAccount] = useState('');
-    const [transRef, setTransRef] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'SYSTEM_ACCOUNT'>('CASH');
 
     const fetchData = async () => {
         try {
@@ -73,26 +86,63 @@ const PharmacistPurchases = () => {
 
     useEffect(() => { fetchData(); }, []);
 
-    const handleCreatePO = async () => {
+    const handleRegisterPurchase = async () => {
+        if (!supplierId || orderItems.some(i => !i.medicine_id || !i.batch_number)) {
+            toastWarning('Missing Information', 'Please select a supplier and fill all required item details (including Batch #).');
+            return;
+        }
+
         try {
-            await client.post('/purchase-orders', {
+            const payload = {
                 supplier_id: supplierId,
-                payment_method: 'CASH',
+                supplier_invoice_number: (document.getElementById('supplier_inv_number') as HTMLInputElement)?.value,
+                items: orderItems,
+                notes,
                 is_vat_inclusive: isVatInclusive,
                 vat_rate: isVatInclusive ? vatRate : 0,
-                notes,
-                items: orderItems,
-                po_type: poModalTab,
-            });
+                payment_method: paymentMethod === 'CASH' ? 'CASH' : 'BANK_TRANSFER',
+                amount_paid_now: payNow ? amountPaidNow : 0,
+                payment_account_id: (payNow && paymentMethod === 'SYSTEM_ACCOUNT') ? selectedPaymentAccount : undefined,
+            };
+
+            await client.post('/purchase-orders/register', payload);
+            
             setShowCreateModal(false);
             resetForm();
             fetchData();
-            toastSuccess('Purchase Order Created', 'The purchase order has been successfully generated.');
+            toastSuccess('Purchase Registered', 'Inventory stock has been updated successfully.');
         } catch (err: any) {
-            console.error('Failed to create purchase order', err);
-            const msg = extractErrorMessage(err, 'Error creating purchase order.');
-            toastError('Failed to create PO', msg);
+            console.error('Registration failed', err);
+            const msg = extractErrorMessage(err, 'Error registering purchase.');
+            toastError('Registration Failed', msg);
         }
+    };
+
+    const handleSKULookup = (index: number, sku: string) => {
+        const item = medicines.find(m => 
+            m.sku?.toLowerCase() === sku.toLowerCase() || 
+            m.barcode?.toLowerCase() === sku.toLowerCase()
+        );
+
+        const newItems = [...orderItems];
+        if (item) {
+            newItems[index] = {
+                ...newItems[index],
+                medicine_id: item.id,
+                sku: item.sku,
+                name: item.name,
+                item_found: true,
+                product_type: item.product_type
+            };
+        } else {
+            newItems[index] = {
+                ...newItems[index],
+                medicine_id: '',
+                name: '',
+                item_found: false
+            };
+        }
+        setOrderItems(newItems);
     };
 
     const handleUpdateStatus = async (id: string, status: string) => {
@@ -191,13 +241,18 @@ const PharmacistPurchases = () => {
         setNotes('');
         setIsVatInclusive(false);
         setVatRate(15);
-        setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]);
+        setOrderItems([{ medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.MEDICINE }]);
         setPoModalTab('MEDICINE');
+        setPayNow(false);
+        setAmountPaidNow(0);
+        setPaymentMethod('CASH');
+        setSelectedPaymentAccount('');
     };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'COMPLETED': return 'bg-emerald-100 text-emerald-700';
+            case 'REGISTERED': return 'bg-indigo-100 text-indigo-700';
             case 'APPROVED': case 'SENT': case 'CONFIRMED': return 'bg-indigo-100 text-indigo-700';
             case 'PARTIALLY_RECEIVED': return 'bg-amber-100 text-amber-700';
             case 'CANCELLED': return 'bg-rose-100 text-rose-700';
@@ -225,9 +280,8 @@ const PharmacistPurchases = () => {
     const filteredPO = useMemo(() => {
         return purchases.filter(po => {
             let matchesTab = true;
-            if (activeTab === 'ALL') matchesTab = po.status !== 'DRAFT';
-            if (activeTab === 'PLANNED') matchesTab = po.status === 'DRAFT' || po.status === 'APPROVED';
-            if (activeTab === 'PENDING_PAYMENT') matchesTab = po.status === 'PENDING_PAYMENT';
+            // Simplified: All registered/completed orders shown together
+            matchesTab = po.status !== 'DRAFT'; 
             
             const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
             const poDate = formatDate(po.purchase_date);
@@ -263,45 +317,22 @@ const PharmacistPurchases = () => {
                     <h1 className="text-2xl font-black text-gray-900">Purchases & Procurements</h1>
                     <p className="text-gray-500 mt-1 font-medium">Manage stock orders and record supply receipts</p>
                 </div>
-                {(role === 'ADMIN' || role === 'PHARMACIST') && activeTab === 'PLANNED' && (
+                {role === 'ADMIN' && (
                     <button
                         onClick={() => setShowCreateModal(true)}
                         className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 border-b-4 border-indigo-800"
                     >
-                        <Plus className="w-5 h-5" /> New Purchase Order
+                        <Plus className="w-5 h-5" /> Register Purchase
                     </button>
                 )}
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl w-full sm:w-auto shadow-inner border border-gray-200/60">
-                    <button
-                        onClick={() => setActiveTab('ALL')}
-                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'ALL' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'ALL' ? 'border-gray-100' : 'border-transparent'}`}
-                    >
-                        Active Orders
-                    </button>
-                    {(role === 'ADMIN' || role === 'CASHIER') && (
-                        <button
-                            onClick={() => setActiveTab('PENDING_PAYMENT')}
-                            className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'PENDING_PAYMENT' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'PENDING_PAYMENT' ? 'border-gray-100' : 'border-transparent'} relative`}
-                        >
-                            Payment Queue
-                            {purchases.filter(po => po.status === 'PENDING_PAYMENT').length > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                                </span>
-                            )}
-                        </button>
-                    )}
-
-                    <button
-                        onClick={() => setActiveTab('PLANNED')}
-                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'PLANNED' ? 'bg-white text-indigo-700 shadow-md transform scale-100' : 'text-gray-500 hover:bg-gray-200/50 hover:text-gray-700'} border ${activeTab === 'PLANNED' ? 'border-gray-100' : 'border-transparent'}`}
-                    >
-                        Planned Drafts
-                    </button>
+                    <div className="px-6 py-2.5 bg-white text-indigo-700 rounded-xl text-sm font-black shadow-sm border border-gray-100 flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Purchase History
+                    </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -332,8 +363,9 @@ const PharmacistPurchases = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-300 uppercase text-[10px] font-black tracking-widest sticky top-0 z-30 shadow-sm border-b border-gray-100 dark:border-slate-700">
                             <tr>
+                                <th className="px-6 py-4">Invoice #</th>
                                 <ColumnFilter
-                                    label="PO Number"
+                                    label="System ID"
                                     options={uniquePONumbers}
                                     selectedValues={columnFilters.poNumber}
                                     onFilterChange={(v) => updateFilter('poNumber', v)}
@@ -370,7 +402,10 @@ const PharmacistPurchases = () => {
                         <tbody className="divide-y divide-gray-50">
                             {filteredPO.map((po) => (
                                 <tr key={po.id} className="hover:bg-indigo-50/20 transition-colors group">
-                                    <td className="px-6 py-4 font-black text-gray-800 font-mono tracking-tight text-xs bg-gray-50/30 group-hover:bg-transparent">
+                                    <td className="px-6 py-4 font-black text-indigo-600 font-mono tracking-tight text-xs">
+                                        {po.supplier_invoice_number || '---'}
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-gray-400 text-[10px] bg-gray-50/30 group-hover:bg-transparent">
                                         {po.po_number}
                                     </td>
                                     <td className="px-6 py-4">
@@ -403,38 +438,21 @@ const PharmacistPurchases = () => {
                                         <span className="text-xs font-bold text-gray-500">{formatDate(po.purchase_date)}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-1.5 pr-6">
-                                        {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
-                                            <button
-                                                onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
-                                                className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-bold text-[10px] uppercase shadow-md shadow-indigo-200 active:scale-95 transition-all"
-                                                title="Send to Cashier for Payment"
-                                            >
-                                                Send for Payment
-                                            </button>
-                                        )}
-                                        {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
-                                            <button
-                                                onClick={() => openReceiveModal(po)}
-                                                className="px-3 py-1.5 text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold text-xs uppercase transition-colors active:scale-95 border-b-2 border-transparent hover:border-emerald-200"
-                                            >
-                                                Receive
-                                            </button>
-                                        )}
-                                        {(po.status === 'COMPLETED' || po.status === 'PARTIALLY_RECEIVED') && (
+                                        {(po.status === 'REGISTERED' || po.status === 'COMPLETED' || po.status === 'PARTIALLY_RECEIVED') && (
                                             <button
                                                 onClick={() => openReceivedHistoryModal(po)}
-                                                className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors active:scale-95"
-                                                title="Received Items History"
+                                                className="px-3 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors font-bold text-[10px] uppercase flex items-center gap-1 ml-auto"
+                                                title="View Details"
                                             >
-                                                <Eye className="w-4 h-4" />
+                                                <Eye className="w-3.5 h-3.5" /> Details
                                             </button>
                                         )}
-                                        {po.status === 'PENDING_PAYMENT' && (role === 'ADMIN' || role === 'CASHIER') && (
+                                        {po.payment_status !== 'PAID' && role === 'ADMIN' && (
                                             <button
-                                                onClick={() => { setSelectedPO(po); setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
-                                                className="px-4 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-colors font-bold text-[11px] uppercase shadow-md shadow-indigo-200 active:scale-95 border-b-[3px] border-indigo-800"
+                                                onClick={() => { setSelectedPO(po); setAmountPaidNow(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
+                                                className="mt-2 px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl transition-colors font-bold text-[11px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
                                             >
-                                                Process Payment
+                                                <DollarSign className="w-3 h-3" /> Process Payment
                                             </button>
                                         )}
                                     </td>
@@ -524,189 +542,315 @@ const PharmacistPurchases = () => {
                         {/* Order Type Tabs */}
                         <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl mb-6 shadow-inner">
                             <button
-                                onClick={() => { setPoModalTab('MEDICINE'); setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]); }}
+                                onClick={() => { setPoModalTab('MEDICINE'); setOrderItems([{ medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.MEDICINE }]); }}
                                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                                     poModalTab === 'MEDICINE'
                                         ? 'bg-white text-indigo-700 shadow-md'
                                         : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
-                                💊 Medicine Order
+                                💊 Medicine Invoice
                             </button>
                             <button
-                                onClick={() => { setPoModalTab('COSMETIC'); setOrderItems([{ medicine_id: '', quantity_ordered: 1, unit_price: 0 }]); }}
+                                onClick={() => { setPoModalTab('COSMETIC'); setOrderItems([{ medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.COSMETIC }]); }}
                                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
                                     poModalTab === 'COSMETIC'
                                         ? 'bg-white text-pink-700 shadow-md'
                                         : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
-                                ✨ Cosmetics Order
+                                ✨ Cosmetics Invoice
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 text-gray-900">
-                            {/* Line Items */}
-                            <div className="xl:col-span-2 space-y-4">
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Line Items</h3>
-                                <div className="space-y-3">
-                                    {orderItems.map((item, index) => (
-                                        <div key={index} className="flex flex-wrap sm:flex-nowrap items-start gap-3 p-4 rounded-2xl border-2 border-gray-50 focus-within:border-indigo-100 focus-within:bg-indigo-50/10 transition-colors shadow-sm">
-                                            <div className="flex-1 min-w-[160px]">
-                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
-                                                    {poModalTab === 'MEDICINE' ? 'Medicine' : 'Cosmetic'} *
-                                                </label>
-                                                <select
-                                                    value={item.medicine_id}
-                                                    onChange={e => {
-                                                        const newItems = [...orderItems];
-                                                        newItems[index].medicine_id = e.target.value;
-                                                        setOrderItems(newItems);
-                                                    }}
-                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-semibold transition-all text-gray-800"
-                                                >
-                                                    <option value="">Select Item</option>
-                                                    {medicines
-                                                        .filter(m => poModalTab === 'COSMETIC' ? m.product_type === 'COSMETIC' : m.product_type !== 'COSMETIC')
-                                                        .map(m => (
-                                                            <option key={m.id} value={m.id}>{m.name}{m.generic_name ? ` — ${m.generic_name}` : ''}</option>
-                                                        ))}
-                                                </select>
-                                            </div>
-                                            <div className="w-[90px]">
-                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Qty *</label>
-                                                <input
-                                                    type="number" min="1"
-                                                    value={item.quantity_ordered || ''}
-                                                    onChange={e => {
-                                                        const newItems = [...orderItems];
-                                                        newItems[index].quantity_ordered = e.target.value === '' ? 0 : parseInt(e.target.value);
-                                                        setOrderItems(newItems);
-                                                    }}
-                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black text-center transition-all text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="w-[130px]">
-                                                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Unit Price (ETB) *</label>
-                                                <input
-                                                    type="number" min="0" step="0.01"
-                                                    value={item.unit_price || ''}
-                                                    onChange={e => {
-                                                        const newItems = [...orderItems];
-                                                        newItems[index].unit_price = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                                        setOrderItems(newItems);
-                                                    }}
-                                                    className="w-full px-3 py-2.5 bg-gray-50 border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:bg-white text-sm font-black transition-all text-gray-800"
-                                                />
-                                            </div>
-                                            <div className="flex items-end pb-1">
-                                                {index > 0 && (
-                                                    <button
-                                                        onClick={() => setOrderItems(orderItems.filter((_, i) => i !== index))}
-                                                        className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-colors"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button
-                                    onClick={() => setOrderItems([...orderItems, { medicine_id: '', quantity_ordered: 1, unit_price: 0 }])}
-                                    className="text-[11px] font-black text-indigo-700 hover:text-white uppercase tracking-wider flex items-center bg-indigo-50 hover:bg-indigo-600 px-4 py-2 rounded-xl transition-all active:scale-95"
-                                >
-                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Item
-                                </button>
-                            </div>
-
-                            {/* Procurement Details */}
-                            <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner">
-                                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Procurement Details</h3>
-                                <div>
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Supplier *</label>
+                        <div className="space-y-6">
+                            {/* Supplier & Header Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                                <div className="md:col-span-1">
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Supplier *</label>
                                     <select
                                         value={supplierId}
                                         onChange={e => setSupplierId(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white rounded-xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all"
+                                        className="w-full px-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-gray-800"
                                     >
                                         <option value="">Select Vendor</option>
-                                        {suppliers.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
-                                <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={isVatInclusive}
-                                            onChange={e => setIsVatInclusive(e.target.checked)}
-                                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                                            id="vat-check"
-                                        />
-                                        <label htmlFor="vat-check" className="text-sm font-bold text-gray-700 cursor-pointer">Includes VAT</label>
-                                    </div>
-                                    {isVatInclusive && (
-                                        <div className="mt-3 flex items-center gap-3">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Rate (%)</label>
-                                            <input
-                                                type="number" min="0" max="100"
-                                                value={vatRate || ''}
-                                                onChange={e => setVatRate(e.target.value === '' ? 0 : Number(e.target.value))}
-                                                className="w-20 px-3 py-1.5 text-sm bg-gray-50 font-bold border-transparent rounded-xl outline-none focus:ring-4 focus:ring-indigo-100"
-                                            />
-                                        </div>
-                                    )}
+                                <div className="md:col-span-1">
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Physical Invoice # *</label>
+                                    <input
+                                        type="text"
+                                        id="supplier_inv_number"
+                                        placeholder="Serial / INV-..."
+                                        className="w-full px-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-indigo-700"
+                                    />
                                 </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">Remarks</label>
+                                <div className="md:col-span-2 flex flex-col justify-end">
+                                    <div className="flex items-center gap-6 mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="vat-toggle"
+                                                checked={isVatInclusive}
+                                                onChange={e => setIsVatInclusive(e.target.checked)}
+                                                className="w-4 h-4 text-indigo-600 rounded"
+                                            />
+                                            <label htmlFor="vat-toggle" className="text-sm font-bold text-gray-700">Add VAT</label>
+                                        </div>
+                                        {isVatInclusive && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-gray-500">Rate:</span>
+                                                <input
+                                                    type="number"
+                                                    value={vatRate}
+                                                    onChange={e => setVatRate(Number(e.target.value))}
+                                                    className="w-16 px-2 py-1 bg-white border rounded-lg text-xs font-bold"
+                                                />
+                                                <span className="text-xs font-bold text-gray-500">%</span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <textarea
                                         value={notes}
                                         onChange={e => setNotes(e.target.value)}
-                                        rows={2}
-                                        className="w-full px-4 py-2.5 bg-white rounded-xl border-transparent shadow-sm focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-medium resize-none text-gray-800 transition-all"
-                                        placeholder="Internal notes..."
+                                        placeholder="Internal notes or invoice remarks..."
+                                        rows={1}
+                                        className="w-full mt-2 px-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-medium resize-none"
                                     />
                                 </div>
+                            </div>
 
-                                <div className="pt-3 border-t-2 border-dashed border-gray-200">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Subtotal</span>
-                                        <span className="font-bold text-gray-800 text-sm">ETB {orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0).toFixed(2)}</span>
-                                    </div>
-                                    {isVatInclusive && (
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-indigo-600 text-xs font-bold uppercase tracking-wider">VAT ({vatRate}%)</span>
-                                            <span className="font-bold text-indigo-600 text-sm">ETB {(orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (vatRate / 100)).toFixed(2)}</span>
+                            {/* Line Items Table */}
+                            <div className="overflow-x-auto bg-white rounded-3xl border border-gray-100 shadow-sm">
+                                <table className="w-full text-xs text-left">
+                                    <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[9px] border-b">
+                                        <tr>
+                                            <th className="px-4 py-4 w-32">Item ID / SKU</th>
+                                            <th className="px-4 py-4 min-w-[150px]">Product Name</th>
+                                            <th className="px-4 py-4 w-24">Batch #</th>
+                                            <th className="px-4 py-4 w-32">Expiry</th>
+                                            <th className="px-4 py-4 w-20">Qty</th>
+                                            <th className="px-4 py-4 w-24">Unit {isVatInclusive ? 'Excl' : ''}</th>
+                                            <th className="px-4 py-4 w-24">Total</th>
+                                            <th className="px-4 py-4 w-24">Selling</th>
+                                            <th className="px-4 py-4 w-10"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {orderItems.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50/30 transition-colors">
+                                                <td className="px-3 py-3">
+                                                    <input
+                                                        type="text"
+                                                        value={item.sku}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].sku = e.target.value;
+                                                            setOrderItems(newItems);
+                                                            handleSKULookup(index, e.target.value);
+                                                        }}
+                                                        placeholder="SKU-XXXX"
+                                                        className="w-full px-2 py-2 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 font-mono font-bold"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    {item.item_found ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-gray-800">{item.name}</span>
+                                                            <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-tighter bg-indigo-50 px-1.5 py-0.5 rounded w-fit mt-0.5">Existing Item</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-rose-500 font-bold italic">Item not found</span>
+                                                            <button 
+                                                                onClick={() => window.location.href = poModalTab === 'MEDICINE' ? '/medicines' : '/cosmetics'}
+                                                                className="text-[9px] font-black uppercase text-white bg-rose-500 px-2 py-1 rounded-md hover:bg-rose-600 transition-colors w-fit"
+                                                            >
+                                                                Register New Product
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <input
+                                                        type="text"
+                                                        value={item.batch_number}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].batch_number = e.target.value;
+                                                            setOrderItems(newItems);
+                                                        }}
+                                                        placeholder="BCH..."
+                                                        className="w-full px-2 py-2 bg-gray-50 rounded-lg outline-none font-bold uppercase"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <input
+                                                        type="date"
+                                                        value={item.expiry_date}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].expiry_date = e.target.value;
+                                                            setOrderItems(newItems);
+                                                        }}
+                                                        className="w-full px-2 py-2 bg-gray-50 rounded-lg outline-none font-bold text-[10px]"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <input
+                                                        type="number"
+                                                        value={item.quantity || ''}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].quantity = Number(e.target.value);
+                                                            setOrderItems(newItems);
+                                                        }}
+                                                        className="w-full px-2 py-2 bg-gray-50 rounded-lg outline-none font-black text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <input
+                                                        type="number"
+                                                        value={item.unit_price || ''}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].unit_price = Number(e.target.value);
+                                                            setOrderItems(newItems);
+                                                        }}
+                                                        className="w-full px-2 py-2 bg-gray-100 rounded-lg outline-none font-bold text-center"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3 text-right">
+                                                    <span className="font-black text-gray-900">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <input
+                                                        type="number"
+                                                        value={item.selling_price || ''}
+                                                        onChange={e => {
+                                                            const newItems = [...orderItems];
+                                                            newItems[index].selling_price = Number(e.target.value);
+                                                            setOrderItems(newItems);
+                                                        }}
+                                                        placeholder="Retail"
+                                                        className="w-full px-2 py-2 bg-emerald-50 text-emerald-700 rounded-lg outline-none font-bold text-center placeholder:text-emerald-300"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    {index > 0 && (
+                                                        <button onClick={() => setOrderItems(orderItems.filter((_, i) => i !== index))} className="text-gray-300 hover:text-rose-500"><X className="w-4 h-4" /></button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <button
+                                    onClick={() => setOrderItems([...orderItems, { medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: (poModalTab as any) }])}
+                                    className="w-full py-4 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 uppercase tracking-widest transition-colors flex items-center justify-center gap-2 border-t"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> Add Row to Invoice
+                                </button>
+                            </div>
+
+                            {/* Summary & Payment Logic */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <input
+                                                type="checkbox"
+                                                id="pay-now"
+                                                checked={payNow}
+                                                onChange={e => {
+                                                    setPayNow(e.target.checked);
+                                                    if (e.target.checked) setAmountPaidNow(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1));
+                                                }}
+                                                className="w-5 h-5 text-indigo-600 rounded-lg"
+                                            />
+                                            <label htmlFor="pay-now" className="text-sm font-black text-gray-900 cursor-pointer uppercase tracking-tight">Process Payment Now</label>
                                         </div>
-                                    )}
-                                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                                        <span className="text-gray-900 text-xs font-black uppercase tracking-wider">Grand Total</span>
-                                        <span className={`text-xl font-black ${
-                                            orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1) > 50000
-                                                ? 'text-rose-600' : 'text-indigo-600'
-                                        }`}>
-                                            ETB {(orderItems.reduce((s, i) => s + (i.quantity_ordered * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1)).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                        </span>
+
+                                        {payNow && (
+                                            <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setPaymentMethod('CASH')}
+                                                        className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${paymentMethod === 'CASH' ? 'bg-indigo-600 text-white shadow-lg border-b-4 border-indigo-800' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'}`}
+                                                    >
+                                                        Physical Cash
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setPaymentMethod('SYSTEM_ACCOUNT')}
+                                                        className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${paymentMethod === 'SYSTEM_ACCOUNT' ? 'bg-indigo-600 text-white shadow-lg border-b-4 border-indigo-800' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'}`}
+                                                    >
+                                                        System Account
+                                                    </button>
+                                                </div>
+
+                                                {paymentMethod === 'SYSTEM_ACCOUNT' && (
+                                                    <select
+                                                        value={selectedPaymentAccount}
+                                                        onChange={e => setSelectedPaymentAccount(e.target.value)}
+                                                        className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm outline-none text-sm font-bold text-gray-800"
+                                                    >
+                                                        <option value="">-- Select Source Ledger --</option>
+                                                        {paymentAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name} (Bal: ETB {Number(acc.balance).toLocaleString()})</option>)}
+                                                    </select>
+                                                )}
+
+                                                <div className="relative">
+                                                    <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 ml-1">Payment Amount (ETB)</label>
+                                                    <div className="relative flex items-center">
+                                                        <span className="absolute left-4 font-black text-gray-400">ETB</span>
+                                                        <input
+                                                            type="number"
+                                                            value={amountPaidNow}
+                                                            onChange={e => setAmountPaidNow(Number(e.target.value))}
+                                                            className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-lg font-black text-indigo-700"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-[10px] font-bold text-indigo-700 leading-relaxed">
+                                        <AlertCircle className="w-3.5 h-3.5 inline mr-1.5 align-text-bottom" />
+                                        Confirming this registration will immediately increment your stock levels. Payments can be settled fully or partially at any time in the future.
                                     </div>
                                 </div>
 
-                                <div className="flex gap-3 pt-2">
-                                    <button onClick={() => setShowCreateModal(false)}
-                                        className="flex-1 py-2.5 bg-gray-100 rounded-xl text-sm font-black text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-all active:scale-95">
-                                        Cancel
-                                    </button>
-                                    <button onClick={handleCreatePO}
-                                        disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
-                                        className={`flex-1 py-2.5 rounded-xl text-sm font-black text-white transition-all shadow-xl active:scale-95 disabled:opacity-50 border-b-4 ${
-                                            poModalTab === 'COSMETIC'
-                                                ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-200 border-pink-700'
-                                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 border-indigo-800'
-                                        }`}>
-                                        Create Order
-                                    </button>
+                                <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl flex flex-col gap-3 h-fit">
+                                    <div className="flex justify-between items-center text-sm font-bold text-gray-500">
+                                        <span>Subtotal</span>
+                                        <span className="text-gray-900">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                    </div>
+                                    {isVatInclusive && (
+                                        <div className="flex justify-between items-center text-sm font-bold text-indigo-600">
+                                            <span>VAT ({vatRate}%)</span>
+                                            <span>ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                        </div>
+                                    )}
+                                    <div className="mt-2 pt-4 border-t-2 border-dashed border-gray-100 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Payable</p>
+                                            <p className="text-4xl font-black text-gray-900 tracking-tighter">
+                                                ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1)).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            </p>
+                                        </div>
+                                        <button 
+                                            onClick={handleRegisterPurchase}
+                                            disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
+                                            className={`px-10 py-5 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:shadow-none border-b-8 ${
+                                                poModalTab === 'COSMETIC' 
+                                                    ? 'bg-pink-500 hover:bg-pink-600 border-pink-700 shadow-pink-200' 
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-900 shadow-indigo-200'
+                                            }`}
+                                        >
+                                            Register Purchase
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -910,31 +1054,33 @@ const PharmacistPurchases = () => {
 
                         <div className="overflow-x-auto border border-gray-100 bg-gray-50 rounded-3xl flex-1 hide-scrollbar shadow-inner mt-2">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-[10px] uppercase font-black text-gray-400 tracking-widest border-b-2 border-gray-100 sticky top-0 bg-gray-50 z-10 backdrop-blur-md">
+                                    <thead className="text-[10px] uppercase font-black text-gray-400 tracking-widest border-b-2 border-gray-100 sticky top-0 bg-white z-10 backdrop-blur-md">
                                     <tr>
-                                        <th className="px-6 py-5">Product Name</th>
-                                        <th className="px-6 py-5">Manifest Qty</th>
-                                        <th className="px-6 py-5">Logged Inward</th>
-                                        <th className="px-6 py-5">Allocated Batch #</th>
-                                        <th className="px-6 py-5">Expiry Date</th>
+                                        <th className="px-6 py-5">Item Manifest</th>
+                                        <th className="px-4 py-5 font-black">Quantity</th>
+                                        <th className="px-4 py-5 font-black">Price</th>
+                                        <th className="px-4 py-5 font-black text-center">Batch Number</th>
+                                        <th className="px-4 py-5 font-black text-center">Expiry</th>
+                                        <th className="px-4 py-5 text-right font-black">Ext. Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {receiveData.map((item, index) => (
-                                        <tr key={index} className="hover:bg-white transition-colors bg-white/40">
+                                        <tr key={index} className="hover:bg-indigo-50/10 transition-colors bg-white/40">
                                             <td className="px-6 py-5">
-                                                <p className="font-bold text-gray-800">{item.medicine?.name || item.medicine_name}</p>
-                                                <p className="text-[10px] text-gray-400 mt-0.5">{item.medicine?.generic_name}</p>
+                                                <p className="font-bold text-gray-800">{item.medicine?.name || 'Unknown Item'}</p>
+                                                <p className="text-[10px] text-indigo-500 mt-0.5 font-bold tracking-tight uppercase">{item.medicine?.sku}</p>
                                             </td>
-                                            <td className="px-6 py-5"><span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">{item.quantity_ordered}</span></td>
-                                            <td className="px-6 py-5"><span className="text-sm font-black text-emerald-600 bg-emerald-100 px-4 py-2 rounded-xl">{item.quantity_received}</span></td>
-                                            <td className="px-6 py-5">
-                                                <span className="px-3 py-1.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold font-mono rounded-lg border border-indigo-100 uppercase tracking-wider">
-                                                    {item.batch?.batch_number || 'Multiple'}
+                                            <td className="px-4 py-5 font-black text-gray-700">{item.quantity_ordered} <span className="text-[10px] text-gray-400 font-bold uppercase">{item.medicine?.unit}</span></td>
+                                            <td className="px-4 py-5 font-bold text-gray-500 text-xs">ETB {Number(item.unit_price).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                                            <td className="px-4 py-5 text-center"><span className="text-gray-900 bg-gray-100 px-3 py-1 rounded-lg font-mono text-[10px] font-black">{item.batch_number || '---'}</span></td>
+                                            <td className="px-4 py-5 text-center">
+                                                <span className="text-[10px] font-black text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
+                                                    {item.expiry_date ? formatDate(item.expiry_date) : 'NON-EXPIRABLE'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-5 text-xs font-bold text-gray-600">
-                                                {item.batch?.expiry_date ? formatDate(item.batch.expiry_date) : 'N/A'}
+                                            <td className="px-4 py-5 text-right font-black text-indigo-700">
+                                                ETB {Number(item.subtotal).toLocaleString(undefined, {minimumFractionDigits:2})}
                                             </td>
                                         </tr>
                                     ))}
@@ -945,192 +1091,14 @@ const PharmacistPurchases = () => {
                             </table>
                         </div>
 
-                        <div className="mt-8 flex justify-end">
+                        <div className="mt-8 flex justify-between items-center border-t border-gray-100 pt-6">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Invoice Value</span>
+                                <span className="text-2xl font-black text-gray-900">ETB {Number(selectedPO.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
                             <button onClick={() => setShowReceivedHistoryModal(false)}
                                 className="px-10 py-3.5 bg-gray-900 border border-transparent text-white rounded-2xl text-sm font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-900/20">
-                                Close Manifest
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-const CashierPurchases = () => {
-    const [pendingPOs, setPendingPOs] = useState<any[]>([]);
-    const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [selectedPO, setSelectedPO] = useState<any>(null);
-    const [paymentAmount, setPaymentAmount] = useState(0);
-    const [selectedPaymentAccount, setSelectedPaymentAccount] = useState('');
-
-    const fetchData = async () => {
-        try {
-            const [poRes, actRes] = await Promise.all([
-                client.get('/purchase-orders'),
-                client.get('/payment-accounts')
-            ]);
-            const filteredPOs = (poRes.data || []).filter((po: any) => po.status === 'PENDING_PAYMENT');
-            setPendingPOs(filteredPOs);
-            setPaymentAccounts(actRes.data || []);
-        } catch (err) {
-            console.error('Failed fetching queue data', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 6000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const handleRecordPayment = async () => {
-        if (!selectedPO || paymentAmount <= 0) return;
-        if (!selectedPaymentAccount) {
-            toastWarning('Payment Account Required', 'Please select a payment account.');
-            return;
-        }
-
-        try {
-            await client.post(`/purchase-orders/${selectedPO.id}/pay`, {
-                payment_account_id: selectedPaymentAccount,
-                amount: paymentAmount,
-            });
-            setShowPaymentModal(false);
-            setSelectedPaymentAccount('');
-            setSelectedPO(null);
-            fetchData();
-            toastSuccess('Payment Confirmed', 'The purchase order has been successfully paid.');
-        } catch (err: any) {
-            console.error('Failed to record payment', err);
-            const msg = extractErrorMessage(err, 'Error recording payment.');
-            toastError('Payment failed', msg);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="h-[60vh] flex items-center justify-center">
-                <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex flex-col h-full min-h-0 space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-none">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900">PO Payment Queue</h1>
-                    <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-indigo-400" /> Auto-refreshing every 6 seconds
-                    </p>
-                </div>
-                <div className={`px-4 py-2 rounded-full font-bold text-sm border ${pendingPOs.length > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
-                    {pendingPOs.length} Pending {pendingPOs.length === 1 ? 'Order' : 'Orders'}
-                </div>
-            </div>
-
-            {pendingPOs.length === 0 ? (
-                <div className="text-center py-20 text-gray-400">
-                    <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle className="w-10 h-10 text-emerald-400 opacity-60" />
-                    </div>
-                    <p className="font-semibold text-gray-500 text-lg">Queue is Clear</p>
-                    <p className="text-sm mt-1">No purchase orders awaiting payment.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {pendingPOs.map(po => (
-                        <div key={po.id} className="bg-white rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-all p-5 flex flex-col">
-                            <div className="flex justify-between items-start mb-3">
-                                <div>
-                                    <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-0.5">Pending Payment</p>
-                                    <p className="font-black text-gray-900 text-base">{po.po_number || 'PO-??'}</p>
-                                </div>
-                                <span className="text-xs text-gray-400">{new Date(po.created_at).toLocaleDateString()}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                                <Building2 className="w-4 h-4 text-gray-400" />
-                                <span className="font-semibold">{po.supplier?.name || 'Unknown Supplier'}</span>
-                            </div>
-
-                            <div className="border-t border-dashed border-gray-200 pt-3 mb-4 flex justify-between items-center mt-auto">
-                                <span className="text-sm font-bold text-gray-500">Total Due</span>
-                                <span className="text-xl font-black text-indigo-700">ETB {Number(po.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                            </div>
-
-                            <button
-                                onClick={() => { setSelectedPO(po); setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
-                                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
-                            >
-                                <CheckCircle className="w-4 h-4" /> Accept Payment
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* PAYMENT MODAL */}
-            {showPaymentModal && selectedPO && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setShowPaymentModal(false)} />
-                    <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-200">
-                        <button onClick={() => setShowPaymentModal(false)} className="absolute top-4 border border-gray-100 right-4 p-2 bg-gray-50 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                        
-                        <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100">
-                            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100"><DollarSign className="w-6 h-6" /></div>
-                            <div>
-                                <h2 className="text-xl font-black text-gray-900">Process Bank/Cash Payment</h2>
-                                <p className="text-sm font-medium text-gray-500 mt-0.5">Clearing funds for {selectedPO.po_number}</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl flex justify-between items-center">
-                                <span className="font-bold text-amber-900 text-sm">Total Required:</span>
-                                <span className="font-black text-amber-600 text-xl">ETB {Number(selectedPO.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Deduct From Account</label>
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {paymentAccounts.filter(act => act.is_active).map(act => (
-                                        <button key={act.id} onClick={() => setSelectedPaymentAccount(act.id)}
-                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${selectedPaymentAccount === act.id ? 'border-indigo-600 bg-indigo-50/50' : 'border-gray-100 bg-white hover:border-indigo-200'}`}>
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-xl border ${selectedPaymentAccount === act.id ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                                                    <Building2 className="w-4 h-4" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className={`font-bold text-sm ${selectedPaymentAccount === act.id ? 'text-indigo-900' : 'text-gray-900'}`}>{act.name}</p>
-                                                    <p className="text-xs font-medium text-gray-500">Balance: ETB {Number(act.balance).toLocaleString()}</p>
-                                                </div>
-                                            </div>
-                                            {selectedPaymentAccount === act.id && <CheckCircle className="w-5 h-5 text-indigo-600" />}
-                                        </button>
-                                    ))}
-                                    {paymentAccounts.length === 0 && (
-                                        <div className="p-6 text-center text-sm font-medium text-rose-500 bg-rose-50 rounded-2xl border border-rose-100">
-                                            No active payment accounts configured for the organization.
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 flex gap-3">
-                            <button onClick={() => setShowPaymentModal(false)} className="flex-1 px-6 py-4 bg-gray-50 text-gray-600 rounded-2xl font-bold hover:bg-gray-100 transition-colors border border-gray-200">Cancel</button>
-                            <button onClick={handleRecordPayment} disabled={!selectedPaymentAccount} className="flex-[2] px-6 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors shadow-lg active:scale-[0.98] tracking-wide border-b-[4px] border-indigo-800 flex justify-center items-center gap-2">
-                                <DollarSign className="w-4 h-4" /> Confirm & Pay ETB {Number(selectedPO.total_amount).toLocaleString()}
+                                Close Invoice
                             </button>
                         </div>
                     </div>
@@ -1142,8 +1110,18 @@ const CashierPurchases = () => {
 
 const Purchases = () => {
     const { role } = useAuth();
-    if (role === 'CASHIER') return <CashierPurchases />;
-    return <PharmacistPurchases />;
+    if (role === 'CASHIER') {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center text-center px-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-4">
+                    <X className="w-10 h-10" />
+                </div>
+                <h2 className="text-xl font-black text-gray-900">Access Restricted</h2>
+                <p className="text-gray-500 mt-1 max-w-sm">The Purchase module is reserved for administrators and pharmacy owners only. Cashiers are not authorized to view or manage procurement data.</p>
+            </div>
+        );
+    }
+    return <PurchaseManager />;
 };
 
 export default Purchases;

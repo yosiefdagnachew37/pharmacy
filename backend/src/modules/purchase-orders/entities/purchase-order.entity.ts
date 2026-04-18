@@ -13,18 +13,22 @@ export enum POStatus {
     COMPLETED = 'COMPLETED',
     CANCELLED = 'CANCELLED',
     PENDING_PAYMENT = 'PENDING_PAYMENT',
+    REGISTERED = 'REGISTERED',
 }
 
 export enum POPaymentMethod {
     CASH = 'CASH',
     CREDIT = 'CREDIT',
     CHEQUE = 'CHEQUE',
+    BANK_TRANSFER = 'BANK_TRANSFER',
+    OTHER = 'OTHER',
 }
 
 export enum POPaymentStatus {
     PAID = 'PAID',
     PENDING = 'PENDING',
     PARTIALLY_PAID = 'PARTIALLY_PAID',
+    UNPAID = 'UNPAID',
 }
 
 @Entity('purchase_orders')
@@ -35,6 +39,9 @@ export class PurchaseOrder {
 
     @Column()
     po_number: string; // Auto-generated
+
+    @Column({ nullable: true })
+    supplier_invoice_number: string; // Physical invoice number from supplier
 
     @ManyToOne(() => Supplier, { onDelete: 'SET NULL', nullable: true })
     @JoinColumn({ name: 'supplier_id' })
