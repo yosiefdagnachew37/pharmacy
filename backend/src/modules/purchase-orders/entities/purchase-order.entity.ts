@@ -115,6 +115,9 @@ export class PurchaseOrder {
     @Column({ type: 'date', nullable: true })
     expected_delivery: Date;
 
+    @Column({ type: 'date', nullable: true })
+    payment_due_date: Date;
+
     // ─── Cheque Payment Details ───────────────────────────────────
     @Column({ nullable: true })
     cheque_bank_name: string;

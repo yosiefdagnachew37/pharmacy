@@ -88,6 +88,7 @@ export class PurchaseOrdersService {
         cheque_bank_name?: string;
         cheque_number?: string;
         cheque_due_date?: string;
+        payment_due_date?: string;
     }, userId: string) {
         const organization_id = getTenantId();
 
@@ -128,6 +129,7 @@ export class PurchaseOrdersService {
                 cheque_bank_name: data.cheque_bank_name,
                 cheque_number: data.cheque_number,
                 cheque_due_date: data.cheque_due_date ? new Date(data.cheque_due_date) : undefined,
+                payment_due_date: data.payment_due_date ? new Date(data.payment_due_date) : undefined,
                 created_by: userId,
                 organization_id,
             });
@@ -444,9 +446,8 @@ export class PurchaseOrdersService {
         };
     }
 
-    // ─── Cheque Reminder Check ────────────────────────────────────
     @Cron(CronExpression.EVERY_DAY_AT_9AM)
-    async checkChequeReminders(): Promise<{ checked: number; alerts: number }> {
+    async checkPaymentReminders(): Promise<{ checked: number; alerts: number }> {
         const orgStore = await this.organizationsService.findAll();
         let totalChecked = 0;
         let totalAlerts = 0;
@@ -459,7 +460,7 @@ export class PurchaseOrdersService {
                 userId: 'SYSTEM', 
                 isSuperAdmin: false 
             }, async () => {
-                return this.runChequeCheckForCurrentTenant();
+                return this.runPaymentChecksForCurrentTenant();
             });
 
             totalChecked += res.checked;
@@ -469,48 +470,59 @@ export class PurchaseOrdersService {
         return { checked: totalChecked, alerts: totalAlerts };
     }
 
-    private async runChequeCheckForCurrentTenant(): Promise<{ checked: number; alerts: number }> {
+    private async runPaymentChecksForCurrentTenant(): Promise<{ checked: number; alerts: number }> {
         const today = new Date();
         const organization_id = getTenantId();
         today.setHours(0, 0, 0, 0);
 
-        const chequePOs = await this.poRepo
+        const unpaidPOs = await this.poRepo
             .createQueryBuilder('po')
             .leftJoinAndSelect('po.supplier', 'supplier')
-            .where('po.payment_method = :method', { method: POPaymentMethod.CHEQUE })
-            .andWhere('po.organization_id = :organization_id', { organization_id })
-            .andWhere('po.cheque_due_date IS NOT NULL')
+            .where('po.organization_id = :organization_id', { organization_id })
             .andWhere('po.status NOT IN (:...exclude)', { exclude: [POStatus.CANCELLED] })
-            .andWhere('po.payment_status != :paid', { paid: 'PAID' })
+            .andWhere('po.payment_status != :paid', { paid: POPaymentStatus.PAID })
+            .andWhere('(po.cheque_due_date IS NOT NULL OR po.payment_due_date IS NOT NULL)')
             .getMany();
 
         let alertsCreated = 0;
-        const AlertsService = (await import('../alerts/alerts.service')).AlertsService;
 
-        for (const po of chequePOs) {
-            const dueDate = new Date(po.cheque_due_date);
+        for (const po of unpaidPOs) {
+            const dueDateRaw = po.payment_due_date || po.cheque_due_date;
+            if (!dueDateRaw) continue;
+
+            const dueDate = new Date(dueDateRaw);
             dueDate.setHours(0, 0, 0, 0);
             const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
             let alertMessage: string | null = null;
+            const isCheque = po.payment_method === POPaymentMethod.CHEQUE;
+            const itemType = isCheque ? 'Cheque' : 'Payment';
+
             if (daysUntilDue === 7) {
-                alertMessage = `⚠️ Cheque Due in 7 Days: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
+                alertMessage = `⚠️ ${itemType} Due in 7 Days: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
             } else if (daysUntilDue === 3) {
-                alertMessage = `🔔 Cheque Due in 3 Days: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
+                alertMessage = `🔔 ${itemType} Due in 3 Days: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
             } else if (daysUntilDue === 0) {
-                alertMessage = `🚨 Cheque DUE TODAY: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, Amount: ETB ${po.cheque_amount || po.total_amount}. Action required!`;
+                alertMessage = `🚨 ${itemType} DUE TODAY: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Action required!`;
             } else if (daysUntilDue < 0) {
-                alertMessage = `🚨 OVERDUE Cheque: PO ${po.po_number} — Bank: ${po.cheque_bank_name || 'N/A'}, Cheque #${po.cheque_number || 'N/A'}, was due ${dueDate.toLocaleDateString()}. ETB ${po.cheque_amount || po.total_amount}`;
+                alertMessage = `🚨 OVERDUE ${itemType}: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, was due ${dueDate.toLocaleDateString()}. ETB ${po.total_amount}`;
             }
 
             if (alertMessage) {
-                // Use AlertsService to record urgent alert
-                console.log('[CHEQUE REMINDER]', alertMessage);
+                console.log('[PAYMENT REMINDER]', alertMessage);
+                // Also create a system notification for the creator/admins
+                await this.notificationsService.create({
+                    title: `${itemType} Reminder`,
+                    message: alertMessage,
+                    type: NotificationType.PURCHASE_ORDER,
+                    organization_id,
+                    user_id: po.created_by, // Send to the person who created the PO
+                }).catch(() => {});
                 alertsCreated++;
             }
         }
 
-        return { checked: chequePOs.length, alerts: alertsCreated };
+        return { checked: unpaidPOs.length, alerts: alertsCreated };
     }
 
     // ─── Cashier Payment for PO ──────────────────────────────

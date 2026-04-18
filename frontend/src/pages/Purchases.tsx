@@ -46,7 +46,7 @@ const PurchaseManager = () => {
     // Form states
     const [supplierId, setSupplierId] = useState('');
     const [orderItems, setOrderItems] = useState<Array<{
-        medicine_id: string; sku: string; name: string; quantity: number; unit_price: number; 
+        medicine_id: string; sku: string; name: string; quantity: number; unit_price: number;
         selling_price: number; batch_number: string; expiry_date: string; item_found: boolean; product_type: ProductType;
         showDropdown?: boolean;
     }>>([
@@ -56,12 +56,13 @@ const PurchaseManager = () => {
     const [isVatInclusive, setIsVatInclusive] = useState(false);
     const [vatRate, setVatRate] = useState(15);
     const [poModalTab, setPoModalTab] = useState<'MEDICINE' | 'COSMETIC'>('MEDICINE');
-    
+
     // Receipt/History states
     const [receiveData, setReceiveData] = useState<any[]>([]);
 
     // Payment during registration
     const [payNow, setPayNow] = useState(false);
+    const [paymentDueDate, setPaymentDueDate] = useState('');
     const [amountPaidNow, setAmountPaidNow] = useState(0);
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [selectedPaymentAccount, setSelectedPaymentAccount] = useState('');
@@ -75,8 +76,8 @@ const PurchaseManager = () => {
             const [poRes, suppRes, medRes, cosRes, actRes] = await Promise.all([
                 client.get('/purchase-orders').catch(e => ({ data: [] })),
                 client.get('/suppliers').catch(e => ({ data: [] })),
-                client.get('/medicines').catch(e => ({ data: [] })),
-                client.get('/cosmetics').catch(e => ({ data: [] })),
+                client.get('/medicines?product_type=MEDICINE').catch(e => ({ data: [] })),
+                client.get('/medicines?product_type=COSMETIC').catch(e => ({ data: [] })),
                 client.get('/payment-accounts').catch(e => ({ data: [] }))
             ]);
             setPurchases(poRes.data || []);
@@ -113,10 +114,11 @@ const PurchaseManager = () => {
                 cheque_bank_name: paymentMethod === 'CHEQUE' ? chequeBank : undefined,
                 cheque_number: paymentMethod === 'CHEQUE' ? chequeNumber : undefined,
                 cheque_due_date: paymentMethod === 'CHEQUE' ? chequeDueDate : undefined,
+                payment_due_date: !payNow ? paymentDueDate : undefined,
             };
 
             await client.post('/purchase-orders/register', payload);
-            
+
             setShowCreateModal(false);
             resetForm();
             fetchData();
@@ -225,10 +227,10 @@ const PurchaseManager = () => {
         setNotes('');
         setIsVatInclusive(false);
         setVatRate(15);
-        setOrderItems([{ 
-            medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, 
+        setOrderItems([{
+            medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0,
             batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.MEDICINE,
-            showDropdown: false 
+            showDropdown: false
         }]);
         setPoModalTab('MEDICINE');
         setPayNow(false);
@@ -272,8 +274,8 @@ const PurchaseManager = () => {
         return purchases.filter(po => {
             let matchesTab = true;
             // Simplified: All registered/completed orders shown together
-            matchesTab = po.status !== 'DRAFT'; 
-            
+            matchesTab = po.status !== 'DRAFT';
+
             const matchesSearch = po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || (po.supplier?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
             const poDate = formatDate(po.purchase_date);
 
@@ -407,7 +409,7 @@ const PurchaseManager = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="font-black text-gray-800 text-sm">ETB {Number(po.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                            <span className="font-black text-gray-800 text-sm">ETB {Number(po.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -478,7 +480,7 @@ const PurchaseManager = () => {
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="font-bold text-gray-500">Total</span>
-                            <span className="font-black text-gray-900">ETB {Number(po.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <span className="font-black text-gray-900">ETB {Number(po.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="font-bold text-gray-500">Payment</span>
@@ -534,21 +536,19 @@ const PurchaseManager = () => {
                         <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl mb-6 shadow-inner">
                             <button
                                 onClick={() => { setPoModalTab('MEDICINE'); setOrderItems([{ medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.MEDICINE }]); }}
-                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                                    poModalTab === 'MEDICINE'
-                                        ? 'bg-white text-indigo-700 shadow-md'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${poModalTab === 'MEDICINE'
+                                    ? 'bg-white text-indigo-700 shadow-md'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 💊 Medicine Invoice
                             </button>
                             <button
                                 onClick={() => { setPoModalTab('COSMETIC'); setOrderItems([{ medicine_id: '', sku: '', name: '', quantity: 1, unit_price: 0, selling_price: 0, batch_number: '', expiry_date: '', item_found: false, product_type: ProductType.COSMETIC }]); }}
-                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                                    poModalTab === 'COSMETIC'
-                                        ? 'bg-white text-pink-700 shadow-md'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${poModalTab === 'COSMETIC'
+                                    ? 'bg-white text-pink-700 shadow-md'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 ✨ Cosmetics Invoice
                             </button>
@@ -673,7 +673,9 @@ const PurchaseManager = () => {
                                                                                         item_found: true,
                                                                                         showDropdown: false,
                                                                                         unit_price: Number(prod.purchase_price) || 0,
-                                                                                        selling_price: Number(prod.selling_price) || 0
+                                                                                        selling_price: Number(prod.selling_price) || 0,
+                                                                                        batch_number: prod.batch_number || '',
+                                                                                        expiry_date: prod.expiry_date ? formatDate(prod.expiry_date) : ''
                                                                                     };
                                                                                     setOrderItems(newItems);
                                                                                 }}
@@ -684,7 +686,7 @@ const PurchaseManager = () => {
                                                                             </button>
                                                                         ));
                                                                     })()}
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => {
                                                                             const newItems = [...orderItems];
                                                                             newItems[index].showDropdown = false;
@@ -765,7 +767,7 @@ const PurchaseManager = () => {
                                                         />
                                                     </td>
                                                     <td className="px-4 py-4 text-right">
-                                                        <span className="font-black text-gray-900 text-base">ETB {(item.quantity * item.unit_price).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                                                        <span className="font-black text-gray-900 text-base">ETB {(item.quantity * item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                     </td>
                                                     <td className="px-4 py-4 text-center">
                                                         {index > 0 && (
@@ -797,12 +799,30 @@ const PurchaseManager = () => {
                                                     checked={payNow}
                                                     onChange={e => {
                                                         setPayNow(e.target.checked);
-                                                        if (e.target.checked) setAmountPaidNow(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1));
+                                                        if (e.target.checked) setAmountPaidNow(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate / 100) : 1));
                                                     }}
                                                     className="w-6 h-6 text-indigo-600 rounded-lg cursor-pointer"
                                                 />
-                                                <label htmlFor="pay-now" className="text-sm font-black text-gray-900 cursor-pointer uppercase tracking-tight">Post Payment Transaction</label>
+                                                <label htmlFor="pay-now" className="text-sm font-black text-gray-900 cursor-pointer uppercase tracking-tight">Process Payment Now</label>
                                             </div>
+
+                                            {!payNow && (
+                                                <div className="bg-white p-2.5 rounded-2xl border border-indigo-100 shadow-sm animate-in zoom-in-95 duration-200">
+                                                    <label className="block text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1 ml-1 flex items-center gap-2">
+                                                        <Calendar className="w-3 h-3" /> SET PAYMENT DUE DATE *
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={paymentDueDate}
+                                                        onChange={e => setPaymentDueDate(e.target.value)}
+                                                        className="w-full px-4 py-2.5 bg-indigo-50/30 rounded-xl border border-transparent focus:border-indigo-200 outline-none text-sm font-bold text-indigo-700"
+                                                        required
+                                                    />
+                                                    <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1.5 px-1 font-bold">
+                                                        <AlertCircle className="w-3 h-3" /> You will be notified when this payment is due.
+                                                    </p>
+                                                </div>
+                                            )}
 
                                             {payNow && (
                                                 <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
@@ -817,6 +837,12 @@ const PurchaseManager = () => {
                                                             </button>
                                                         ))}
                                                     </div>
+                                                    
+                                                    {paymentMethod !== 'SYSTEM_ACCOUNT' && (
+                                                        <p className="text-[10px] bg-amber-50 text-amber-700 p-2 rounded-lg border border-amber-100 font-bold">
+                                                            Note: {paymentMethod === 'CASH' ? 'Cash' : 'Cheque'} payment will be recorded as a manual reference note.
+                                                        </p>
+                                                    )}
 
                                                     {paymentMethod === 'SYSTEM_ACCOUNT' && (
                                                         <select
@@ -877,40 +903,39 @@ const PurchaseManager = () => {
                                     <div className="bg-white p-3 rounded-xl border-2 border-indigo-50 shadow-2xl shadow-indigo-100 flex flex-col gap-1">
                                         <div className="flex justify-between items-center text-sm font-black text-gray-400 uppercase tracking-widest">
                                             <span>Subtotal</span>
-                                            <span className="text-gray-900 border-b-2 border-indigo-50 pb-1">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                            <span className="text-gray-900 border-b-2 border-indigo-50 pb-1">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                         {isVatInclusive && (
                                             <div className="flex justify-between items-center text-sm font-black text-indigo-400 uppercase tracking-widest">
                                                 <span>VAT ({vatRate}%)</span>
-                                                <span className="border-b-2 border-indigo-50 pb-1">ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                <span className="border-b-2 border-indigo-50 pb-1">ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         )}
                                         <div className="mt-2 flex justify-between items-end border-t-2 border-gray-50 pt-4">
                                             <div className="flex flex-col">
                                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-1">Final Payable</p>
                                                 <p className="text-3xl font-black text-gray-900 tracking-tighter">
-                                                    ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate/100) : 1)).toLocaleString(undefined, {minimumFractionDigits: 0})}
+                                                    ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate / 100) : 1)).toLocaleString(undefined, { minimumFractionDigits: 0 })}
                                                 </p>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={handleRegisterPurchase}
                                                 disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
-                                                className={`px-8 py-4.5 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-4 flex items-center gap-3 ${
-                                                    poModalTab === 'COSMETIC' 
-                                                        ? 'bg-pink-600 hover:bg-pink-700 border-pink-900 shadow-pink-100' 
-                                                        : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-950 shadow-indigo-100'
-                                                }`}
+                                                className={`px-8 py-4.5 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-4 flex items-center gap-3 ${poModalTab === 'COSMETIC'
+                                                    ? 'bg-pink-600 hover:bg-pink-700 border-pink-900 shadow-pink-100'
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-950 shadow-indigo-100'
+                                                    }`}
                                             >
                                                 <PackageCheck className="w-5 h-5" /> REGISTER TO STOCK
                                             </button>
                                         </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        )}
+            )}
 
             {/* RECEIVE GOODS MODAL */}
             {showReceiveModal && selectedPO && (
@@ -1039,7 +1064,7 @@ const PurchaseManager = () => {
                             <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-3xl shadow-xl shadow-indigo-200 text-white relative overflow-hidden">
                                 <div className="absolute -right-6 -bottom-6 opacity-10"><DollarSign className="w-40 h-40" /></div>
                                 <p className="text-[10px] text-indigo-200 font-black uppercase tracking-widest mb-1 relative z-10">Authorized Payables Amount</p>
-                                <p className="text-4xl font-black relative z-10">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toLocaleString(undefined, {minimumFractionDigits:2})}</p>
+                                <p className="text-4xl font-black relative z-10">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                                 <div className="mt-4 flex gap-4 text-xs font-bold text-indigo-100 relative z-10">
                                     <span className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">PO: {selectedPO.po_number}</span>
                                     <span className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 line-clamp-1">{selectedPO.supplier?.name}</span>
@@ -1106,9 +1131,44 @@ const PurchaseManager = () => {
                             </button>
                         </div>
 
+                        {selectedPO.payment_status !== 'PAID' && selectedPO.payment_due_date && (
+                            <div className={`mb-4 p-3 rounded-2xl flex items-center justify-between border animate-in slide-in-from-top-4 duration-300 ${
+                                new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0))
+                                    ? 'bg-rose-50 border-rose-100 text-rose-700' 
+                                    : 'bg-indigo-50 border-indigo-100 text-indigo-700'
+                            }`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0)) ? 'bg-rose-100' : 'bg-indigo-100'}`}>
+                                        <Clock className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                                            {new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0)) ? 'Overdue Payment' : 'Upcoming Payment'}
+                                        </p>
+                                        <p className="text-sm font-black">
+                                            Due Date: {formatDate(selectedPO.payment_due_date)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    {(() => {
+                                        const diff = new Date(selectedPO.payment_due_date).getTime() - new Date().setHours(0,0,0,0);
+                                        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                                        return (
+                                            <span className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-tight ${
+                                                days < 0 ? 'bg-rose-600 text-white shadow-lg shadow-rose-100' : 'bg-indigo-600 text-white'
+                                            }`}>
+                                                {days === 0 ? 'Due Today' : (days < 0 ? `${Math.abs(days)} Days Overdue` : `${days} Days Remaining`)}
+                                            </span>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="overflow-x-auto border border-gray-100 bg-gray-50 rounded-3xl flex-1 hide-scrollbar shadow-inner mt-2">
                             <table className="w-full text-sm text-left">
-                                    <thead className="text-[10px] uppercase font-black text-gray-400 tracking-widest border-b-2 border-gray-100 sticky top-0 bg-white z-10 backdrop-blur-md">
+                                <thead className="text-[10px] uppercase font-black text-gray-400 tracking-widest border-b-2 border-gray-100 sticky top-0 bg-white z-10 backdrop-blur-md">
                                     <tr>
                                         <th className="px-6 py-5">Item Manifest</th>
                                         <th className="px-4 py-5 font-black">Quantity</th>
@@ -1126,7 +1186,7 @@ const PurchaseManager = () => {
                                                 <p className="text-[10px] text-indigo-500 mt-0.5 font-bold tracking-tight uppercase">{item.medicine?.sku}</p>
                                             </td>
                                             <td className="px-4 py-5 font-black text-gray-700">{item.quantity_ordered} <span className="text-[10px] text-gray-400 font-bold uppercase">{item.medicine?.unit}</span></td>
-                                            <td className="px-4 py-5 font-bold text-gray-500 text-xs">ETB {Number(item.unit_price).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                                            <td className="px-4 py-5 font-bold text-gray-500 text-xs">ETB {Number(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             <td className="px-4 py-5 text-center"><span className="text-gray-900 bg-gray-100 px-3 py-1 rounded-lg font-mono text-[10px] font-black">{item.batch_number || '---'}</span></td>
                                             <td className="px-4 py-5 text-center">
                                                 <span className="text-[10px] font-black text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
@@ -1134,7 +1194,7 @@ const PurchaseManager = () => {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-5 text-right font-black text-indigo-700">
-                                                ETB {Number(item.subtotal).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                                ETB {Number(item.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     ))}
@@ -1148,7 +1208,7 @@ const PurchaseManager = () => {
                         <div className="mt-8 flex justify-between items-center border-t border-gray-100 pt-6">
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Invoice Value</span>
-                                <span className="text-2xl font-black text-gray-900">ETB {Number(selectedPO.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                <span className="text-2xl font-black text-gray-900">ETB {Number(selectedPO.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <button onClick={() => setShowReceivedHistoryModal(false)}
                                 className="px-10 py-3.5 bg-gray-900 border border-transparent text-white rounded-2xl text-sm font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-900/20">
