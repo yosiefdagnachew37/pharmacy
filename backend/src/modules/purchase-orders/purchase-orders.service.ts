@@ -85,6 +85,9 @@ export class PurchaseOrdersService {
         payment_method?: POPaymentMethod;
         payment_account_id?: string;
         amount_paid_now?: number;
+        cheque_bank_name?: string;
+        cheque_number?: string;
+        cheque_due_date?: string;
     }, userId: string) {
         const organization_id = getTenantId();
 
@@ -122,6 +125,9 @@ export class PurchaseOrdersService {
                 status: POStatus.REGISTERED, // Simplified workflow
                 payment_method: data.payment_method || POPaymentMethod.CASH,
                 payment_status: POPaymentStatus.UNPAID,
+                cheque_bank_name: data.cheque_bank_name,
+                cheque_number: data.cheque_number,
+                cheque_due_date: data.cheque_due_date ? new Date(data.cheque_due_date) : undefined,
                 created_by: userId,
                 organization_id,
             });
