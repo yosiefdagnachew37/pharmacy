@@ -201,15 +201,19 @@ const PurchaseManager = () => {
 
     const handleRecordPayment = async () => {
         if (!selectedPO || paymentAmount <= 0) return;
-        if (!selectedPaymentAccount && selectedPO.payment_method !== 'CREDIT') {
+        if (paymentMethod === 'SYSTEM_ACCOUNT' && !selectedPaymentAccount) {
             toastWarning('Payment Account Required', 'Please select a payment account.');
             return;
         }
 
         try {
             await client.post(`/purchase-orders/${selectedPO.id}/pay`, {
-                payment_account_id: selectedPaymentAccount,
+                payment_method: paymentMethod === 'CASH' ? 'CASH' : (paymentMethod === 'CHEQUE' ? 'CHEQUE' : 'BANK_TRANSFER'),
+                payment_account_id: paymentMethod === 'SYSTEM_ACCOUNT' ? selectedPaymentAccount : undefined,
                 amount: paymentAmount,
+                cheque_bank_name: paymentMethod === 'CHEQUE' ? chequeBank : undefined,
+                cheque_number: paymentMethod === 'CHEQUE' ? chequeNumber : undefined,
+                cheque_due_date: paymentMethod === 'CHEQUE' ? chequeDueDate : undefined,
             });
             setShowPaymentModal(false);
             setSelectedPaymentAccount('');
@@ -431,7 +435,7 @@ const PurchaseManager = () => {
                                         <span className="text-xs font-bold text-gray-500">{formatDate(po.purchase_date)}</span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-1.5 pr-6">
-                                        {(po.status === 'REGISTERED' || po.status === 'COMPLETED' || po.status === 'PARTIALLY_RECEIVED') && (
+                                        {po.id && (
                                             <button
                                                 onClick={() => openReceivedHistoryModal(po)}
                                                 className="px-3 py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors font-bold text-[10px] uppercase flex items-center gap-1 ml-auto"
@@ -440,9 +444,15 @@ const PurchaseManager = () => {
                                                 <Eye className="w-3.5 h-3.5" /> Details
                                             </button>
                                         )}
-                                        {po.payment_status !== 'PAID' && role === 'ADMIN' && (
+                                         {po.payment_status !== 'PAID' && role === 'ADMIN' && (
                                             <button
-                                                onClick={() => { setSelectedPO(po); setAmountPaidNow(Number(po.total_amount) - Number(po.total_paid || 0)); setShowPaymentModal(true); }}
+                                                onClick={() => { 
+                                                    setSelectedPO(po); 
+                                                    setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); 
+                                                    setPaymentMethod('CASH');
+                                                    setSelectedPaymentAccount('');
+                                                    setShowPaymentModal(true); 
+                                                }}
                                                 className="mt-2 px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl transition-colors font-bold text-[11px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
                                             >
                                                 <DollarSign className="w-3 h-3" /> Process Payment
@@ -491,13 +501,23 @@ const PurchaseManager = () => {
                             <span className="text-gray-700 font-medium">{formatDate(po.purchase_date)}</span>
                         </div>
                         <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                            <button onClick={() => openReceivedHistoryModal(po)}
+                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                <Eye className="w-3.5 h-3.5" /> Details
+                            </button>
                             <button onClick={() => { setSelectedPO(po); setShowHistoryModal(true); }}
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-100 transition-colors">
-                                <History className="w-3.5 h-3.5" /> History
+                                <History className="w-3.5 h-3.5" /> Receipts
                             </button>
-                            <button onClick={() => { setSelectedPO(po); setShowPaymentModal(true); }}
+                            <button onClick={() => { 
+                                setSelectedPO(po); 
+                                setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
+                                setPaymentMethod('CASH');
+                                setSelectedPaymentAccount('');
+                                setShowPaymentModal(true); 
+                            }}
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
-                                <Eye className="w-3.5 h-3.5" /> View
+                                <DollarSign className="w-3.5 h-3.5" /> Process Payment
                             </button>
                             {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                 <button onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
@@ -1072,19 +1092,69 @@ const PurchaseManager = () => {
                             </div>
 
                             <div className="space-y-5 px-1 pt-2">
-                                <div>
-                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Deduct From Account *</label>
-                                    <select
-                                        value={selectedPaymentAccount}
-                                        onChange={e => setSelectedPaymentAccount(e.target.value)}
-                                        className="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all cursor-pointer"
-                                    >
-                                        <option value="">-- Select Source Ledger --</option>
-                                        {paymentAccounts.filter(p => p.is_active).map(acc => (
-                                            <option key={acc.id} value={acc.id}>{acc.name} (Bal: ETB {Number(acc.balance).toLocaleString()})</option>
-                                        ))}
-                                    </select>
+                                <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100 gap-1">
+                                    {(['CASH', 'SYSTEM_ACCOUNT', 'CHEQUE'] as const).map((method) => (
+                                        <button
+                                            key={method}
+                                            type="button"
+                                            onClick={() => setPaymentMethod(method)}
+                                            className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
+                                        >
+                                            {method.replace('_', ' ')}
+                                        </button>
+                                    ))}
                                 </div>
+
+                                {paymentMethod === 'SYSTEM_ACCOUNT' && (
+                                    <div>
+                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Deduct From Account *</label>
+                                        <select
+                                            value={selectedPaymentAccount}
+                                            onChange={e => setSelectedPaymentAccount(e.target.value)}
+                                            className="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 outline-none text-sm font-bold text-gray-800 transition-all cursor-pointer"
+                                        >
+                                            <option value="">-- Select Source Ledger --</option>
+                                            {paymentAccounts.filter(p => p.is_active).map(acc => (
+                                                <option key={acc.id} value={acc.id}>{acc.name} (Bal: ETB {Number(acc.balance).toLocaleString()})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {paymentMethod === 'CHEQUE' && (
+                                    <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300">
+                                        <input
+                                            type="text"
+                                            placeholder="Bank Name"
+                                            value={chequeBank}
+                                            onChange={e => setChequeBank(e.target.value)}
+                                            className="px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-indigo-300 outline-none text-sm font-bold"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Cheque Number"
+                                            value={chequeNumber}
+                                            onChange={e => setChequeNumber(e.target.value)}
+                                            className="px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-indigo-300 outline-none text-sm font-bold"
+                                        />
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Due Date</label>
+                                            <input
+                                                type="date"
+                                                value={chequeDueDate}
+                                                onChange={e => setChequeDueDate(e.target.value)}
+                                                className="w-full px-5 py-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-indigo-300 outline-none text-sm font-bold text-gray-700"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {paymentMethod === 'CASH' && (
+                                    <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 text-amber-700 text-xs font-bold flex items-start gap-3">
+                                        <AlertCircle className="w-4 h-4 shrink-0" />
+                                        <p>Cash payments will be recorded as a manual reference note on this Purchase Order for accounting records.</p>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2">
@@ -1105,9 +1175,9 @@ const PurchaseManager = () => {
 
                         <div className="mt-10 flex gap-4">
                             <button onClick={handleRecordPayment}
-                                disabled={paymentAmount <= 0 || !selectedPaymentAccount}
+                                disabled={paymentAmount <= 0 || (paymentMethod === 'SYSTEM_ACCOUNT' && !selectedPaymentAccount)}
                                 className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:shadow-none border-b-4 border-indigo-800">
-                                Authorize Ledger Deduction
+                                {paymentMethod === 'SYSTEM_ACCOUNT' ? 'Authorize Ledger Deduction' : 'Confirm Manual Payment'}
                             </button>
                         </div>
                     </div>

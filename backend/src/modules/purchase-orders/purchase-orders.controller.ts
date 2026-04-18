@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
-import { POStatus } from './entities/purchase-order.entity';
+import { POStatus, POPaymentMethod } from './entities/purchase-order.entity';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { FeatureGuard } from '../../common/guards/feature.guard';
 
@@ -70,7 +70,18 @@ export class PurchaseOrdersController {
 
     @Post(':id/pay')
     @Roles(UserRole.ADMIN)
-    recordPayment(@Param('id') id: string, @Body() body: { payment_account_id: string; amount: number }, @Request() req: any) {
+    recordPayment(
+        @Param('id') id: string, 
+        @Body() body: { 
+            payment_method: POPaymentMethod;
+            payment_account_id?: string; 
+            amount: number;
+            cheque_bank_name?: string;
+            cheque_number?: string;
+            cheque_due_date?: string;
+        }, 
+        @Request() req: any
+    ) {
         return this.poService.recordPayment(id, body, req.user.userId);
     }
 }

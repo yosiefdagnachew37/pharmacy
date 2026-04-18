@@ -70,8 +70,8 @@ export class PurchaseOrder {
     subtotal_before_vat: number;
 
     // ─── PO Payment by Cashier ────────────────────────────────────
-    @Column({ nullable: true })
-    payment_account_id: string;
+    @Column({ type: 'varchar', nullable: true })
+    payment_account_id: string | null;
 
     @Column({ nullable: true })
     paid_by: string; // cashier user id
@@ -119,17 +119,17 @@ export class PurchaseOrder {
     payment_due_date: Date;
 
     // ─── Cheque Payment Details ───────────────────────────────────
-    @Column({ nullable: true })
-    cheque_bank_name: string;
+    @Column({ type: 'varchar', nullable: true })
+    cheque_bank_name: string | null;
 
-    @Column({ nullable: true })
-    cheque_number: string;
+    @Column({ type: 'varchar', nullable: true })
+    cheque_number: string | null;
 
     @Column({ type: 'date', nullable: true })
     cheque_issue_date: Date;
 
     @Column({ type: 'date', nullable: true })
-    cheque_due_date: Date;
+    cheque_due_date: Date | null;
 
     @Column('decimal', { precision: 12, scale: 2, nullable: true })
     cheque_amount: number;

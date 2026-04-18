@@ -527,50 +527,75 @@ export class PurchaseOrdersService {
 
     // ─── Cashier Payment for PO ──────────────────────────────
     async recordPayment(poId: string, data: {
-        payment_account_id: string;
+        payment_method: POPaymentMethod;
+        payment_account_id?: string;
         amount: number;
+        cheque_bank_name?: string;
+        cheque_number?: string;
+        cheque_due_date?: string;
     }, cashierUserId: string) {
         const organization_id = getTenantId();
+        console.log(`[PROCESS PAYMENT] PO: ${poId}, Method: ${data.payment_method}, Acount: ${data.payment_account_id}, Amount: ${data.amount}`);
+
         return this.dataSource.transaction(async (manager) => {
             const po = await manager.findOne(PurchaseOrder, {
                 where: { id: poId, organization_id },
             });
             if (!po) throw new NotFoundException('Purchase order not found');
 
-            const paymentAccount = await manager.findOne(PaymentAccount, {
-                where: { id: data.payment_account_id, organization_id },
-            });
-            if (!paymentAccount) throw new NotFoundException('Payment account not found');
-
             const amount = Number(data.amount);
-            if (Number(paymentAccount.balance) < amount) {
-                throw new BadRequestException('Insufficient funds in the selected payment account');
+
+            // Strict check for System Account payments
+            if (data.payment_method === POPaymentMethod.BANK_TRANSFER) {
+                if (!data.payment_account_id) {
+                    throw new BadRequestException('Payment account ID is required for System Account payments');
+                }
+
+                const paymentAccount = await manager.findOne(PaymentAccount, {
+                    where: { id: data.payment_account_id, organization_id },
+                });
+                if (!paymentAccount) throw new NotFoundException('Payment account not found');
+
+                if (Number(paymentAccount.balance) < amount) {
+                    throw new BadRequestException(`Insufficient funds in ${paymentAccount.name}. Balance: ETB ${paymentAccount.balance}, Required: ETB ${amount}`);
+                }
+
+                // Deduct from payment account
+                paymentAccount.balance = Number(paymentAccount.balance) - amount;
+                await manager.save(paymentAccount);
+
+                // Log transaction
+                const tx = manager.create(PaymentAccountTransaction, {
+                    payment_account_id: paymentAccount.id,
+                    amount,
+                    type: PATransactionType.DEBIT,
+                    reference_type: PAReferenceType.PURCHASE,
+                    reference_id: po.id,
+                    description: `Payment for PO ${po.po_number}`,
+                    created_by: cashierUserId,
+                    organization_id,
+                });
+                await manager.save(tx);
+                po.payment_account_id = data.payment_account_id;
+            } else if (data.payment_method === POPaymentMethod.CHEQUE) {
+                po.cheque_bank_name = data.cheque_bank_name || null;
+                po.cheque_number = data.cheque_number || null;
+                po.cheque_due_date = data.cheque_due_date ? new Date(data.cheque_due_date) : null;
+                po.payment_account_id = null;
+            } else {
+                // Physical Cash / Other - recorded as note if outside system accounts
+                po.notes = (po.notes ? po.notes + "\n" : "") + `Note: Post-registration ${data.payment_method} payment of ETB ${amount} recorded.`;
+                po.payment_account_id = null;
             }
-
-            // Deduct from payment account
-            paymentAccount.balance = Number(paymentAccount.balance) - amount;
-            await manager.save(paymentAccount);
-
-            // Log transaction
-            const tx = manager.create(PaymentAccountTransaction, {
-                payment_account_id: paymentAccount.id,
-                amount,
-                type: PATransactionType.DEBIT,
-                reference_type: PAReferenceType.PURCHASE,
-                reference_id: po.id,
-                description: `Payment for PO ${po.po_number}`,
-                created_by: cashierUserId,
-                organization_id,
-            });
-            await manager.save(tx);
 
             // Update PO payment status
             po.total_paid = Number(po.total_paid) + amount;
             po.paid_by = cashierUserId;
-            po.payment_account_id = data.payment_account_id;
+            po.payment_method = data.payment_method;
+            
             if (po.total_paid >= po.total_amount) {
                 po.payment_status = POPaymentStatus.PAID;
-                if (po.status === POStatus.PENDING_PAYMENT) {
+                if (po.status === POStatus.PENDING_PAYMENT || po.status === POStatus.REGISTERED) {
                     po.status = POStatus.CONFIRMED;
                 }
             } else {
@@ -582,7 +607,7 @@ export class PurchaseOrdersService {
             if (po.created_by) {
                 this.notificationsService.create({
                     title: 'PO Payment Recorded',
-                    message: `Payment of ETB ${amount.toLocaleString()} recorded for PO ${po.po_number} via ${paymentAccount.name}.`,
+                    message: `Payment of ETB ${amount.toLocaleString()} recorded for PO ${po.po_number} via ${data.payment_method}.`,
                     type: NotificationType.PURCHASE_ORDER,
                     user_id: po.created_by,
                     organization_id,
