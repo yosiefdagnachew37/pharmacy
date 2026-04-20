@@ -212,14 +212,14 @@ const DashboardLayout = () => {
         </div>
 
         {user && (
-          <div className="px-6 py-4 border-b border-indigo-800 bg-indigo-950/30">
+          <div className="px-5 py-3 border-b border-indigo-800 bg-indigo-950/30">
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-indigo-700 flex items-center justify-center text-sm font-bold uppercase ring-2 ring-indigo-500/50">
+              <div className="w-9 h-9 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold uppercase ring-2 ring-indigo-500/50">
                 {user.username.charAt(0)}
               </div>
-              <div className="ml-3">
-                <div className="text-sm font-semibold text-indigo-100">{user.username}</div>
-                <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${roleBadgeColors[role!] || 'bg-gray-500'} text-white mt-1 shadow-sm`}>
+              <div className="ml-2.5">
+                <div className="text-sm font-semibold text-indigo-100 leading-tight">{user.username}</div>
+                <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${roleBadgeColors[role!] || 'bg-gray-500'} text-white mt-1 shadow-sm`}>
                   {role}
                 </span>
               </div>
@@ -235,13 +235,13 @@ const DashboardLayout = () => {
               <Link
                 key={item.label}
                 to={item.path}
-                className={`flex items-center px-6 py-3.5 transition-all ${isActive
+                className={`flex items-center px-5 py-2.5 transition-all ${isActive
                   ? 'bg-indigo-800 text-white border-r-4 border-indigo-300 shadow-inner'
-                  : 'text-indigo-100 hover:bg-indigo-800/50 hover:pl-7'
+                  : 'text-indigo-100 hover:bg-indigo-800/50 hover:pl-6'
                   }`}
               >
-                <item.icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <item.icon className="w-4.5 h-4.5 mr-2.5" />
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             );
           })}
@@ -328,19 +328,19 @@ const DashboardLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="h-20 lg:h-24 bg-white/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-4 lg:px-12 border-b border-gray-100/50">
-          <div className="flex items-center gap-4">
+        <header className="h-16 lg:h-20 bg-white/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-4 lg:px-8 border-b border-gray-100/50">
+          <div className="flex items-center gap-3">
             <button
-              className="lg:hidden p-3 -ml-2 text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-95"
+              className="lg:hidden p-2 -ml-1 text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-95"
               onClick={() => setIsSidebarOpen(true)}
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
             <div>
-              <h2 className="text-xl lg:text-2xl font-black text-gray-900 tracking-tight">
+              <h2 className="text-lg lg:text-xl font-black text-gray-900 tracking-tight">
                 {visibleMenuItems.find(i => i.path === location.pathname || (i.path !== '/' && location.pathname.startsWith(i.path)))?.label || 'Pharmacy ERP'}
               </h2>
-              <p className="hidden md:block text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management Portal</p>
+              <p className="hidden md:block text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Management Portal</p>
             </div>
           </div>
 
@@ -405,7 +405,7 @@ const DashboardLayout = () => {
           </div>
         )}
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

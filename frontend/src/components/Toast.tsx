@@ -67,13 +67,13 @@ export function ToastContainer() {
       {toasts.map(t => (
         <div
           key={t.id}
-          className={`${bgMap[t.type]} rounded-xl shadow-xl p-4 flex items-start gap-3 pointer-events-auto animate-in slide-in-from-right duration-300`}
+          className={`${bgMap[t.type]} rounded-xl shadow-xl p-3 flex items-start gap-2.5 pointer-events-auto animate-in slide-in-from-right duration-300 border border-gray-100`}
         >
-          {iconMap[t.type]}
+          <div className="mt-0.5">{iconMap[t.type]}</div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 leading-tight">{t.title}</p>
+            <p className="text-[11px] font-black text-gray-900 leading-tight uppercase tracking-tight">{t.title}</p>
             {t.message && (
-              <p className="text-xs text-gray-500 mt-0.5 leading-snug whitespace-pre-line">
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-snug whitespace-pre-line font-medium">
                 {typeof t.message === 'string'
                   ? t.message
                   : Array.isArray(t.message)
@@ -86,9 +86,9 @@ export function ToastContainer() {
           </div>
           <button
             onClick={() => dismiss(t.id)}
-            className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
+            className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 mt-0.5"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ))}

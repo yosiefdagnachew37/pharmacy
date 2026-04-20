@@ -81,9 +81,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
       title="Subscription Management"
       maxWidth="max-w-4xl"
     >
-      <div className="flex flex-col h-[600px]">
+      <div className="flex flex-col h-[520px]">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-2xl mb-6">
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-4">
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm transition-all ${
@@ -129,33 +129,33 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
             {activeTab === 'overview' && (
               <div className="space-y-6 pb-4">
                 {/* Status Card */}
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-100">
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-xl shadow-indigo-100">
                   <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="px-2 py-0.5 bg-white/20 rounded-md text-[9px] font-black uppercase tracking-widest backdrop-blur-md">
                           Current Plan
                         </span>
                         {data.organization.status === 'ACTIVE' ? (
-                          <span className="px-3 py-1 bg-emerald-500/20 text-emerald-100 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md">
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-100 border border-emerald-500/30 rounded-md text-[9px] font-black uppercase tracking-widest backdrop-blur-md">
                             Active
                           </span>
                         ) : (
-                          <span className="px-3 py-1 bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md">
+                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-md text-[9px] font-black uppercase tracking-widest backdrop-blur-md">
                             {data.organization.status}
                           </span>
                         )}
                       </div>
-                      <h3 className="text-4xl font-black mb-1">{data.organization.plan_name}</h3>
-                      <p className="text-indigo-100 font-medium opacity-80">{data.currentPlan?.description || 'Your organization is on our professional business tier.'}</p>
+                      <h3 className="text-2xl font-black mb-0.5">{data.organization.plan_name}</h3>
+                      <p className="text-[11px] text-indigo-100 font-medium opacity-80">{data.currentPlan?.description || 'Your organization is on our business tier.'}</p>
                     </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-                      <div className="flex items-center gap-3 mb-1">
-                        <Clock className="w-5 h-5 text-indigo-200" />
-                        <span className="text-sm font-bold text-indigo-100 uppercase tracking-tight">Renewal Date</span>
+                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <Clock className="w-4 h-4 text-indigo-200" />
+                        <span className="text-[10px] font-black text-indigo-100 uppercase tracking-tight">Renewal Date</span>
                       </div>
-                      <div className="text-xl font-black">
+                      <div className="text-lg font-black tracking-tight">
                         {data.organization.expiry_date 
                           ? formatDate(data.organization.expiry_date)
                           : 'Perpetual License'}
@@ -172,7 +172,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
                       {data.features.filter((f: any) => f.isIncluded).length} / {data.features.length} Enabled
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {data.features.map((feat: any) => {
                       const IconComponent = ({
                         Building2,
@@ -187,28 +187,28 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
                       return (
                         <div 
                           key={feat.key} 
-                          className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                          className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                             feat.isIncluded 
                               ? 'bg-white border-gray-100 shadow-sm' 
                               : 'bg-gray-50 border-dashed border-gray-200 opacity-60'
                           }`}
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                             feat.isIncluded ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-400'
                           }`}>
-                            <IconComponent className="w-5 h-5" />
+                            <IconComponent className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <h5 className="font-bold text-gray-900 truncate">{feat.name}</h5>
-                              {feat.isNew && <span className="text-[8px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-full uppercase">New</span>}
+                              <h5 className="font-black text-[11px] text-gray-900 truncate uppercase tracking-tight">{feat.name}</h5>
+                              {feat.isNew && <span className="text-[7.5px] font-black bg-amber-500 text-white px-1 py-0.5 rounded-md uppercase">New</span>}
                             </div>
-                            <p className="text-[10px] text-gray-500 truncate">{feat.description}</p>
+                            <p className="text-[9px] text-gray-500 truncate font-medium">{feat.description}</p>
                           </div>
                           {feat.isIncluded ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                           ) : (
-                            <XCircle className="w-5 h-5 text-gray-300 shrink-0" />
+                            <XCircle className="w-4 h-4 text-gray-300 shrink-0" />
                           )}
                         </div>
                       );
@@ -227,24 +227,24 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {data.availablePlans.map((plan: any) => (
-                    <div key={plan.id} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                          <Zap className="w-6 h-6" />
+                    <div key={plan.id} className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                          <Zap className="w-5 h-5" />
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-bold text-gray-400 uppercase block tracking-widest">Monthly</span>
-                          <span className="text-xl font-black text-gray-900">ETB {Number(plan.costs).toLocaleString()}</span>
+                          <span className="text-[9px] font-black text-gray-400 uppercase block tracking-widest mb-0.5">Monthly</span>
+                          <span className="text-lg font-black text-gray-900 tracking-tight">ETB {Number(plan.costs).toLocaleString()}</span>
                         </div>
                       </div>
-                      <h4 className="text-xl font-black text-gray-900 mb-2">{plan.name}</h4>
-                      <p className="text-xs text-gray-500 mb-6 font-medium leading-relaxed">{plan.description || "Unlock advanced features and priority support."}</p>
+                      <h4 className="text-[15px] font-black text-gray-900 mb-1 uppercase tracking-tight">{plan.name}</h4>
+                      <p className="text-[10px] text-gray-500 mb-4 font-medium leading-relaxed">{plan.description || "Unlock advanced features and priority support."}</p>
                       
-                      <div className="space-y-3 mb-8">
+                      <div className="space-y-2 mb-6">
                         {plan.features.map((f: string, i: number) => (
-                          <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500 mt-0.5" />
-                            <span className="font-medium">{f}</span>
+                          <div key={i} className="flex items-start gap-2 text-[11px] text-gray-700">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 mt-0.5" />
+                            <span className="font-bold">{f}</span>
                           </div>
                         ))}
                       </div>
@@ -254,9 +254,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
                           setSelectedPlanId(plan.id);
                           setActiveTab('request');
                         }}
-                        className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-all shadow-lg active:scale-95"
+                        className="w-full py-3 bg-gray-900 text-white font-black text-[11px] uppercase tracking-wider rounded-xl hover:bg-black transition-all shadow-lg active:scale-95"
                       >
-                        Request This Plan
+                        Request Plan
                       </button>
                     </div>
                   ))}

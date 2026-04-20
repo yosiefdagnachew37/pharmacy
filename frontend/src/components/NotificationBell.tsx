@@ -109,12 +109,12 @@ const NotificationBell = () => {
             {/* Bell Button */}
             <button
                 onClick={handleOpen}
-                className="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                className="relative p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
                 title="Notifications"
             >
-                <Bell className={`w-5 h-5 ${isOpen ? 'text-indigo-600' : ''}`} />
+                <Bell className={`w-4.5 h-4.5 ${isOpen ? 'text-indigo-600' : ''}`} />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse shadow-sm">
+                    <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-pulse shadow-sm">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
@@ -124,24 +124,24 @@ const NotificationBell = () => {
             {isOpen && (
                 <div className="fixed sm:absolute top-[80px] sm:top-full right-4 sm:right-0 left-auto w-[calc(100vw-32px)] xs:w-[320px] sm:w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
+                    <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-white">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-gray-800">Notifications</h3>
+                            <h3 className="text-[13px] font-black text-gray-800 uppercase tracking-tight">Notifications</h3>
                             {unreadCount > 0 && (
-                                <span className="px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
-                                    {unreadCount} new
+                                <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded-md">
+                                    {unreadCount} NEW
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1 sm:gap-1.5">
                             {unreadCount > 0 && (
                                 <button
                                     onClick={handleMarkAllRead}
-                                    className="text-[9px] sm:text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 px-1.5 py-1 bg-indigo-50 rounded-lg transition-colors whitespace-nowrap"
+                                    className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 px-1.5 py-1 bg-indigo-50 rounded-lg transition-colors whitespace-nowrap uppercase tracking-tighter"
                                 >
                                     <CheckCheck className="w-3 h-3" />
-                                    <span className="hidden xs:inline">Mark all read</span>
-                                    <span className="xs:hidden">All Read</span>
+                                    <span className="hidden xs:inline">ALL READ</span>
+                                    <span className="xs:hidden">READ</span>
                                 </button>
                             )}
                             <button
@@ -170,40 +170,40 @@ const NotificationBell = () => {
                                 return (
                                     <div
                                         key={n.id}
-                                        className={`flex items-start gap-3 px-3 sm:px-5 py-3 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
+                                        className={`flex items-start gap-3 px-3 sm:px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group ${!n.is_read ? 'bg-indigo-50/30' : ''
                                             }`}
                                     >
-                                        <div className={`p-2 rounded-xl ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
-                                            <Icon className="w-4 h-4" />
+                                        <div className={`p-1.5 rounded-lg ${config.bg} ${config.color} flex-shrink-0 mt-0.5`}>
+                                            <Icon className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <p className={`text-sm ${!n.is_read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'} line-clamp-1`}>
+                                            <div className="flex items-start justify-between gap-1">
+                                                <p className={`text-[11px] ${!n.is_read ? 'font-black text-gray-900 uppercase tracking-tight' : 'font-bold text-gray-700 uppercase tracking-tight'} line-clamp-1`}>
                                                     {n.title}
                                                 </p>
                                                 {!n.is_read && (
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 mt-1.5" />
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0 mt-1" />
                                                 )}
                                             </div>
-                                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                                            <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{formatDate(n.created_at)}</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
+                                            <p className="text-[9px] text-gray-400 mt-1 font-black uppercase tracking-widest">{formatDate(n.created_at)}</p>
                                         </div>
-                                        <div className="flex flex-col gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                        <div className="flex flex-col gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                             {!n.is_read && (
                                                 <button
                                                     onClick={(e) => handleMarkRead(n.id, e)}
-                                                    className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                                     title="Mark as read"
                                                 >
-                                                    <Check className="w-3.5 h-3.5" />
+                                                    <Check className="w-3 h-3" />
                                                 </button>
                                             )}
                                             <button
                                                 onClick={(e) => handleDelete(n.id, e)}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                                 title="Delete"
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-3 h-3" />
                                             </button>
                                         </div>
                                     </div>

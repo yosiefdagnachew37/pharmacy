@@ -155,36 +155,36 @@ const SalesHistory = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Sales History</h1>
-                    <p className="text-gray-500 text-sm">View and manage all transaction history</p>
+                    <h1 className="text-lg font-black text-gray-800 uppercase tracking-tight">Sales History</h1>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Transaction Archive</p>
                 </div>
                 <div className="flex w-full sm:w-auto">
                     <button
                         onClick={handleExportExcel}
                         disabled={exporting}
-                        className="w-full sm:w-auto flex items-center justify-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                        className="w-full sm:w-auto flex items-center justify-center px-4 py-1.5 bg-white border border-gray-100 rounded-lg text-[10px] font-black text-gray-500 hover:bg-gray-50 transition-all shadow-sm active:scale-95 disabled:opacity-50 uppercase tracking-widest"
                     >
                         {exporting ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
                         ) : (
-                            <Download className="w-4 h-4 mr-2" />
+                            <Download className="w-3.5 h-3.5 mr-2" />
                         )}
                         {exporting ? 'Exporting...' : 'Export Excel'}
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
-                <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row items-center gap-4">
-                    <div className="relative max-w-md w-full">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-50 overflow-visible">
+                <div className="p-2 border-b border-gray-50 flex flex-col sm:flex-row items-center gap-3">
+                    <div className="relative max-w-sm w-full">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                         <input
                             type="text"
-                            placeholder="Search by receipt or customer..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                            placeholder="Search receipt or customer..."
+                            className="w-full pl-9 pr-4 py-1.5 bg-gray-50 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-50 text-[11px] font-medium"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -192,46 +192,46 @@ const SalesHistory = () => {
                     {activeFilterCount > 0 && (
                         <button
                             onClick={() => setColumnFilters({ receipt: [], date: [], patient: [], method: [], user: [], status: [] })}
-                            className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            className="text-[10px] font-black text-rose-500 hover:text-rose-700 bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap uppercase tracking-widest"
                         >
-                            Clear All Filters ({activeFilterCount})
+                            Reset ({activeFilterCount})
                         </button>
                     )}
                 </div>
 
                 <div className="hidden md:block overflow-x-auto min-h-[400px]">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-600 uppercase text-[11px] font-bold sticky top-0 z-30 shadow-sm">
+                        <thead className="bg-gray-50/50 text-gray-400 uppercase text-[9px] font-black tracking-widest sticky top-0 z-30 border-b border-gray-50">
                             <tr>
                                 <ColumnFilter
                                     label="Receipt #"
                                     options={uniqueReceipts}
                                     selectedValues={columnFilters.receipt}
                                     onFilterChange={(v) => updateFilter('receipt', v)}
-                                    className="px-3 py-3"
+                                    className="px-2 py-2"
                                 />
                                 <ColumnFilter
                                     label="Date"
                                     options={uniqueDates}
                                     selectedValues={columnFilters.date}
                                     onFilterChange={(v) => updateFilter('date', v)}
-                                    className="px-3 py-3"
+                                    className="px-2 py-2"
                                 />
                                 <ColumnFilter
                                     label="Customer"
                                     options={uniquePatients}
                                     selectedValues={columnFilters.patient}
                                     onFilterChange={(v) => updateFilter('patient', v)}
-                                    className="px-3 py-3 hidden md:table-cell"
+                                    className="px-2 py-2 hidden md:table-cell"
                                 />
-                                <th className="px-3 py-3 text-center hidden sm:table-cell">Type</th>
-                                <th className="px-3 py-3 text-right">Amount</th>
+                                <th className="px-2 py-2 text-center hidden sm:table-cell">Type</th>
+                                <th className="px-2 py-2 text-right">Amount</th>
                                 <ColumnFilter
                                     label="Method"
                                     options={uniqueMethods}
                                     selectedValues={columnFilters.method}
                                     onFilterChange={(v) => updateFilter('method', v)}
-                                    className="px-3 py-3 text-center hidden lg:table-cell"
+                                    className="px-2 py-2 text-center hidden lg:table-cell"
                                     align="center"
                                 />
                                 <ColumnFilter
@@ -239,69 +239,69 @@ const SalesHistory = () => {
                                     options={uniqueUsers}
                                     selectedValues={columnFilters.user}
                                     onFilterChange={(v) => updateFilter('user', v)}
-                                    className="px-3 py-3 hidden xl:table-cell"
+                                    className="px-2 py-2 hidden xl:table-cell"
                                 />
                                 <ColumnFilter
                                     label="Status"
                                     options={uniqueStatuses}
                                     selectedValues={columnFilters.status}
                                     onFilterChange={(v) => updateFilter('status', v)}
-                                    className="px-3 py-3 text-center hidden sm:table-cell"
+                                    className="px-2 py-2 text-center hidden sm:table-cell"
                                 />
-                                <th className="px-3 py-3 text-right sticky right-0 bg-gray-50 dark:bg-slate-800 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">Actions</th>
+                                <th className="px-2 py-2 text-right sticky right-0 bg-gray-50/50 z-10">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-50">
                             {loading ? (
-                                <tr><td colSpan={9} className="px-6 py-8 text-center text-gray-500">Loading history...</td></tr>
+                                <tr><td colSpan={9} className="px-6 py-8 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Initialising archive…</td></tr>
                             ) : filteredSales.length === 0 ? (
-                                <tr><td colSpan={9} className="px-6 py-8 text-center text-gray-500">No records found.</td></tr>
+                                <tr><td colSpan={9} className="px-6 py-8 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">No matching records</td></tr>
                             ) : (
                                 filteredSales.map((sale) => (
-                                    <tr key={sale.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                                        <td className="px-3 py-3 font-mono text-xs text-gray-700 whitespace-nowrap">{sale.receipt_number}</td>
-                                        <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
+                                    <tr key={sale.id} className="hover:bg-indigo-50/30 transition-colors group">
+                                        <td className="px-2 py-1.5 font-mono text-[10px] font-black text-indigo-600 whitespace-nowrap">{sale.receipt_number}</td>
+                                        <td className="px-2 py-1.5 text-[10px] font-bold text-gray-500 whitespace-nowrap uppercase tracking-tighter">
                                             {formatDate(sale.created_at)}
                                         </td>
-                                        <td className="px-3 py-3 text-xs font-semibold text-gray-800 truncate max-w-[140px] hidden md:table-cell" title={sale.patient?.name || 'Walk-in'}>
+                                        <td className="px-2 py-1.5 text-[11px] font-black text-gray-800 truncate max-w-[140px] hidden md:table-cell tracking-tight" title={sale.patient?.name || 'Walk-in'}>
                                             {sale.patient?.name || 'Walk-in'}
                                         </td>
-                                        <td className="px-3 py-3 text-center hidden sm:table-cell">
+                                        <td className="px-2 py-1.5 text-center hidden sm:table-cell">
                                             {sale.is_controlled_transaction ? (
-                                                <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-indigo-100 shadow-sm">
-                                                    <Lock className="w-3 h-3" /> Ctrl
+                                                <span className="inline-flex items-center gap-1 text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[8px] font-black uppercase border border-indigo-100 tracking-tighter">
+                                                    <Lock className="w-2.5 h-2.5" /> Ctrl
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center text-[10px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">Reg</span>
+                                                <span className="inline-flex items-center text-[8px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 uppercase tracking-tighter">Reg</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 text-xs font-bold text-gray-900 whitespace-nowrap text-right">
+                                        <td className="px-2 py-1.5 text-[11px] font-black text-gray-900 whitespace-nowrap text-right tracking-tight">
                                             <div className="flex flex-col items-end">
                                                 <span>ETB {Number(sale.total_amount).toFixed(2)}</span>
-                                                <span className={`sm:hidden text-[9px] font-bold uppercase ${sale.is_refunded ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                <span className={`sm:hidden text-[7px] font-black uppercase tracking-widest ${sale.is_refunded ? 'text-rose-500' : 'text-emerald-500'}`}>
                                                     {sale.is_refunded ? 'Refunded' : 'Paid'}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-3 py-3 text-center hidden lg:table-cell">
-                                            <span className="bg-white px-2 py-0.5 rounded text-[10px] font-bold text-gray-700 border border-gray-300 uppercase shadow-sm">{sale.payment_method}</span>
+                                        <td className="px-2 py-1.5 text-center hidden lg:table-cell">
+                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black text-gray-500 border border-gray-100 uppercase tracking-tighter">{sale.payment_method}</span>
                                         </td>
-                                        <td className="px-3 py-3 text-xs text-gray-700 truncate max-w-[100px] hidden xl:table-cell" title={sale.user?.name || sale.user?.username || 'System'}>
+                                        <td className="px-2 py-1.5 text-[10px] font-bold text-gray-400 truncate max-w-[100px] hidden xl:table-cell uppercase tracking-tighter" title={sale.user?.name || sale.user?.username || 'System'}>
                                             {sale.user?.name || sale.user?.username || 'System'}
                                         </td>
-                                        <td className="px-3 py-3 text-center hidden sm:table-cell">
+                                        <td className="px-2 py-1.5 text-center hidden sm:table-cell">
                                             {sale.is_refunded ? (
-                                                <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold border border-red-100">Refunded</span>
+                                                <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[8px] font-black border border-rose-100 uppercase tracking-widest">Refunded</span>
                                             ) : (
-                                                <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[10px] font-bold border border-green-100">Paid</span>
+                                                <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[8px] font-black border border-emerald-100 uppercase tracking-widest">Paid</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-3 text-right sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.05)] border-l border-gray-50 dark:border-slate-800">
+                                        <td className="px-2 py-1.5 text-right sticky right-0 bg-white/90 group-hover:bg-indigo-50/90 backdrop-blur-sm z-10 border-l border-gray-50">
                                             <button
                                                 onClick={() => handleOpenDetail(sale)}
-                                                className="p-1 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-lg text-indigo-600 dark:text-indigo-400 transition-colors"
+                                                className="p-1 hover:bg-white rounded-lg text-indigo-400 transition-colors"
                                             >
-                                                <ChevronRight className="w-4 h-4" />
+                                                <ChevronRight className="w-3.5 h-3.5" />
                                             </button>
                                         </td>
                                     </tr>
@@ -312,49 +312,48 @@ const SalesHistory = () => {
                 </div>
                 
                 {/* Mobile Card View */}
-                <div className="md:hidden p-4 space-y-3">
+                <div className="md:hidden p-3 space-y-2">
                     {loading ? (
-                        <div className="py-12 text-center text-gray-400 italic bg-gray-50 rounded-2xl">Loading history...</div>
+                        <div className="py-8 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 rounded-xl">Searching archive…</div>
                     ) : filteredSales.length === 0 ? (
-                        <div className="py-12 text-center text-gray-400 italic bg-gray-50 rounded-2xl">No records found.</div>
+                        <div className="py-8 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 rounded-xl">No records</div>
                     ) : (
                         filteredSales.map((sale) => (
-                            <div key={sale.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
-                                <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                            <div key={sale.id} className="bg-white rounded-xl border border-gray-50 shadow-sm p-3 flex flex-col gap-2">
+                                <div className="flex justify-between items-start border-b border-gray-50 pb-2">
                                     <div>
-                                        <p className="font-mono text-xs font-black text-indigo-600 tracking-wider font-mono">{sale.receipt_number}</p>
-                                        <p className="font-bold text-gray-800 text-sm mt-0.5">{sale.patient?.name || 'Walk-in'}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1 font-medium">
-                                            <Calendar className="w-3.5 h-3.5" />
+                                        <p className="font-mono text-[9px] font-black text-indigo-600 tracking-wider uppercase font-mono">{sale.receipt_number}</p>
+                                        <p className="font-black text-gray-900 text-xs mt-0.5 tracking-tight">{sale.patient?.name || 'Walk-in'}</p>
+                                        <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1 font-bold uppercase tracking-tighter">
+                                            <Calendar className="w-3 h-3" />
                                             {formatDate(sale.created_at)}
                                         </p>
                                     </div>
-                                    <div className="flex flex-col items-end gap-1.5">
+                                    <div className="flex flex-col items-end gap-1">
                                         {sale.is_refunded ? (
-                                            <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[9px] font-bold border border-red-100 uppercase tracking-widest">Refunded</span>
+                                            <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[7px] font-black border border-rose-100 uppercase tracking-widest">Refunded</span>
                                         ) : (
-                                            <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[9px] font-bold border border-green-100 uppercase tracking-widest">Paid</span>
+                                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[7px] font-black border border-emerald-100 uppercase tracking-widest">Paid</span>
                                         )}
                                         {sale.is_controlled_transaction && (
-                                            <span className="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[9px] font-bold uppercase border border-indigo-100 shadow-sm tracking-widest">
+                                            <span className="inline-flex items-center gap-1 text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded text-[7px] font-black uppercase border border-indigo-100 tracking-widest">
                                                 <Lock className="w-2.5 h-2.5" /> Ctrl
                                             </span>
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <span className="bg-gray-100 px-2 py-1 rounded text-[10px] font-black text-gray-600 border border-gray-200 uppercase tracking-widest">{sale.payment_method}</span>
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-50 px-2 py-1 border border-gray-100 rounded">By: {sale.user?.name || sale.user?.username || 'Sys'}</span>
+                                <div className="flex justify-between items-center text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black text-gray-500 border border-gray-100 uppercase tracking-tighter">{sale.payment_method}</span>
+                                        <span className="text-[8px] text-gray-400 font-black uppercase tracking-tighter opacity-60">By: {sale.user?.name || sale.user?.username || 'Sys'}</span>
                                     </div>
-                                    <span className="font-black text-indigo-700 text-base">ETB {Number(sale.total_amount).toFixed(2)}</span>
+                                    <span className="font-black text-indigo-600 text-sm tracking-tight">ETB {Number(sale.total_amount).toFixed(2)}</span>
                                 </div>
-                                <div className="pt-2">
+                                <div className="pt-1">
                                     <button
                                         onClick={() => handleOpenDetail(sale)}
-                                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-colors active:scale-95"
+                                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[10px] font-black transition-all active:scale-95 uppercase tracking-widest"
                                     >
-                                        <ChevronRight className="w-4 h-4" /> View Details & Items
                                     </button>
                                 </div>
                             </div>
@@ -364,98 +363,90 @@ const SalesHistory = () => {
             </div>
 
             {/* Sale Detail Modal */}
-            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Sale Details">
+            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Transaction Details">
                 {selectedSale && (
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl text-sm">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100 text-[11px]">
                             <div>
-                                <p className="text-gray-500 text-[10px] font-bold uppercase">Receipt Number</p>
-                                <p className="font-mono">{selectedSale.receipt_number}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Receipt</p>
+                                <p className="font-mono font-black text-indigo-600">{selectedSale.receipt_number}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 text-[10px] font-bold uppercase">Date & Time</p>
-                                <p>{formatDate(selectedSale.created_at)} {new Date(selectedSale.created_at).toLocaleTimeString()}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Timestamp</p>
+                                <p className="font-bold text-gray-700">{formatDate(selectedSale.created_at)} · {new Date(selectedSale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 text-[10px] font-bold uppercase">Cashier</p>
-                                <p>{selectedSale.user?.name || 'N/A'}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Staff</p>
+                                <p className="font-bold text-gray-700 uppercase tracking-tighter">{selectedSale.user?.name || 'N/A'}</p>
                             </div>
                             <div>
-                                <p className="text-gray-500 text-[10px] font-bold uppercase">Payment Method</p>
-                                <p className="font-bold">{selectedSale.payment_method}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Mode</p>
+                                <p className="font-black text-indigo-600 uppercase tracking-widest">{selectedSale.payment_method}</p>
                             </div>
                         </div>
 
                         {selectedSale.prescription_image_url && (
-                            <div className="space-y-2">
-                                <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-2">
-                                    <ImageIcon className="w-4 h-4" /> Attached Prescription
+                             <div className="space-y-2">
+                                <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
+                                    <ImageIcon className="w-3 h-3" /> Prescription Attached
                                 </h3>
-                                <div className="border rounded-2xl overflow-hidden bg-gray-50 aspect-video flex items-center justify-center relative group">
+                                <div className="border border-gray-100 rounded-xl overflow-hidden bg-white aspect-video flex items-center justify-center relative group">
                                     <img
                                         src={selectedSale.prescription_image_url}
                                         alt="Prescription"
-                                        className="max-h-full object-contain"
+                                        className="max-h-full object-contain p-1"
                                     />
-                                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <button
                                             onClick={() => window.open(selectedSale.prescription_image_url, '_blank')}
-                                            className="bg-white/90 backdrop-blur px-4 py-2 rounded-xl text-xs font-bold shadow-lg"
+                                            className="bg-white/95 backdrop-blur px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-xl border border-gray-100"
                                         >
-                                            View Full Size
+                                            Enlarge
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        <div className="space-y-3">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Items</h3>
-                            <div className="divide-y divide-gray-100 border rounded-xl">
+                        <div className="space-y-2">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Line Items</h3>
+                            <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl bg-white overflow-hidden">
                                 {selectedSale.items?.map((item, idx) => (
-                                    <div key={idx} className="p-3 flex justify-between items-center text-sm">
-                                        <div>
-                                            <p className="font-bold text-gray-800">{item.medicine?.name}</p>
-                                            <p className="text-xs text-gray-500">Qty: {item.quantity} x ETB {item.unit_price}</p>
+                                    <div key={idx} className="p-2.5 flex justify-between items-center">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-black text-gray-900 text-xs tracking-tight truncate">{item.medicine?.name}</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">
+                                                {item.quantity} × ETB {item.unit_price}
+                                            </p>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <p className="font-bold text-gray-900">ETB {Number(item.subtotal).toFixed(2)}</p>
+                                        <div className="flex items-center gap-3 pl-2">
+                                            <p className="font-black text-gray-900 text-xs tracking-tight">ETB {Number(item.subtotal).toFixed(2)}</p>
                                             {!item.is_refunded && (
-                                                <div className="flex flex-col items-end gap-1">
+                                                <div className="flex flex-col items-end">
                                                     <button
                                                         onClick={() => {
                                                             const hasUnpaidCredit = (selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
                                                                                    selectedSale.credit_records?.some(cr => cr.status !== 'PAID');
                                                             
                                                             if (hasUnpaidCredit) {
-                                                                toastError('Refund Restricted', 'This sale was made on credit and must be fully paid before a refund can be processed.');
+                                                                toastError('Refund Restricted', 'Awaiting credit payment.');
                                                                 return;
                                                             }
                                                             handleOpenRefund(selectedSale, item);
                                                         }}
-                                                        className={`p-2 rounded-lg transition-all ${
+                                                        className={`p-1.5 rounded-lg transition-all ${
                                                             ((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
                                                              selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
-                                                            ? 'text-gray-300 cursor-not-allowed' 
-                                                            : 'text-rose-500 hover:bg-rose-50'
+                                                            ? 'text-gray-200 cursor-not-allowed' 
+                                                            : 'text-rose-400 hover:bg-rose-50'
                                                         }`}
-                                                        title={((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
-                                                                selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
-                                                                ? 'Refund restricted until credit is paid'
-                                                                : 'Process Refund'}
                                                     >
-                                                        <RotateCcw className="w-4 h-4" />
+                                                        <RotateCcw className="w-3.5 h-3.5" />
                                                     </button>
-                                                    {((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
-                                                      selectedSale.credit_records?.some(cr => cr.status !== 'PAID')) && (
-                                                        <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100 italic">
-                                                            Awaiting Credit Payment
-                                                        </span>
-                                                    )}
                                                 </div>
                                             )}
                                             {item.is_refunded && (
-                                                <span className="px-2 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold border border-red-100">
+                                                <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[7px] font-black border border-rose-100 uppercase tracking-widest">
                                                     Refunded
                                                 </span>
                                             )}
@@ -465,46 +456,46 @@ const SalesHistory = () => {
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-dashed flex justify-between items-center font-bold text-lg">
-                            <span>Total Amount</span>
-                            <span>ETB {Number(selectedSale.total_amount).toFixed(2)}</span>
+                        <div className="pt-3 border-t border-dashed border-gray-200 flex justify-between items-center mt-auto">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Transaction</span>
+                            <span className="font-black text-indigo-600 text-lg tracking-tight">ETB {Number(selectedSale.total_amount).toFixed(2)}</span>
                         </div>
                     </div>
                 )}
             </Modal>
 
             {/* Refund Processing Modal */}
-            <Modal isOpen={isRefundModalOpen} onClose={() => setIsRefundModalOpen(false)} title="Process Refund">
-                <div className="space-y-4">
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3">
-                        <RotateCcw className="w-5 h-5 text-amber-600 mt-1" />
+            <Modal isOpen={isRefundModalOpen} onClose={() => setIsRefundModalOpen(false)} title="Process Return">
+                <div className="space-y-3">
+                    <div className="bg-rose-50 p-3 rounded-xl border border-rose-100 flex gap-2.5">
+                        <RotateCcw className="w-4 h-4 text-rose-500 mt-0.5" />
                         <div>
-                            <p className="text-sm font-bold text-amber-800">Refund for {refundItem?.name}</p>
-                            <p className="text-xs text-amber-700">Full return of {refundItem?.quantity} units. Amount to return: ETB {refundItem ? (Number(refundItem.price) * Number(refundItem.quantity)).toFixed(2) : 0}</p>
+                            <p className="text-[11px] font-black text-rose-900 tracking-tight">Return for {refundItem?.name}</p>
+                            <p className="text-[10px] text-rose-700 font-bold uppercase tracking-tighter">Full return: {refundItem?.quantity} units · Refund: ETB {refundItem ? (Number(refundItem.price) * Number(refundItem.quantity)).toFixed(2) : 0}</p>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Reason for Return</label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Reason for Return</label>
                         <textarea
                             rows={3}
-                            placeholder="e.g., Damaged item, Incorrect prescription..."
-                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                            placeholder="Brief description..."
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold leading-relaxed"
                             value={refundReason}
                             onChange={(e) => setRefundReason(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2 pt-1">
                         <button
                             onClick={() => setIsRefundModalOpen(false)}
-                            className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-all"
+                            className="flex-1 py-2.5 bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-100 transition-all"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={processRefund}
-                            className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 shadow-lg shadow-rose-100 transition-all"
+                            className="flex-1 py-2.5 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 shadow-lg shadow-rose-100 transition-all"
                         >
                             Confirm Refund
                         </button>

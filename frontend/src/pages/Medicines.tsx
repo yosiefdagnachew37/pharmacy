@@ -118,7 +118,7 @@ const Medicines = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate: if expirable + batch number provided, expiry date is required
     if (!editingMed && formData.batch_number && formData.is_expirable && !formData.expiry_date) {
       toastError('Validation Error', 'Expiry Date is required for expirable items with a batch.');
@@ -215,9 +215,9 @@ const Medicines = () => {
   const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Medicines Inventory</h1>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h1 className="text-xl font-bold text-gray-800">Medicines Inventory</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {canCreate('medicines') && (
             <>
@@ -231,16 +231,16 @@ const Medicines = () => {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importing}
-                className="w-full sm:w-auto bg-white text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm active:scale-95 disabled:opacity-50"
+                className="w-full sm:w-auto bg-white text-gray-700 border border-gray-200 px-3.5 py-2 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm active:scale-95 disabled:opacity-50 text-sm"
               >
-                {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-indigo-500" /> : <Upload className="w-4 h-4 mr-2 text-indigo-500" />}
+                {importing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-indigo-500" /> : <Upload className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />}
                 {importing ? 'Importing...' : 'Import Excel'}
               </button>
               <button
                 onClick={() => handleOpenModal()}
-                className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2.5 rounded-lg flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm active:scale-95"
+                className="w-full sm:w-auto bg-indigo-600 text-white px-3.5 py-2 rounded-lg flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm active:scale-95 text-sm"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add Medicine
               </button>
             </>
@@ -249,13 +249,13 @@ const Medicines = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <input
               type="text"
               placeholder="Search by name, generic name or Item ID..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm"
+              className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -270,7 +270,7 @@ const Medicines = () => {
           )}
         </div>
 
-        <div className="hidden md:block overflow-x-auto min-h-[400px]">
+        <div className="hidden md:block overflow-x-auto min-h-[550px]">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold sticky top-0 z-30 shadow-sm">
               <tr>
@@ -278,10 +278,10 @@ const Medicines = () => {
                 <ColumnFilter label="Product Name" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={(v) => updateFilter('name', v)} />
                 <ColumnFilter label="Dosage Form" options={uniqueDosageForms} selectedValues={columnFilters.dosage_form} onFilterChange={(v) => updateFilter('dosage_form', v)} className="hidden sm:table-cell" />
                 <ColumnFilter label="Stock Level" options={uniqueStockLevels} selectedValues={columnFilters.stock} onFilterChange={(v) => updateFilter('stock', v)} />
-                <th className="px-6 py-3 whitespace-nowrap hidden md:table-cell">Min. Level</th>
+                <th className="px-3 py-2.5 whitespace-nowrap hidden md:table-cell">Min. Level</th>
                 <ColumnFilter label="Status" options={statusOptions} selectedValues={columnFilters.status} onFilterChange={(v) => updateFilter('status', v)} />
-                <th className="px-6 py-3 font-bold">Selling Price</th>
-                <th className="px-6 py-3 text-right">Actions</th>
+                <th className="px-3 py-2.5 font-black">Selling Price</th>
+                <th className="px-3 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -291,39 +291,39 @@ const Medicines = () => {
                 <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-500">No medicines found.</td></tr>
               ) : (
                 filteredMedicines.map((med) => (
-                  <tr key={med.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{med.sku || '—'}</span>
+                  <tr key={med.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-3 py-3">
+                      <span className="text-[10px] font-mono font-black text-indigo-600 bg-indigo-50 px-1.5 py-1 rounded tracking-tighter">{med.sku || '—'}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{med.name}</div>
-                      <div className="text-xs text-gray-500">{med.generic_name}</div>
+                    <td className="px-3 py-3">
+                      <div className="text-[11.5px] font-medium text-gray-900 leading-none tracking-tight">{med.name}</div>
+                      <div className="text-[10px] text-gray-500 mt-1 font-bold">{med.generic_name}</div>
                     </td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-medium">{med.dosage_form || '—'}</span>
+                    <td className="px-3 py-3 hidden sm:table-cell">
+                      <span className="text-[10px] bg-gray-100 text-gray-700 px-1.5 py-1 rounded font-medium tracking-widest">{med.dosage_form || '—'}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`font-semibold ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
-                        {med.total_stock} {med.unit}
+                    <td className="px-3 py-3">
+                      <span className={`text-[11.5px] font-black ${med.total_stock <= med.minimum_stock_level ? 'text-red-600' : 'text-green-600'}`}>
+                        {med.total_stock} <span className="text-[9px] text-gray-400 uppercase">{med.unit}</span>
                       </span>
                     </td>
-                    <td className="px-6 py-4 hidden md:table-cell text-sm text-gray-600">{med.minimum_stock_level}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-3 hidden md:table-cell text-[10px] font-black text-gray-700">{med.minimum_stock_level}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-1.5">
                         {med.total_stock <= med.minimum_stock_level ? (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Low Stock</span>
+                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded-md text-[9px] font-black tracking-tight">Low Stock</span>
                         ) : (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">In Stock</span>
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-[9px] font-black tracking-tight">In Stock</span>
                         )}
                         {!med.is_expirable && (
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[9px] font-bold uppercase">Non-Exp</span>
+                          <span className="px-1.5 py-1 bg-gray-100 text-gray-600 rounded-md text-[8.5px] font-black whitespace-nowrap tracking-tighter">Non-Exp</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-black text-indigo-700">ETB {Number(med.selling_price || 0).toFixed(2)}</div>
+                    <td className="px-3 py-3">
+                      <div className="text-[12px] font-black text-indigo-700 tracking-tight">ETB {Number(med.selling_price || 0).toFixed(2)}</div>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-3 py-3 text-right space-x-2">
                       {canUpdate('medicines') && (
                         <button onClick={() => handleOpenModal(med)} className="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit Medicine">
                           <Edit2 className="w-4 h-4" />

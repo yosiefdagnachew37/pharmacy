@@ -338,19 +338,19 @@ const PharmacistPOS = () => {
           </>
         ) : (
           <>
-            <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mb-4 animate-pulse">
-              <Clock className="w-10 h-10 text-amber-500" />
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-3 animate-pulse">
+              <Clock className="w-8 h-8 text-amber-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800">Waiting for Cashier…</h2>
-            <p className="text-gray-500 mt-1 text-sm">Order <strong>{current.order_number}</strong> is in the cashier queue.</p>
-            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><RefreshCw className="w-3 h-3 animate-spin" /> Auto-refreshing every 6 seconds</p>
-            <div className="mt-6 bg-white border border-gray-100 rounded-2xl shadow-sm p-5 w-full max-w-sm text-left space-y-2">
+            <h2 className="text-xl font-black text-gray-800">Waiting for Cashier…</h2>
+            <p className="text-gray-500 mt-1 text-xs">Order <strong>{current.order_number}</strong> is in the cashier queue.</p>
+            <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Auto-refreshing every 6s</p>
+            <div className="mt-4 bg-white border border-gray-100 rounded-xl shadow-sm p-4 w-full max-w-sm text-left space-y-1.5">
               {cart.map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <div>
                     <span className="font-semibold text-gray-800">{item.name}</span>
                     {item.batch_number && <span className="ml-2 text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">Batch: {item.batch_number}</span>}
-                    <span className="text-gray-400"> × {item.quantity}</span>
+                    <span className="text-gray-400">× {item.quantity}</span>
                   </div>
                   <span className="text-gray-700 font-bold">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
                 </div>
@@ -363,7 +363,7 @@ const PharmacistPOS = () => {
         )}
         <button
           onClick={() => { setSentOrder(null); setPollingOrder(null); setCart([]); setPatientId(''); setCartDiscount(0); setPrescriptionUrl(null); fetchData(); }}
-          className="mt-8 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 active:scale-95 transition-all"
+          className="mt-6 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all text-xs"
         >
           {isConfirmed || isCancelled ? 'New Transaction' : 'Start New Sale Order'}
         </button>
@@ -373,97 +373,93 @@ const PharmacistPOS = () => {
 
   // ── Main POS UI ───────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col lg:flex-row h-full min-h-0 gap-6 relative">
+    <div className="flex flex-col lg:flex-row h-full min-h-0 gap-4 relative">
       {/* Mobile Tab Switcher */}
-      <div className="lg:hidden flex mb-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex-none">
-        <button onClick={() => setActiveTab('products')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>
+      <div className="lg:hidden flex mb-2 bg-white p-1 rounded-lg shadow-sm border border-gray-100 flex-none">
+        <button onClick={() => setActiveTab('products')} className={`flex-1 py-2 px-3 rounded-md font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
           <Package className="w-4 h-4" /> Products
         </button>
-        <button onClick={() => setActiveTab('cart')} className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 relative ${activeTab === 'cart' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}>
+        <button onClick={() => setActiveTab('cart')} className={`flex-1 py-2 px-3 rounded-md font-bold text-xs transition-all flex items-center justify-center gap-1.5 relative ${activeTab === 'cart' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
           <ShoppingCart className="w-4 h-4" /> Cart
-          {cart.length > 0 && <span className={`absolute top-2 right-4 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 ${activeTab === 'cart' ? 'bg-white text-indigo-600 border-indigo-600' : 'bg-rose-500 text-white border-white'}`}>{cart.reduce((s, i) => s + i.quantity, 0)}</span>}
+          {cart.length > 0 && <span className={`absolute top-1 right-2 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border-2 ${activeTab === 'cart' ? 'bg-white text-indigo-600 border-indigo-600' : 'bg-rose-500 text-white border-white'}`}>{cart.reduce((s, i) => s + i.quantity, 0)}</span>}
         </button>
       </div>
 
       {/* Product Grid */}
       <div className={`flex-1 flex flex-col min-h-0 ${activeTab !== 'products' && 'hidden lg:flex'}`}>
-        <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input type="text" placeholder="Search medicine (Name or Generic)..." className="w-full pl-12 pr-36 py-4 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all text-sm font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg" title="USB barcode scanner supported">
-            <Barcode className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">Scanner Ready</span>
+        <div className="relative mb-3.5">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input type="text" placeholder="Search medicine (Name or Generic)..." className="w-full pl-10 pr-28 py-2.5 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all text-xs font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100" title="USB barcode scanner supported">
+            <Barcode className="w-3 h-3" /><span className="text-[8px] font-black tracking-tight">Scanner Ready</span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
+        <div className="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-6">
           {filteredMedicines.map(med => (
             <button key={med.id} onClick={() => openBatchPicker(med)} disabled={med.total_stock <= 0}
-              className={`p-5 bg-white border rounded-2xl text-left hover:border-indigo-400 hover:shadow-lg transition-all group ${med.total_stock <= 0 ? 'opacity-50 grayscale cursor-not-allowed border-gray-100' : 'border-gray-50 shadow-sm'}`}>
-              <h3 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1">{med.name}</h3>
-              <p className="text-xs text-gray-500 mb-4 line-clamp-1 h-4">{med.generic_name}</p>
-              <div className="flex justify-between items-end border-t border-gray-50 pt-3">
+              className={`p-3.5 bg-white border rounded-xl text-left hover:border-indigo-400 hover:shadow-md transition-all group ${med.total_stock <= 0 ? 'opacity-50 grayscale cursor-not-allowed border-gray-100' : 'border-gray-50 shadow-sm'}`}>
+              <h3 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-1 text-sm">{med.name}</h3>
+              <p className="text-[10px] text-gray-500 mb-3 line-clamp-1 h-3.5">{med.generic_name}</p>
+              <div className="flex justify-between items-end border-t border-gray-50 pt-2.5">
                 <div>
-                  <span className="text-xs text-gray-400 font-bold block mb-0.5">Price</span>
-                  <span className="text-base font-black text-indigo-700">ETB {Number(med.selling_price || 0).toFixed(2)}</span>
+                  <span className="text-[9px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tighter">Price</span>
+                  <span className="text-sm font-black text-indigo-700">ETB {Number(med.selling_price || 0).toFixed(2)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-gray-400 font-bold block mb-0.5 uppercase">In Stock</span>
-                  <span className={`text-xs font-black px-2 py-1 rounded-md ${med.total_stock < 10 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{med.total_stock}</span>
+                  <span className="text-[9px] text-gray-400 font-bold block mb-0.5 uppercase tracking-tighter">In Stock</span>
+                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${med.total_stock < 10 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{med.total_stock}</span>
                 </div>
               </div>
-              {med.is_controlled && <div className="mt-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1"><Lock className="w-3 h-3" /> Controlled</div>}
+              {med.is_controlled && <div className="mt-2 text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1 border border-amber-100 max-w-fit"><Lock className="w-2.5 h-2.5" /> Controlled</div>}
             </button>
           ))}
         </div>
       </div>
 
       {/* Cart Panel */}
-      <div className={`w-full lg:w-[420px] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-[2rem] shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 ${activeTab !== 'cart' && 'hidden lg:flex'}`}>
-        <div className="p-4 border-b border-gray-50 dark:border-slate-800 flex items-center justify-between flex-none">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingCart className="w-5 h-5" /></div>
-            <h2 className="font-bold text-gray-800 dark:text-slate-100 text-lg">Current Sale</h2>
+      <div className={`w-full lg:w-[360px] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl shadow-xl flex flex-col h-full min-h-0 flex-shrink-0 ${activeTab !== 'cart' && 'hidden lg:flex'}`}>
+        <div className="p-3 border-b border-gray-50 dark:border-slate-800 flex items-center justify-between flex-none">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><ShoppingCart className="w-4 h-4" /></div>
+            <h2 className="font-bold text-gray-800 dark:text-slate-100 text-base tracking-tight">Current Sale</h2>
           </div>
-          <button onClick={() => setCart([])} className="text-[10px] font-black uppercase text-rose-500 hover:text-white bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-500 px-3 py-1.5 rounded-lg transition-all">Clear</button>
+          <button onClick={() => setCart([])} className="text-[9px] font-black uppercase text-rose-500 hover:text-white bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-500 px-2 py-1 rounded-md transition-all">Clear</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 custom-scrollbar">
           {cart.length === 0 ? (
-            <div className="text-center py-16 text-gray-400"><ShoppingCart className="w-16 h-16 mx-auto mb-4 opacity-10" /><p className="font-medium">Click a medicine to add</p><p className="text-xs mt-1">FEFO batch selected automatically</p></div>
+            <div className="text-center py-12 text-gray-400"><ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-10" /><p className="font-medium text-xs">Click a medicine to add</p><p className="text-[10px] mt-1">FEFO batch selected automatically</p></div>
           ) : (
             cart.map((item, idx) => (
-              <div key={`${item.medicine_id}-${item.batch_id}-${idx}`} className="group relative bg-gray-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-gray-100/50 dark:border-slate-700/50">
-                <div className="flex justify-between items-start mb-1.5">
-                  <div className="pr-7">
-                    <h4 className="text-sm font-bold text-gray-800 leading-tight">{item.name}</h4>
+              <div key={`${item.medicine_id}-${item.batch_id}-${idx}`} className="group relative bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-gray-100/50 dark:border-slate-700/50">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="pr-6">
+                    <h4 className="text-[13px] font-bold text-gray-800 leading-tight">{item.name}</h4>
                     {item.batch_number ? (
-                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${item.is_fefo_default ? expiryColor(item.expiry_date!) : 'text-purple-600 bg-purple-50 border-purple-200'}`}>
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded border inline-flex items-center gap-0.5 ${item.is_fefo_default ? expiryColor(item.expiry_date!) : 'text-purple-600 bg-purple-50 border-purple-200'}`}>
                           <Layers className="w-2.5 h-2.5" /> {item.batch_number}
                         </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${expiryColor(item.expiry_date!)}`}>
-                          <Calendar className="w-2.5 h-2.5" /> Exp: {formatDate(item.expiry_date!)}
+                        <span className={`text-[9px] font-bold px-1 py-0.5 rounded border inline-flex items-center gap-0.5 ${expiryColor(item.expiry_date!)}`}>
+                          <Calendar className="w-2.5 h-2.5" /> {formatDate(item.expiry_date!)}
                         </span>
-                        {!item.is_fefo_default && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">Override</span>}
                       </div>
                     ) : (
-                      <span className="text-[10px] text-gray-400 mt-0.5 inline-block">Auto FEFO at checkout</span>
+                      <span className="text-[9px] text-gray-400 mt-0.5 inline-block">Auto FEFO at checkout</span>
                     )}
                   </div>
-                  <button onClick={() => removeFromCart(item.medicine_id, item.batch_id)} className="absolute top-3 right-3 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => removeFromCart(item.medicine_id, item.batch_id)} className="absolute top-2.5 right-2.5 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
-                <div className="flex items-center justify-between gap-2 mt-2">
-                  <div className="flex items-center bg-white rounded-lg border border-gray-200">
-                    <button onClick={() => updateQuantity(item.medicine_id, item.batch_id, -1)} className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"><Minus className="w-3.5 h-3.5" /></button>
-                    <span className="text-xs font-bold text-gray-800 w-7 text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.medicine_id, item.batch_id, 1)} className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"><Plus className="w-3.5 h-3.5" /></button>
+                <div className="flex items-center justify-between gap-1.5 mt-1.5 pt-1.5 border-t border-gray-100/50">
+                  <div className="flex items-center bg-white rounded border border-gray-200 overflow-hidden">
+                    <button onClick={() => updateQuantity(item.medicine_id, item.batch_id, -1)} className="p-0.5 text-gray-400 hover:text-indigo-600 transition-colors"><Minus className="w-3 h-3" /></button>
+                    <span className="text-[11px] font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.medicine_id, item.batch_id, 1)} className="p-0.5 text-gray-400 hover:text-indigo-600 transition-colors"><Plus className="w-3 h-3" /></button>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-1 justify-end">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">Price</span>
-                      <input type="number" className="w-14 text-right text-xs font-bold text-indigo-600 bg-white border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-indigo-500 hide-arrows" value={item.unit_price ?? ''} onChange={e => updatePrice(item.medicine_id, item.batch_id, parseFloat(e.target.value) || 0)} step="0.01" />
-                    </div>
-                    <p className="text-[11px] font-black text-gray-900">ETB {(item.quantity * item.unit_price).toFixed(2)}</p>
+                  <div className="flex items-center gap-1 flex-1 justify-end">
+                    <input type="number" className="w-12 text-right text-[10px] font-bold text-indigo-600 bg-white border border-gray-100 rounded px-1 py-0.5 outline-none focus:border-indigo-300 hide-arrows" value={item.unit_price ?? ''} onChange={e => updatePrice(item.medicine_id, item.batch_id, parseFloat(e.target.value) || 0)} step="0.01" />
+                    <p className="text-[10px] font-black text-gray-900 ml-1">ETB {(item.quantity * item.unit_price).toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -472,14 +468,14 @@ const PharmacistPOS = () => {
         </div>
 
         {/* Bottom Controls */}
-        <div className="p-3 bg-gray-50/50 dark:bg-slate-800/80 rounded-b-[2rem] border-t border-gray-100 dark:border-slate-800 flex flex-col gap-2 flex-none">
+        <div className="p-3 bg-gray-50/50 dark:bg-slate-800/80 rounded-b-xl border-t border-gray-100 dark:border-slate-800 flex flex-col gap-2 flex-none">
           {/* Customer */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase mb-1 ml-1">Customer / Patient</label>
+            <label className="block text-[9px] font-bold text-gray-400 dark:text-slate-400 uppercase mb-1 ml-1 tracking-wider">Customer / Patient</label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <select value={patientId} onChange={e => e.target.value === 'NEW_CUSTOMER' ? setShowAddPatientModal(true) : setPatientId(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-100 text-xs font-medium appearance-none">
+                className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 text-xs font-medium appearance-none">
                 <option value="">Walk-in Customer</option>
                 <option value="NEW_CUSTOMER" className="text-indigo-600 font-bold">+ New Customer</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>)}
@@ -489,91 +485,90 @@ const PharmacistPOS = () => {
 
           {/* Prescription */}
           {hasControlledItems && (
-            <div className="pt-1 border-t border-dashed border-gray-200">
+            <div className="pt-0.5 border-t border-dashed border-gray-200">
               <PrescriptionAttachment onAttachment={setPrescriptionUrl} attachedUrl={prescriptionUrl} />
             </div>
           )}
 
           {/* Discount + Totals */}
           <div className="pt-2 border-t border-dashed border-gray-200 dark:border-slate-700">
-            <div className="flex justify-between items-center text-gray-800 dark:text-slate-200 mb-1">
-              <span className="text-[10px] font-bold uppercase flex items-center gap-1"><Percent className="w-3 h-3" /> Discount</span>
-              <div className="flex items-center gap-2">
+            <div className="flex justify-between items-center text-gray-800 dark:text-slate-200 mb-1.5">
+              <span className="text-[9px] font-bold uppercase flex items-center gap-1 tracking-tight"><Percent className="w-2.5 h-2.5" /> Discount</span>
+              <div className="flex items-center gap-1.5">
+                <div className="relative w-12">
+                  <input type="number" min="0" max="100" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'PERCENTAGE' ? 'border-indigo-400 ring-1 ring-indigo-50' : 'border-gray-200 dark:border-slate-700'} rounded px-1 py-0.5 text-[10px] font-bold focus:outline-none`} value={discountType === 'PERCENTAGE' ? cartDiscount : ''} onChange={e => { setCartDiscount(e.target.value); setDiscountType('PERCENTAGE'); }} placeholder="0" />
+                  <span className="absolute right-0.5 top-1/2 -translate-y-1/2 text-gray-400 text-[8px] font-bold">%</span>
+                </div>
                 <div className="relative w-16">
-                  <input type="number" min="0" max="100" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'PERCENTAGE' ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-gray-200 dark:border-slate-700'} rounded-md px-1 py-0.5 text-xs font-bold focus:outline-none`} value={discountType === 'PERCENTAGE' ? cartDiscount : ''} onChange={e => { setCartDiscount(e.target.value); setDiscountType('PERCENTAGE'); }} placeholder="0" />
-                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">%</span>
-                </div>
-                <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400">OR</span>
-                <div className="relative w-20">
-                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">ETB</span>
-                  <input type="number" min="0" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'FIXED' ? 'border-indigo-400 ring-1 ring-indigo-400' : 'border-gray-200 dark:border-slate-700'} rounded-md pl-6 pr-1 py-0.5 text-xs font-bold focus:outline-none`} value={discountType === 'FIXED' ? cartDiscountValue : ''} onChange={e => { setCartDiscountValue(e.target.value); setDiscountType('FIXED'); }} placeholder="0.00" />
+                  <span className="absolute left-0.5 top-1/2 -translate-y-1/2 text-gray-400 text-[8px] font-bold">ETB</span>
+                  <input type="number" min="0" className={`w-full text-right bg-white dark:bg-slate-900 border ${discountType === 'FIXED' ? 'border-indigo-400 ring-1 ring-indigo-50' : 'border-gray-200 dark:border-slate-700'} rounded pl-5 pr-0.5 py-0.5 text-[10px] font-bold focus:outline-none`} value={discountType === 'FIXED' ? cartDiscountValue : ''} onChange={e => { setCartDiscountValue(e.target.value); setDiscountType('FIXED'); }} placeholder="0" />
                 </div>
               </div>
             </div>
             <div className="flex justify-between items-center text-gray-800 dark:text-slate-200 mb-1">
-              <span className="text-[10px] font-bold uppercase">Subtotal</span>
-              <span className="text-xs font-bold">ETB {subtotal.toFixed(2)}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight">Subtotal</span>
+              <span className="text-[11px] font-bold">ETB {subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-end text-gray-900 dark:text-slate-100 mt-1">
+            <div className="flex justify-between items-end text-gray-900 dark:text-slate-100 mt-1.5">
               <div className="flex flex-col">
-                {isDiscountExceeding && <span className="text-[10px] font-bold text-rose-600 uppercase">Exceeds limits!</span>}
-                {!isDiscountExceeding && discountAmount > 0 && <span className="text-[10px] font-bold text-emerald-600 uppercase">-ETB {discountAmount.toFixed(2)}</span>}
-                <span className="text-[10px] font-black uppercase leading-none text-gray-800 dark:text-slate-200 mt-0.5">Total Due</span>
+                {isDiscountExceeding && <span className="text-[8px] font-bold text-rose-600 uppercase tracking-tighter">Limit exceeded</span>}
+                {!isDiscountExceeding && discountAmount > 0 && <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">-ETB {discountAmount.toFixed(2)}</span>}
+                <span className="text-[9px] font-black uppercase leading-none text-gray-400 dark:text-slate-200 mt-0.5 tracking-wider">Total Due</span>
               </div>
-              <span className="text-xl font-black leading-none text-indigo-700 dark:text-indigo-400">ETB {total.toFixed(2)}</span>
+              <span className="text-lg font-black leading-none text-indigo-700 dark:text-indigo-400">ETB {total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
             disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl) || isDiscountExceeding}
             onClick={handleSendToCashier}
-            className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-50 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1 flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4" />
-            {loading ? 'Sending…' : `Send to Cashier — ETB ${total.toFixed(2)}`}
+            <Send className="w-3.5 h-3.5" />
+            {loading ? 'Sending…' : `Send to Cashier`}
           </button>
         </div>
       </div>
 
       {/* Batch Picker Modal */}
       <Modal isOpen={showBatchModal} onClose={() => { setShowBatchModal(false); setPendingMedForBatch(null); }} title={`Select Batch — ${pendingMedForBatch?.name}`}>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-700 font-semibold">
-            <Layers className="w-4 h-4 flex-shrink-0" />
-            <span>Batches are sorted by FEFO (First Expired, First Out). The first batch is recommended.</span>
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-1.5 p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-[10px] text-indigo-700 font-bold uppercase tracking-tight">
+            <Layers className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Batches sorted by FEFO (Recommended)</span>
           </div>
           {batchLoading ? (
-            <div className="text-center py-8 text-gray-400"><RefreshCw className="w-6 h-6 mx-auto animate-spin mb-2" /><p className="text-sm">Loading batches…</p></div>
+            <div className="text-center py-6 text-gray-400 font-bold text-xs uppercase tracking-widest"><RefreshCw className="w-5 h-5 mx-auto animate-spin mb-1.5" />Loading…</div>
           ) : availableBatches.length === 0 ? (
-            <div className="text-center py-8 text-gray-400"><Package className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-sm font-medium">No valid batches available</p></div>
+            <div className="text-center py-6 text-gray-400 italic text-xs uppercase tracking-widest border border-dashed rounded-lg">No valid batches</div>
           ) : (
             <>
               {availableBatches.map((batch, idx) => (
                 <button key={batch.id} onClick={() => addToCartWithBatch(pendingMedForBatch!, batch, idx === 0)}
-                  className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${idx === 0 ? 'border-indigo-300 bg-indigo-50 hover:border-indigo-400' : 'border-gray-200 bg-white hover:border-indigo-300'}`}>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-gray-800 text-sm">Batch #{batch.batch_number}</span>
-                        {idx === 0 && <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full">FEFO ✓</span>}
+                  className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-sm ${idx === 0 ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100' : 'border-gray-100 bg-white hover:border-indigo-200'}`}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="font-black text-gray-800 text-[11px]">Batch #{batch.batch_number}</span>
+                        {idx === 0 && <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm shadow-indigo-100">FEFO RECOMMENDED</span>}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span className={`font-bold px-2 py-0.5 rounded border inline-flex items-center gap-1 ${expiryColor(batch.expiry_date)}`}>
-                          <Calendar className="w-3 h-3" /> Exp: {formatDate(batch.expiry_date)}
+                      <div className="flex items-center gap-3 text-[10px] font-bold">
+                        <span className={`px-1.5 py-0.5 rounded border inline-flex items-center gap-0.5 ${expiryColor(batch.expiry_date)}`}>
+                          <Calendar className="w-2.5 h-2.5" /> Exp: {formatDate(batch.expiry_date)}
                         </span>
-                        <span className="font-semibold">Qty: <strong className="text-gray-800">{batch.quantity_remaining}</strong></span>
+                        <span className="text-gray-400 font-bold tracking-tight uppercase">Qty: <strong className="text-gray-800">{batch.quantity_remaining}</strong></span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-black text-indigo-700">ETB {Number(batch.selling_price || pendingMedForBatch?.selling_price || 0).toFixed(2)}</span>
+                      <span className="text-xs font-black text-indigo-700 uppercase tracking-tighter">ETB {Number(batch.selling_price || pendingMedForBatch?.selling_price || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </button>
               ))}
-              <div className="pt-2 border-t border-gray-100">
+              <div className="pt-1.5 border-t border-gray-100">
                 <button onClick={() => addToCartWithBatch(pendingMedForBatch!, availableBatches[0], true)}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
-                  Use FEFO Recommended Batch
+                  className="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-indigo-100 active:scale-95">
+                  Confirm Recommended Batch
                 </button>
               </div>
             </>
@@ -583,39 +578,39 @@ const PharmacistPOS = () => {
 
       {/* Manager PIN Modal */}
       <Modal isOpen={showAuthModal} onClose={() => { setShowAuthModal(false); setPendingMed(null); setManagerPin(''); setAuthError(''); }} title="Authorization Required">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-            <div className="p-2 bg-amber-500 text-white rounded-lg"><AlertTriangle className="w-6 h-6" /></div>
-            <div><p className="text-sm font-bold text-gray-800">Controlled Substance</p><p className="text-xs text-gray-500">"{pendingMed?.name}" requires manager authorization.</p></div>
+        <div className="space-y-3.5">
+          <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+            <div className="p-1.5 bg-amber-500 text-white rounded-lg"><AlertTriangle className="w-5 h-5" /></div>
+            <div><p className="text-xs font-black text-gray-800 uppercase tracking-tight">Controlled Substance</p><p className="text-[10px] text-gray-500 mt-0.5">Manager authorization required for "{pendingMed?.name}".</p></div>
           </div>
-          <form onSubmit={handleAuthorize} className="space-y-4">
+          <form onSubmit={handleAuthorize} className="space-y-3.5">
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input autoFocus type="password" placeholder="Enter Manager PIN" className={`w-full pl-10 pr-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none font-bold tracking-widest ${authError ? 'border-rose-300' : 'border-gray-200'}`} value={managerPin} onChange={e => setManagerPin(e.target.value)} />
-              {authError && <p className="text-[10px] font-bold text-rose-500 mt-1 ml-1">{authError}</p>}
+              <input autoFocus type="password" placeholder="Enter Manager PIN" className={`w-full pl-10 pr-4 py-2 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-indigo-50 outline-none font-bold tracking-widest text-sm ${authError ? 'border-rose-300' : 'border-gray-200'}`} value={managerPin} onChange={e => setManagerPin(e.target.value)} />
+              {authError && <p className="text-[9px] font-black text-rose-500 mt-1 ml-1 uppercase tracking-tighter">{authError}</p>}
             </div>
-            <div className="flex gap-3">
-              <button type="button" onClick={() => { setShowAuthModal(false); setPendingMed(null); setManagerPin(''); setAuthError(''); }} className="flex-1 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition-all border border-gray-200">Cancel</button>
-              <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">{authLoading ? 'Checking…' : 'Authorize'}</button>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setShowAuthModal(false); setPendingMed(null); setManagerPin(''); setAuthError(''); }} className="flex-1 py-2.5 bg-gray-50 text-gray-600 font-bold rounded-lg hover:bg-gray-100 transition-all border border-gray-200 text-xs">Cancel</button>
+              <button type="submit" className="flex-1 py-2.5 bg-indigo-600 text-white font-black rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all text-xs uppercase tracking-widest">{authLoading ? 'Checking…' : 'Authorize'}</button>
             </div>
           </form>
         </div>
       </Modal>
 
       {/* Quick Add Patient Modal */}
-      <Modal isOpen={showAddPatientModal} onClose={() => setShowAddPatientModal(false)} title="Quick Register Customer">
-        <form onSubmit={handleQuickAddPatient} className="space-y-4">
+      <Modal isOpen={showAddPatientModal} onClose={() => setShowAddPatientModal(false)} title="Register Customer">
+        <form onSubmit={handleQuickAddPatient} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name *</label>
-            <input type="text" required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm" value={newPatient.name} onChange={e => setNewPatient(p => ({ ...p, name: e.target.value }))} />
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Full Name *</label>
+            <input type="text" required className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold" value={newPatient.name} onChange={e => setNewPatient(p => ({ ...p, name: e.target.value }))} />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone</label>
-            <input type="tel" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm" value={newPatient.phone} onChange={e => setNewPatient(p => ({ ...p, phone: e.target.value }))} />
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Phone Number</label>
+            <input type="tel" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold" value={newPatient.phone} onChange={e => setNewPatient(p => ({ ...p, phone: e.target.value }))} />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setShowAddPatientModal(false)} className="flex-1 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all">Cancel</button>
-            <button type="submit" disabled={addPatientLoading} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all">{addPatientLoading ? 'Saving…' : 'Register'}</button>
+          <div className="flex gap-2 pt-1.5">
+            <button type="button" onClick={() => setShowAddPatientModal(false)} className="flex-1 py-2.5 bg-gray-50 text-gray-600 font-bold rounded-lg border border-gray-200 hover:bg-gray-100 transition-all text-xs">Cancel</button>
+            <button type="submit" disabled={addPatientLoading} className="flex-1 py-2.5 bg-indigo-600 text-white font-black rounded-lg hover:bg-indigo-700 transition-all text-xs uppercase tracking-widest shadow-lg shadow-indigo-100">{addPatientLoading ? 'Saving…' : 'Register'}</button>
           </div>
         </form>
       </Modal>
@@ -733,11 +728,11 @@ const CashierPOS = () => {
   if (confirmedSale) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <CheckCircle className="w-20 h-20 text-emerald-500 mb-4" />
-        <h2 className="text-3xl font-bold text-gray-800">Payment Confirmed!</h2>
-        <p className="text-gray-500 mt-2">Receipt <strong>{confirmedSale.receipt_number}</strong> has been generated.</p>
-        <div className="mt-4 text-sm text-gray-500">The pharmacist has been notified to dispense the medicine.</div>
-        <button onClick={() => setConfirmedSale(null)} className="mt-8 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">Back to Queue</button>
+        <CheckCircle className="w-16 h-16 text-emerald-500 mb-3" />
+        <h2 className="text-xl font-black text-gray-800">Payment Confirmed!</h2>
+        <p className="text-gray-500 mt-1 text-sm tracking-tight">Receipt <strong>{confirmedSale.receipt_number}</strong> generated.</p>
+        <div className="mt-2 text-xs text-gray-400">Pharmacist notified to dispense medicine.</div>
+        <button onClick={() => setConfirmedSale(null)} className="mt-6 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Back to Queue</button>
       </div>
     );
   }
@@ -745,14 +740,14 @@ const CashierPOS = () => {
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-none">
+      <div className="flex items-center justify-between mb-4 flex-none">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">Cashier Queue</h1>
-          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" /> Auto-refreshing every 6 seconds
+          <h1 className="text-lg font-black text-gray-900 tracking-tight">Cashier Queue</h1>
+          <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5 font-bold">
+            <RefreshCw className="w-3 h-3 animate-spin text-indigo-400" /> Auto-refreshing every 6s
           </p>
         </div>
-        <div className={`px-4 py-2 rounded-full font-bold text-sm border ${pendingOrders.length > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+        <div className={`px-3 py-1 rounded-lg font-black text-[10px] uppercase border shadow-sm ${pendingOrders.length > 0 ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
           {pendingOrders.length} Pending {pendingOrders.length === 1 ? 'Order' : 'Orders'}
         </div>
       </div>
@@ -768,44 +763,43 @@ const CashierPOS = () => {
             <p className="text-sm mt-1">Waiting for pharmacist to send orders…</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3.5">
             {pendingOrders.map(order => (
-              <div key={order.id} className="bg-white rounded-2xl border border-amber-200 shadow-sm hover:shadow-md transition-all p-5 flex flex-col">
-                <div className="flex justify-between items-start mb-3">
+              <div key={order.id} className="bg-white rounded-xl border border-amber-100 shadow-sm hover:shadow-md transition-all p-4 flex flex-col relative overflow-hidden">
+                <div className="flex justify-between items-start mb-2.5">
                   <div>
-                    <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-0.5">Pending Order</p>
-                    <p className="font-black text-gray-900 text-base">{order.order_number}</p>
+                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1 ml-1">Pending Order</p>
+                    <p className="font-black text-gray-900 text-xs tracking-tight">{order.order_number}</p>
                   </div>
-                  <span className="text-xs text-gray-400">{formatDate(order.created_at)}</span>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase opacity-60">{formatDate(order.created_at)}</span>
                 </div>
 
                 {order.patient && (
-                  <div className="flex items-center gap-2 mb-3 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                    <User className="w-4 h-4 text-gray-400" /> <span className="font-semibold">{order.patient.name}</span>
+                  <div className="flex items-center gap-2 mb-2.5 text-xs text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5 border border-gray-100">
+                    <User className="w-3.5 h-3.5 text-gray-400" /> <span className="font-black tracking-tight">{order.patient.name}</span>
                   </div>
                 )}
 
-                <div className="space-y-1.5 mb-4 flex-1">
+                <div className="space-y-1 mb-3.5 flex-1">
                   {(order.items as any[]).map((item: any, i: number) => (
-                    <div key={i} className="flex justify-between text-sm">
+                    <div key={i} className="flex justify-between text-[11px] leading-tight">
                       <div>
-                        <span className="font-medium text-gray-700">{item.name}</span>
-                        {item.batch_number && <span className="ml-1.5 text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded font-bold">#{item.batch_number}</span>}
-                        <span className="text-gray-400"> × {item.quantity}</span>
+                        <span className="font-bold text-gray-600">{item.name}</span>
+                        <span className="text-gray-400 ml-1">× {item.quantity}</span>
                       </div>
-                      <span className="font-semibold text-gray-800">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
+                      <span className="font-black text-gray-800">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="border-t border-dashed border-gray-200 pt-3 mb-4 flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-500">Total</span>
-                  <span className="text-xl font-black text-indigo-700">ETB {Number(order.total_amount).toFixed(2)}</span>
+                <div className="border-t border-dashed border-gray-200 pt-2.5 mb-3 flex justify-between items-center">
+                  <span className="text-[10px] font-black text-gray-600">Total Amount</span>
+                  <span className="text-lg font-black text-indigo-700 tracking-tighter">ETB {Number(order.total_amount).toFixed(2)}</span>
                 </div>
 
                 {order.is_controlled_transaction && (
-                  <div className="mb-3 flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1.5 rounded-lg">
-                    <AlertTriangle className="w-3 h-3" /> Contains Controlled Substance
+                  <div className="mb-3 flex items-center gap-1.5 text-[8px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-1 rounded-md uppercase tracking-tight">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Controlled Substance
                   </div>
                 )}
 
@@ -813,8 +807,8 @@ const CashierPOS = () => {
                   <button onClick={() => handleCancel(order.id)} className="flex-none px-3 py-2.5 bg-gray-50 text-gray-500 hover:bg-rose-50 hover:text-rose-600 border border-gray-200 rounded-xl transition-all font-bold text-xs">
                     Cancel
                   </button>
-                  <button onClick={() => openPayment(order)} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm flex items-center justify-center gap-2">
-                    <Wallet className="w-4 h-4" /> Accept Payment
+                  <button onClick={() => openPayment(order)} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-50 flex items-center justify-center gap-1.5 tracking-widest active:scale-95">
+                    <Wallet className="w-3 h-3" /> Accept Payment
                   </button>
                 </div>
               </div>
@@ -825,66 +819,66 @@ const CashierPOS = () => {
 
       {/* Payment Modal */}
       <Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title={`Accept Payment — ${selectedOrder?.order_number}`}>
-        <div className="space-y-4">
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-xs font-bold text-gray-400 uppercase mb-2">Order Summary</p>
+        <div className="space-y-3.5">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <p className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1.5 ml-1">Order Summary</p>
             <div className="space-y-1">
               {((selectedOrder?.items || []) as any[]).map((item: any, i: number) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span className="text-gray-700">{item.name} × {item.quantity}</span>
-                  <span className="font-bold text-gray-900">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
+                <div key={i} className="flex justify-between text-[11px] font-bold text-gray-600">
+                  <span>{item.name} × {item.quantity}</span>
+                  <span className="text-gray-900 tracking-tight">ETB {(item.quantity * item.unit_price).toFixed(2)}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 flex justify-between font-black text-lg">
-              <span>Total Due</span>
+            <div className="mt-2.5 pt-2.5 border-t border-dashed border-gray-200 flex justify-between font-black text-base">
+              <span className="text-black text-[11px] tracking-widest self-center">Total Due</span>
               <span className="text-indigo-700">ETB {Number(selectedOrder?.total_amount || 0).toFixed(2)}</span>
             </div>
           </div>
 
           <div>
-            <div className="flex bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
-              <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CASH' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
-              <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
-              <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-2 rounded-lg transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
+            <div className="flex bg-gray-100 p-1 rounded-lg mb-3.5 text-[10px] font-black uppercase tracking-tight">
+              <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'CASH' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
+              <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
+              <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
             </div>
 
             {paymentMode !== 'CASH' && !selectedOrder?.patient && (
-              <div className="bg-rose-50 text-rose-600 border border-rose-200 p-3 rounded-xl text-xs font-bold mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" /> Cannot issue credit: No patient attached to this order.
+              <div className="bg-rose-50 text-rose-600 border border-rose-100 p-2.5 rounded-lg text-[10px] font-black tracking-tight mb-3.5 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> Cannot issue credit: No patient attached.
               </div>
             )}
 
             {paymentMode === 'SPLIT' && (
-              <div className="mb-4">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Upfront Amount Paid (ETB)</label>
-                <input type="number" step="0.01" min="0" max={selectedOrder?.total_amount} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-lg font-black text-gray-900 bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 transition-all outline-none mb-1" placeholder="0.00" />
+              <div className="mb-3.5">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Upfront Amount Paid (ETB)</label>
+                <input type="number" step="0.01" min="0" max={selectedOrder?.total_amount} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-base font-black text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-50 transition-all outline-none" placeholder="0.00" />
                 {amountPaid && amountPaid > 0 && amountPaid < selectedOrder!.total_amount && (
-                  <p className="text-xs font-bold text-indigo-600 ml-1 mt-1">Remaining ETB {(selectedOrder!.total_amount - (amountPaid as number)).toFixed(2)} will be credited.</p>
+                  <p className="text-[9px] font-black text-indigo-500 ml-1 mt-1 uppercase tracking-tight">Remaining ETB {(selectedOrder!.total_amount - (amountPaid as number)).toFixed(2)} will be credited.</p>
                 )}
               </div>
             )}
 
             {paymentMode !== 'CREDIT' && (
               <>
-                <p className="text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Select Payment Account <span className="lowercase font-medium text-gray-400">(for upfront cash)</span></p>
+                <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-2 ml-1">Select Payment Account</p>
                 {paymentAccounts.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
-                    No payment accounts configured. Ask admin to add accounts.
+                  <div className="text-center py-5 text-gray-400 text-[11px] font-bold italic border border-dashed rounded-lg bg-gray-50">
+                    No payment accounts defined.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                     {paymentAccounts.map(acc => (
                       <button key={acc.id} onClick={() => setSelectedAccount(acc)}
-                        className={`w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedAccount?.id === acc.id ? 'border-indigo-500 bg-indigo-50' : `${accountTypeColor(acc.type)} hover:border-indigo-300`}`}>
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${selectedAccount?.id === acc.id ? 'bg-indigo-600 text-white' : 'bg-white'}`}>
-                          {accountTypeIcon(acc.type)}
+                        className={`w-full text-left p-2 rounded-lg border-2 transition-all flex items-center gap-2.5 ${selectedAccount?.id === acc.id ? 'border-indigo-500 bg-indigo-50' : `${accountTypeColor(acc.type)} hover:border-indigo-200`}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedAccount?.id === acc.id ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-100 shadow-sm'}`}>
+                          <div className="scale-75">{accountTypeIcon(acc.type)}</div>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900 text-sm">{acc.name}</p>
-                          {acc.account_number && <p className="text-xs text-gray-500">{acc.account_number}</p>}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-gray-900 text-xs truncate leading-tight">{acc.name}</p>
+                          {acc.account_number && <p className="text-[10px] font-bold text-gray-400 truncate tracking-tight">{acc.account_number}</p>}
                         </div>
-                        {selectedAccount?.id === acc.id && <CheckCircle className="w-5 h-5 text-indigo-600 flex-shrink-0" />}
+                        {selectedAccount?.id === acc.id && <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
                       </button>
                     ))}
                   </div>
@@ -893,8 +887,8 @@ const CashierPOS = () => {
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-all">Cancel</button>
+          <div className="flex gap-2 pt-1.5">
+            <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-2.5 bg-gray-50 text-gray-500 font-bold rounded-lg border border-gray-100 hover:bg-gray-100 transition-all text-xs uppercase tracking-widest">Cancel</button>
             <button
               disabled={
                 confirmLoading ||
@@ -903,10 +897,10 @@ const CashierPOS = () => {
                 (paymentMode === 'SPLIT' && (!amountPaid || amountPaid <= 0 || amountPaid >= selectedOrder!.total_amount))
               }
               onClick={handleConfirm}
-              className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-emerald-600 text-white font-black rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-50 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest active:scale-95"
             >
               <CheckCircle className="w-4 h-4" />
-              {confirmLoading ? 'Confirming…' : 'Confirm Receipt'}
+              {confirmLoading ? 'Adding Receipt…' : 'Confirm'}
             </button>
           </div>
         </div>

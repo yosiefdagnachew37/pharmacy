@@ -7,6 +7,10 @@
 /* =========================================
    DARK MODE THEME VARIABLES
    ========================================= */
+html {
+  font-size: 91%; /* Target 90% aesthetic at 100% zoom */
+}
+
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
@@ -27,36 +31,35 @@
   --input-bg: #f9fafb;
   --input-border: #e5e7eb;
 
-  /* density spacing */
-  --nav-item-py: 0.625rem;   /* 10px comfortable */
-  --nav-item-px: 1.5rem;     /* 24px */
-  --content-p: 2rem;         /* 32px */
-  --content-p-sm: 1rem;
-  --sidebar-item-gap: 0.375rem;
+  /* Density spacing - slightly tighter for premium compact feel */
+  --nav-item-py: 0.5rem;      /* Reduced from 0.625rem */
+  --nav-item-px: 1.25rem;     /* Reduced from 1.5rem */
+  --content-p: 1.5rem;       /* Reduced from 2rem */
+  --content-p-sm: 0.75rem;   /* Reduced from 1rem */
+  --sidebar-item-gap: 0.25rem; /* Reduced from 0.375rem */
 }
 
 /* ---- DARK MODE ---- */
 .dark {
-  /* Sleek modern deep slate theme, referencing sleek portfolio aesthetics */
-  --bg-primary: #0F172A;     /* Slate 900 - rich deep blue-slate bg */
-  --bg-secondary: #1E293B;   /* Slate 800 - secondary blocks */
-  --bg-tertiary: #334155;    /* Slate 700 - tertiary/hover blocks */
-  --bg-card: #1E293B;        /* Slate 800 - cards and prominent sections */
+  --bg-primary: #0F172A;
+  --bg-secondary: #1E293B;
+  --bg-tertiary: #334155;
+  --bg-card: #1E293B;
   --border-color: rgba(255, 255, 255, 0.1); 
   --border-subtle: rgba(255, 255, 255, 0.05);
-  --text-primary: #F8FAFC;   /* Slate 50 - crisp white text */
-  --text-secondary: #CBD5E1; /* Slate 300 - soft off-white */
-  --text-muted: #94A3B8;     /* Slate 400 - subdued text */
-  --text-faint: #64748B;     /* Slate 500 - faint details */
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-faint: #64748B;
   
-  --sidebar-bg: #0B1120;     /* Ultra dark space blue, beautiful contrast */
-  --sidebar-hover: rgba(59, 130, 246, 0.15); /* Soft blue hover */
+  --sidebar-bg: #0B1120;
+  --sidebar-hover: rgba(59, 130, 246, 0.15);
   --sidebar-active: rgba(59, 130, 246, 0.25);
   --sidebar-text: #E2E8F0;
   
-  --header-bg: rgba(15, 23, 42, 0.85); /* Frosty translucent slate */
+  --header-bg: rgba(15, 23, 42, 0.85);
   --shadow-color: rgba(0, 0, 0, 0.4);
-  --input-bg: rgba(15, 23, 42, 0.6);   /* Modern transparent inputs */
+  --input-bg: rgba(15, 23, 42, 0.6);
   --input-border: rgba(255, 255, 255, 0.15);
   color-scheme: dark;
 }

@@ -139,15 +139,15 @@ const Suppliers = () => {
     }
 
     return (
-        <div className="space-y-8 pb-12">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div className="space-y-5 pb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Supplier Management</h1>
-                    <p className="text-gray-500 mt-1">Manage vendors, contracts, and performance</p>
+                    {/* <h1 className="text-xl font-bold text-gray-800">Supplier Management</h1> */}
+                    <p className="text-gray-500 mt-1 text-xs sm:text-sm">Manage vendors, contracts, and performance</p>
                 </div>
                 <button
                     onClick={() => { resetForm(); setEditing(null); setShowModal(true); }}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
                 >
                     <Plus className="w-4 h-4" /> Add Supplier
                 </button>
@@ -156,25 +156,25 @@ const Suppliers = () => {
             {/* Top Ranked Suppliers */}
             {ranking.length > 0 && (
                 <div>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Award className="w-5 h-5 text-amber-500" />
-                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Top Ranked Suppliers</h3>
+                    <div className="flex items-center gap-1.5 mb-3">
+                        <Award className="w-4 h-4 text-amber-500" />
+                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Top Ranked</h3>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                         {ranking.map((r, i) => (
-                            <div key={r.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : 'bg-amber-700 text-white'
+                            <div key={r.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-300 text-white' : 'bg-amber-700 text-white'
                                         }`}>{i + 1}</span>
-                                    <p className="font-bold text-gray-800 text-sm truncate">{r.name}</p>
+                                    <p className="font-bold text-gray-800 text-[11px] truncate">{r.name}</p>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getScoreBadge(r.score)}`}>
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${getScoreBadge(r.score)}`}>
                                         {(r.score * 100).toFixed(0)}%
                                     </span>
                                     <div className="flex items-center gap-0.5">
-                                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                        <span className="text-xs text-gray-500">{r.quality_rating}</span>
+                                        <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                                        <span className="text-[9px] text-gray-500">{r.quality_rating}</span>
                                     </div>
                                 </div>
                             </div>
@@ -184,65 +184,65 @@ const Suppliers = () => {
             )}
 
             {/* Search */}
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     type="text"
                     placeholder="Search suppliers..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-xs"
                 />
             </div>
 
             {/* Supplier Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((s) => (
-                    <div key={s.id} onClick={() => navigate(`/suppliers/${s.id}`)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-50 hover:shadow-lg transition-all group cursor-pointer">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                    <Building2 className="w-6 h-6" />
+                    <div key={s.id} onClick={() => navigate(`/suppliers/${s.id}`)} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 hover:shadow-md transition-all group cursor-pointer relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                    <Building2 className="w-5 h-5" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-800">{s.name}</h3>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <p className="text-xs text-gray-400">{s.contact_person || 'No contact assigned'}</p>
+                                <div className="min-w-0 pr-8">
+                                    <h3 className="font-bold text-gray-800 text-sm truncate">{s.name}</h3>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        <p className="text-[10px] text-gray-400 truncate">{s.contact_person || 'No contact'}</p>
                                         {s.tin && (
                                             <>
                                                 <span className="text-gray-300">•</span>
-                                                <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-wider">TIN: {s.tin}</span>
+                                                <span className="text-[8px] font-black bg-gray-100 text-gray-500 px-1 py-0.5 rounded uppercase tracking-wider">TIN: {s.tin}</span>
                                             </>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex gap-1.5 transition-opacity">
-                                <button onClick={(e) => { e.stopPropagation(); openEdit(s); }} className="p-2 bg-gray-50 rounded-xl hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors">
-                                    <Pencil className="w-4 h-4" />
+                            <div className="flex gap-1">
+                                <button onClick={(e) => { e.stopPropagation(); openEdit(s); }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                                    <Pencil className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(s.id); }} className="p-2 bg-gray-50 rounded-xl hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors">
-                                    <Trash2 className="w-4 h-4" />
+                                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(s.id); }} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                                    <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="space-y-2 text-sm text-gray-600">
+                        <div className="space-y-1.5 text-xs text-gray-600">
                             {s.phone && (
-                                <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-gray-400" />{s.phone}</div>
+                                <div className="flex items-center gap-2 text-[11px]"><Phone className="w-3 h-3 text-gray-400" />{s.phone}</div>
                             )}
                             {s.email && (
-                                <div className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-gray-400" />{s.email}</div>
+                                <div className="flex items-center gap-2 text-[11px]"><Mail className="w-3 h-3 text-gray-400" />{s.email}</div>
                             )}
                             {s.address && (
-                                <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-gray-400" /><span className="truncate">{s.address}</span></div>
+                                <div className="flex items-center gap-2 text-[11px] leading-tight"><MapPin className="w-3 h-3 text-gray-400" /><span className="truncate">{s.address}</span></div>
                             )}
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
-                            <span className="font-bold text-gray-500">Payment: <span className="text-gray-800">{s.payment_terms?.replace('_', ' ')}</span></span>
-                            <span className="font-bold text-gray-500">Lead Time: <span className="text-gray-800">{s.average_lead_time}d</span></span>
-                            <span className={`px-2 py-0.5 rounded-full font-bold ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-gray-400 uppercase tracking-tight">Terms: <span className="text-gray-700">{s.payment_terms?.replace('_', ' ')}</span></span>
+                            <span className="font-bold text-gray-400 uppercase tracking-tight">Lead: <span className="text-gray-700">{s.average_lead_time}d</span></span>
+                            <span className={`px-2 py-0.5 rounded-full font-bold uppercase ${s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                                 {s.is_active ? 'Active' : 'Inactive'}
                             </span>
                         </div>
@@ -260,76 +260,70 @@ const Suppliers = () => {
             {/* Add/Edit Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-3xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-800">{editing ? 'Edit Supplier' : 'New Supplier'}</h2>
-                            <button onClick={() => { setShowModal(false); setEditing(null); }} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                                <X className="w-5 h-5 text-gray-400" />
+                    <div className="bg-white rounded-xl p-5 w-full max-w-lg max-h-[95vh] overflow-y-auto shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-black text-gray-800">{editing ? 'Edit Supplier' : 'New Supplier'}</h2>
+                            <button onClick={() => { setShowModal(false); setEditing(null); }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                <X className="w-4 h-4 text-gray-400" />
                             </button>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3.5">
+                            <div className="grid grid-cols-2 gap-3.5">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Company Name *</label>
+                                    <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Company Name *</label>
                                     <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">TIN Number (Unique) *</label>
+                                    <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">TIN Number *</label>
                                     <input type="text" value={form.tin} onChange={e => setForm({ ...form, tin: e.target.value })}
                                         placeholder="e.g. 0012345678"
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm font-mono" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-mono" />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3.5">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Contact Person</label>
+                                    <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Contact Person</label>
                                     <input type="text" value={form.contact_person} onChange={e => setForm({ ...form, contact_person: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Phone</label>
+                                    <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Phone</label>
                                     <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Email</label>
+                                <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Email</label>
                                 <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Address</label>
+                                <label className="block text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Address</label>
                                 <textarea value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} rows={2}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm resize-none" />
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs resize-none" />
                             </div>
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-3.5">
                                 <div>
-                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
-                                        Credit Limit (ETB)
+                                    <label className="flex items-center gap-1.5 text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1 group">
+                                        Limit (ETB)
                                         <div className="relative">
-                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
-                                                Maximum credit allowed by this supplier. Used for automated purchase warnings.
+                                            <Info className="w-3 h-3 text-gray-300 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10 leading-tight">
+                                                Maximum credit allowed by this supplier.
                                             </div>
                                         </div>
                                     </label>
                                     <input type="number" value={form.credit_limit ?? ''} onChange={e => setForm({ ...form, credit_limit: e.target.value === '' ? undefined : Number(e.target.value) })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold" />
                                 </div>
                                 <div>
-                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
-                                        Payment Terms
-                                        <div className="relative">
-                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
-                                                Standard payment timeframe (e.g., Cash on Delivery, Net 15 days, 30 days).
-                                            </div>
-                                        </div>
+                                    <label className="flex items-center gap-1.5 text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">
+                                        Terms
                                     </label>
                                     <select value={form.payment_terms} onChange={e => setForm({ ...form, payment_terms: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm">
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold">
                                         <option value="COD">COD</option>
                                         <option value="NET_15">Net 15</option>
                                         <option value="NET_30">Net 30</option>
@@ -337,34 +331,34 @@ const Suppliers = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase mb-1.5 group">
-                                        Lead Time (days)
+                                    <label className="flex items-center gap-1.5 text-[10px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1 group">
+                                        Lead (Days)
                                         <div className="relative">
-                                            <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[10px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10">
-                                                Average business days to receive stock. Used by the Intelligent Forecaster.
+                                            <Info className="w-3 h-3 text-gray-300 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-[9px] rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all text-center z-10 leading-tight">
+                                                Average business days to receive stock.
                                             </div>
                                         </div>
                                     </label>
                                     <input type="number" value={form.average_lead_time ?? ''} onChange={e => setForm({ ...form, average_lead_time: e.target.value === '' ? undefined : Number(e.target.value) })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 outline-none text-xs font-bold" />
                                 </div>
                             </div>
-                            <label className="flex items-center gap-3 cursor-pointer">
+                            <label className="flex items-center gap-2.5 cursor-pointer p-2 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors max-w-fit pr-4">
                                 <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })}
-                                    className="w-4 h-4 rounded text-indigo-600" />
-                                <span className="text-sm text-gray-700 font-medium">Supplier is Active</span>
+                                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300" />
+                                <span className="text-[11px] text-gray-700 font-black uppercase tracking-tight">Supplier is Active</span>
                             </label>
                         </div>
 
-                        <div className="mt-8 flex gap-3">
+                        <div className="mt-6 flex gap-2">
                             <button onClick={() => { setShowModal(false); setEditing(null); }}
-                                className="flex-1 py-3 border border-gray-200 rounded-2xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors">
                                 Cancel
                             </button>
                             <button onClick={handleSubmit}
-                                className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 active:scale-95">
-                                {editing ? 'Update' : 'Create'} Supplier
+                                className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95">
+                                {editing ? 'Save Changes' : 'Create Supplier'}
                             </button>
                         </div>
                     </div>
