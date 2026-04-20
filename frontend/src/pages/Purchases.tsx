@@ -500,15 +500,17 @@ const PurchaseManager = () => {
                             <span className="font-bold text-gray-500">Date</span>
                             <span className="text-gray-700 font-medium">{formatDate(po.purchase_date)}</span>
                         </div>
-                        <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
+                        <div className="pt-2 border-t border-gray-100 grid grid-cols-2 gap-2">
                             <button onClick={() => openReceivedHistoryModal(po)}
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
                                 <Eye className="w-3.5 h-3.5" /> Details
                             </button>
+                            {/* Hidden for now as per user request
                             <button onClick={() => { setSelectedPO(po); setShowHistoryModal(true); }}
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-100 transition-colors">
                                 <History className="w-3.5 h-3.5" /> Receipts
                             </button>
+                            */}
                             <button onClick={() => { 
                                 setSelectedPO(po); 
                                 setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
@@ -521,16 +523,18 @@ const PurchaseManager = () => {
                             </button>
                             {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                 <button onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
-                                    className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all">
+                                    className="col-span-2 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all">
                                     Send for Payment
                                 </button>
                             )}
+                            {/* Hidden for now as per user request
                             {(po.status === 'CONFIRMED' || po.status === 'PARTIALLY_RECEIVED') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                 <button onClick={() => openReceiveModal(po)}
-                                    className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all">
+                                    className="col-span-2 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all">
                                     Receive Goods
                                 </button>
                             )}
+                            */}
                         </div>
                     </div>
                 ))}
