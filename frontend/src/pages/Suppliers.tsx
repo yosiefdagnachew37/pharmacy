@@ -7,10 +7,13 @@ import {
 import client from '../api/client';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
+import { Hash } from 'lucide-react';
+import { toastSuccess, toastError } from '../components/Toast';
 
 interface Supplier {
     id: string;
     name: string;
+    tin?: string;
     contact_person: string;
     phone: string;
     email: string;
@@ -32,6 +35,7 @@ const Suppliers = () => {
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [form, setForm] = useState<{
         name: string;
+        tin: string;
         contact_person: string;
         phone: string;
         email: string;
@@ -41,7 +45,7 @@ const Suppliers = () => {
         average_lead_time: number | undefined;
         is_active: boolean;
     }>({
-        name: '', contact_person: '', phone: '', email: '', address: '',
+        name: '', tin: '', contact_person: '', phone: '', email: '', address: '',
         credit_limit: 0, payment_terms: 'COD', average_lead_time: 7, is_active: true,
     });
 
@@ -71,15 +75,19 @@ const Suppliers = () => {
             };
             if (editing) {
                 await client.put(`/suppliers/${editing.id}`, payload);
+                toastSuccess('Supplier Updated', 'Supplier has been successfully modified.');
             } else {
                 await client.post('/suppliers', payload);
+                toastSuccess('Supplier Created', 'New supplier has been added to the registry.');
             }
             setShowModal(false);
             setEditing(null);
             resetForm();
             fetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to save supplier', err);
+            const errorMsg = err?.response?.data?.message || 'Could not save supplier information.';
+            toastError('Save Failed', errorMsg);
         }
     };
 
@@ -95,7 +103,7 @@ const Suppliers = () => {
     const openEdit = (s: Supplier) => {
         setEditing(s);
         setForm({
-            name: s.name, contact_person: s.contact_person || '', phone: s.phone || '',
+            name: s.name, tin: s.tin || '', contact_person: s.contact_person || '', phone: s.phone || '',
             email: s.email || '', address: s.address || '', credit_limit: s.credit_limit || 0,
             payment_terms: s.payment_terms || 'COD', average_lead_time: s.average_lead_time || 7,
             is_active: s.is_active,
@@ -105,7 +113,7 @@ const Suppliers = () => {
 
     const resetForm = () => {
         setForm({
-            name: '', contact_person: '', phone: '', email: '', address: '',
+            name: '', tin: '', contact_person: '', phone: '', email: '', address: '',
             credit_limit: 0, payment_terms: 'COD', average_lead_time: 7, is_active: true
         });
     };
@@ -118,6 +126,7 @@ const Suppliers = () => {
 
     const filtered = suppliers.filter(s =>
         s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.tin?.toLowerCase().includes(search.toLowerCase()) ||
         s.contact_person?.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -197,7 +206,15 @@ const Suppliers = () => {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-800">{s.name}</h3>
-                                    <p className="text-xs text-gray-400">{s.contact_person || 'No contact assigned'}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <p className="text-xs text-gray-400">{s.contact_person || 'No contact assigned'}</p>
+                                        {s.tin && (
+                                            <>
+                                                <span className="text-gray-300">•</span>
+                                                <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-wider">TIN: {s.tin}</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex gap-1.5 transition-opacity">
@@ -252,10 +269,18 @@ const Suppliers = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Company Name *</label>
-                                <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Company Name *</label>
+                                    <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">TIN Number (Unique) *</label>
+                                    <input type="text" value={form.tin} onChange={e => setForm({ ...form, tin: e.target.value })}
+                                        placeholder="e.g. 0012345678"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none text-sm font-mono" />
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

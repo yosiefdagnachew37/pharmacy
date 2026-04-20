@@ -7,7 +7,7 @@ interface ToastMessage {
   id: number;
   type: ToastType;
   title: string;
-  message?: string;
+  message?: any;
 }
 
 // Global toast state (simple singleton pattern for use without Context)
@@ -73,7 +73,15 @@ export function ToastContainer() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 leading-tight">{t.title}</p>
             {t.message && (
-              <p className="text-xs text-gray-500 mt-0.5 leading-snug whitespace-pre-line">{t.message}</p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-snug whitespace-pre-line">
+                {typeof t.message === 'string'
+                  ? t.message
+                  : Array.isArray(t.message)
+                    ? t.message.join(', ')
+                    : typeof t.message === 'object'
+                      ? t.message.message || JSON.stringify(t.message)
+                      : String(t.message)}
+              </p>
             )}
           </div>
           <button

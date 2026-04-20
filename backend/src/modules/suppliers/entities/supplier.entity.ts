@@ -10,9 +10,13 @@ export enum PaymentTerms {
 
 @Entity('suppliers')
 @Unique(['name', 'organization_id'])
+@Unique(['tin', 'organization_id'])
 export class Supplier {
     @PrimaryGeneratedColumn('uuid')
     id: string;
+
+    @Column({ nullable: true })
+    tin: string;
 
     @Column()
     name: string;

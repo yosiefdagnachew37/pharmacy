@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Supplier } from './entities/supplier.entity';
@@ -44,16 +44,38 @@ export class SuppliersService {
     }
 
     async create(data: Partial<Supplier>) {
+        const orgId = getTenantId();
+        
+        if (data.tin) {
+            const existing = await this.supplierRepo.findOne({
+                where: { tin: data.tin, organization_id: orgId }
+            });
+            if (existing) {
+                throw new ConflictException(`Supplier with TIN ${data.tin} already exists`);
+            }
+        }
+
         const supplier = this.supplierRepo.create({
             ...data,
-            organization_id: getTenantId(),
+            organization_id: orgId,
         });
         return this.supplierRepo.save(supplier);
     }
 
     async update(id: string, data: Partial<Supplier>) {
+        const orgId = getTenantId();
         await this.findOne(id); // findOne handles tenant check
-        await this.supplierRepo.update({ id, organization_id: getTenantId() }, data);
+
+        if (data.tin) {
+            const existing = await this.supplierRepo.findOne({
+                where: { tin: data.tin, organization_id: orgId }
+            });
+            if (existing && existing.id !== id) {
+                throw new ConflictException(`Supplier with TIN ${data.tin} already exists`);
+            }
+        }
+
+        await this.supplierRepo.update({ id, organization_id: orgId }, data);
         return this.findOne(id);
     }
 
