@@ -273,11 +273,11 @@ export default function PaymentAccounts() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-indigo-600 text-white p-6 rounded-2xl shadow-xl shadow-indigo-200 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-20"><Wallet className="w-16 h-16" /></div>
           <p className="text-indigo-100 font-bold uppercase tracking-widest text-[10px] mb-1">Total Platform Float</p>
-          <h3 className="text-3xl font-black truncate">ETB {totalPlatformBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+          <h3 className="text-2xl sm:text-3xl font-black truncate">ETB {totalPlatformBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
         </div>
       </div>
 
@@ -292,9 +292,25 @@ export default function PaymentAccounts() {
       </div> */}
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+        {/* Mobile View Switcher (Tabs) */}
+        <div className="lg:hidden flex p-1 bg-gray-100 rounded-2xl gap-1">
+          <button 
+            onClick={() => setSelectedAccount(null)}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-tight transition-all ${!selectedAccount ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
+          >
+            Accounts
+          </button>
+          <button 
+            disabled={!selectedAccount}
+            className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-tight transition-all ${selectedAccount ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-300'}`}
+          >
+            Ledger {selectedAccount && '• ' + selectedAccount.name}
+          </button>
+        </div>
+
         {/* Left Pane: Configured Accounts */}
-        <div className="lg:col-span-4 space-y-3 relative">
+        <div className={`lg:col-span-4 space-y-3 relative ${selectedAccount ? 'hidden lg:block' : 'block'}`}>
           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-1">Configured Accounts</h3>
 
           {loading ? (
@@ -314,17 +330,17 @@ export default function PaymentAccounts() {
                 <div
                   key={acc.id}
                   onClick={() => setSelectedAccount(isSelected ? null : acc)}
-                  className={`p-3 rounded-2xl border-2 transition-all cursor-pointer group relative ${isSelected ? 'border-indigo-500 shadow-md bg-indigo-50/30' : 'border-gray-100 bg-white hover:border-gray-300'} ${!acc.is_active && 'opacity-60'}`}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer group relative ${isSelected ? 'border-indigo-500 shadow-md bg-indigo-50/30' : 'border-gray-100 bg-white hover:border-gray-300'} ${!acc.is_active && 'opacity-60'}`}
                 >
                   {isAdmin && (
-                    <div className="absolute top-2 right-2 flex items-center gap-0.5">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingAcc(acc); setForm({ name: acc.name, type: acc.type, account_number: acc.account_number || '', description: acc.description || '', initial_balance: 0, is_active: acc.is_active, is_visible_to_cashier: acc.is_visible_to_cashier, allow_transfer: acc.allow_transfer }); setShowForm(true); }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil className="w-3.5 h-3.5" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.name); }} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingAcc(acc); setForm({ name: acc.name, type: acc.type, account_number: acc.account_number || '', description: acc.description || '', initial_balance: 0, is_active: acc.is_active, is_visible_to_cashier: acc.is_visible_to_cashier, allow_transfer: acc.allow_transfer }); setShowForm(true); }} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.name); }} className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 ${typeColors[acc.type] || typeColors.OTHER}`}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${typeColors[acc.type] || typeColors.OTHER}`}>
                       {typeIcons[acc.type] || '💳'}
                     </div>
                     <div className="min-w-0 pr-12">
@@ -333,19 +349,19 @@ export default function PaymentAccounts() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3">
                     <div>
                       <p className="text-[9px] font-black uppercase text-gray-400">Current Balance</p>
-                      <p className={`font-black tracking-tight ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>ETB {Number(acc.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      <p className={`text-lg font-black tracking-tight ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>ETB {Number(acc.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       {(isAdmin || acc.allow_transfer) && (
-                        <button onClick={(e) => { e.stopPropagation(); setTransferForm({ from_account_id: acc.id, to_account_id: '', amount: '', reason: '' }); setShowTransferForm(true); }} className="flex-1 justify-center py-2 flex items-center gap-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"><Send className="w-3.5 h-3.5" /> Transfer</button>
+                        <button onClick={(e) => { e.stopPropagation(); setTransferForm({ from_account_id: acc.id, to_account_id: '', amount: '', reason: '' }); setShowTransferForm(true); }} className="flex-1 min-w-[100px] justify-center py-2.5 flex items-center gap-2 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"><Send className="w-4 h-4" /> Transfer</button>
                       )}
                       
                       {isAdmin && (
-                        <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="flex-1 justify-center py-2 flex items-center gap-1 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all"><ArrowUpCircle className="w-3.5 h-3.5" /> Withdraw</button>
+                        <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="flex-1 min-w-[100px] justify-center py-2.5 flex items-center gap-2 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"><ArrowUpCircle className="w-4 h-4" /> Withdraw</button>
                       )}
                     </div>
                   </div>
@@ -356,29 +372,37 @@ export default function PaymentAccounts() {
         </div>
 
         {/* Right Pane: Transaction History */}
-        <div className="lg:col-span-8">
-          <div className="bg-white border text-gray-900 border-gray-100 shadow-sm rounded-2xl h-[calc(100vh-14rem)] flex flex-col overflow-hidden relative">
+        <div className={`lg:col-span-8 ${!selectedAccount ? 'hidden lg:block' : 'block'}`}>
+          <div className="bg-white border text-gray-900 border-gray-100 shadow-sm rounded-2xl h-[calc(100vh-16rem)] lg:h-[calc(100vh-14rem)] flex flex-col overflow-hidden relative">
             {!selectedAccount ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center">
                 <Clock className="w-12 h-12 mb-3 opacity-20" />
                 <p className="font-medium">Select an account from the left to view timeline</p>
               </div>
             ) : (
               <>
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                  <div>
-                    <h3 className="font-black text-gray-900">{selectedAccount.name} • Ledger</h3>
-                    <p className="text-[10px] font-black uppercase text-gray-400 mt-0.5">Account Activity Logs</p>
+                <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50/50 gap-3">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <button 
+                      onClick={() => setSelectedAccount(null)}
+                      className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                    >
+                      <XCircle className="w-6 h-6 rotate-45" />
+                    </button>
+                    <div>
+                      <h3 className="font-black text-gray-900 text-sm sm:text-base">{selectedAccount.name} • Ledger</h3>
+                      <p className="text-[10px] font-black uppercase text-gray-400 mt-0.5">Account Activity Logs</p>
+                    </div>
                   </div>
                   <input
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="bg-white border text-sm text-gray-700 border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 outline-none font-medium"
+                    className="w-full sm:w-auto bg-white border text-sm text-gray-700 border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 outline-none font-medium"
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/20">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 custom-scrollbar bg-gray-50/20">
                   {txLoading ? (
                     <div className="flex justify-center p-8"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div>
                   ) : transactions.length === 0 ? (
@@ -386,18 +410,18 @@ export default function PaymentAccounts() {
                   ) : (
                     <div className="space-y-3">
                       {transactions.map(tx => (
-                        <div key={tx.id} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-gray-200 transition">
+                        <div key={tx.id} className="flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-white hover:border-gray-200 transition">
                           <div className={`mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                             {tx.type === 'CREDIT' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-black text-sm text-gray-800">{tx.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <p className="font-black text-xs sm:text-sm text-gray-800 break-words">{tx.description}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
                               <span className="text-[9px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-widest">{tx.reference_type.replace('_', ' ')}</span>
-                              <span className="text-xs font-medium text-gray-400">{new Date(tx.created_at).toLocaleString()}</span>
+                              <span className="text-[10px] font-medium text-gray-400">{new Date(tx.created_at).toLocaleString()}</span>
                             </div>
                           </div>
-                          <div className={`text-right font-black tracking-tight ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          <div className={`text-right font-black tracking-tight text-xs sm:text-sm ${tx.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
                             {tx.type === 'CREDIT' ? '+' : '-'} ETB {Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </div>
                         </div>

@@ -309,44 +309,44 @@ const PurchaseManager = () => {
 
     return (
         <div className="space-y-8 pb-12 animate-in fade-in duration-500 text-gray-900">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900">Purchases & Procurements</h1>
-                    <p className="text-gray-500 mt-1 font-medium">Manage stock orders and record supply receipts</p>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                <div className="w-full lg:w-auto">
+                    <h1 className="text-2xl sm:text-3xl font-black text-gray-900">Purchases & Procurements</h1>
+                    <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">Manage stock orders and record supply receipts</p>
                 </div>
                 {role === 'ADMIN' && (
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 border-b-4 border-indigo-800"
+                        className="w-full lg:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-4 rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 border-b-4 border-indigo-800"
                     >
                         <Plus className="w-5 h-5" /> Register Purchase
                     </button>
                 )}
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl w-full sm:w-auto shadow-inner border border-gray-200/60">
-                    <div className="px-6 py-2.5 bg-white text-indigo-700 rounded-xl text-sm font-black shadow-sm border border-gray-100 flex items-center gap-2">
+            <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+                <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl w-full lg:w-auto shadow-inner border border-gray-200/60 overflow-x-auto hide-scrollbar">
+                    <div className="whitespace-nowrap px-6 py-2.5 bg-white text-indigo-700 rounded-xl text-sm font-black shadow-sm border border-gray-100 flex items-center gap-2">
                         <History className="w-4 h-4" />
                         Purchase History
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="relative max-w-md w-full">
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:max-w-xl">
+                    <div className="relative w-full">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
                             placeholder="Search PO number or supplier..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100/50 outline-none text-sm transition-all"
+                            className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100/50 outline-none text-sm transition-all"
                         />
                     </div>
                     {activeFilterCount > 0 && (
                         <button
                             onClick={() => setColumnFilters({ poNumber: [], supplier: [], status: [], paymentStatus: [], date: [] })}
-                            className="text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 px-3 py-2 rounded-xl transition-colors whitespace-nowrap active:scale-95"
+                            className="w-full sm:w-auto text-xs font-bold text-rose-500 hover:text-rose-700 bg-rose-50 px-4 py-3.5 rounded-xl transition-colors whitespace-nowrap active:scale-95 text-center"
                         >
                             Clear All Filters ({activeFilterCount})
                         </button>
@@ -444,14 +444,14 @@ const PurchaseManager = () => {
                                                 <Eye className="w-3.5 h-3.5" /> Details
                                             </button>
                                         )}
-                                         {po.payment_status !== 'PAID' && role === 'ADMIN' && (
+                                        {po.payment_status !== 'PAID' && role === 'ADMIN' && (
                                             <button
-                                                onClick={() => { 
-                                                    setSelectedPO(po); 
-                                                    setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0)); 
+                                                onClick={() => {
+                                                    setSelectedPO(po);
+                                                    setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
                                                     setPaymentMethod('CASH');
                                                     setSelectedPaymentAccount('');
-                                                    setShowPaymentModal(true); 
+                                                    setShowPaymentModal(true);
                                                 }}
                                                 className="mt-2 px-4 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl transition-colors font-bold text-[11px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
                                             >
@@ -511,12 +511,12 @@ const PurchaseManager = () => {
                                 <History className="w-3.5 h-3.5" /> Receipts
                             </button>
                             */}
-                            <button onClick={() => { 
-                                setSelectedPO(po); 
+                            <button onClick={() => {
+                                setSelectedPO(po);
                                 setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
                                 setPaymentMethod('CASH');
                                 setSelectedPaymentAccount('');
-                                setShowPaymentModal(true); 
+                                setShowPaymentModal(true);
                             }}
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
                                 <DollarSign className="w-3.5 h-3.5" /> Process Payment
@@ -580,29 +580,29 @@ const PurchaseManager = () => {
 
                         <div className="flex flex-col flex-1 min-h-0">
                             {/* Supplier & Header Info */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100 flex-shrink-0">
-                                <div className="md:col-span-1">
-                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Supplier *</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100 flex-shrink-0">
+                                <div className="sm:col-span-1">
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Supplier *</label>
                                     <select
                                         value={supplierId}
                                         onChange={e => setSupplierId(e.target.value)}
-                                        className="w-full px-4 py-2 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-gray-800"
+                                        className="w-full px-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-gray-800"
                                     >
                                         <option value="">Select Vendor</option>
                                         {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
-                                <div className="md:col-span-1">
-                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2 ml-1">Physical Invoice # *</label>
+                                <div className="sm:col-span-1">
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Physical Invoice # *</label>
                                     <input
                                         type="text"
                                         id="supplier_inv_number"
                                         placeholder="Serial / INV-..."
-                                        className="w-full px-4 py-2 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-indigo-700"
+                                        className="w-full px-4 py-3 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-bold text-indigo-700"
                                     />
                                 </div>
-                                <div className="md:col-span-2 flex flex-col justify-end">
-                                    <div className="flex items-center gap-6 mb-1">
+                                <div className="sm:col-span-2 flex flex-col justify-end">
+                                    <div className="flex flex-wrap items-center gap-4 mb-2 ml-1">
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="checkbox"
@@ -611,18 +611,18 @@ const PurchaseManager = () => {
                                                 onChange={e => setIsVatInclusive(e.target.checked)}
                                                 className="w-5 h-5 text-indigo-600 rounded cursor-pointer"
                                             />
-                                            <label htmlFor="vat-toggle" className="text-base font-bold text-gray-700 cursor-pointer">Add VAT</label>
+                                            <label htmlFor="vat-toggle" className="text-sm font-bold text-gray-700 cursor-pointer">Add VAT</label>
                                         </div>
                                         {isVatInclusive && (
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-bold text-gray-500">Rate:</span>
+                                                <span className="text-xs font-bold text-gray-500">Rate:</span>
                                                 <input
                                                     type="number"
                                                     value={vatRate}
                                                     onChange={e => setVatRate(Number(e.target.value))}
-                                                    className="w-20 px-2 py-2 bg-white border rounded-lg text-sm font-black"
+                                                    className="w-16 px-2 py-1.5 bg-white border rounded-lg text-xs font-black"
                                                 />
-                                                <span className="text-sm font-bold text-gray-500">%</span>
+                                                <span className="text-xs font-bold text-gray-500">%</span>
                                             </div>
                                         )}
                                     </div>
@@ -631,7 +631,7 @@ const PurchaseManager = () => {
                                         onChange={e => setNotes(e.target.value)}
                                         placeholder="Internal notes or invoice remarks..."
                                         rows={1}
-                                        className="w-full mt-2 px-4 py-2 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-sm font-medium resize-none overflow-hidden"
+                                        className="w-full px-4 py-2 bg-white rounded-xl border border-transparent shadow-sm focus:border-indigo-300 outline-none text-xs font-medium resize-none"
                                     />
                                 </div>
                             </div>
@@ -861,7 +861,7 @@ const PurchaseManager = () => {
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    
+
                                                     {paymentMethod !== 'SYSTEM_ACCOUNT' && (
                                                         <p className="text-[10px] bg-amber-50 text-amber-700 p-2 rounded-lg border border-amber-100 font-bold">
                                                             Note: {paymentMethod === 'CASH' ? 'Cash' : 'Cheque'} payment will be recorded as a manual reference note.
@@ -935,17 +935,17 @@ const PurchaseManager = () => {
                                                 <span className="border-b-2 border-indigo-50 pb-1">ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         )}
-                                        <div className="mt-2 flex justify-between items-end border-t-2 border-gray-50 pt-4">
+                                        <div className="mt-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-end border-t-2 border-gray-50 pt-4 gap-4">
                                             <div className="flex flex-col">
                                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-1">Final Payable</p>
-                                                <p className="text-3xl font-black text-gray-900 tracking-tighter">
+                                                <p className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">
                                                     ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate / 100) : 1)).toLocaleString(undefined, { minimumFractionDigits: 0 })}
                                                 </p>
                                             </div>
                                             <button
                                                 onClick={handleRegisterPurchase}
                                                 disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
-                                                className={`px-8 py-4.5 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-4 flex items-center gap-3 ${poModalTab === 'COSMETIC'
+                                                className={`px-6 py-4 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-4 flex items-center justify-center gap-3 ${poModalTab === 'COSMETIC'
                                                     ? 'bg-pink-600 hover:bg-pink-700 border-pink-900 shadow-pink-100'
                                                     : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-950 shadow-indigo-100'
                                                     }`}
@@ -961,20 +961,19 @@ const PurchaseManager = () => {
                 </div>
             )}
 
-            {/* RECEIVE GOODS MODAL */}
             {showReceiveModal && selectedPO && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-                    <div className="bg-white rounded-[2rem] p-8 w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20">
-                        <div className="flex justify-between items-center mb-6">
+                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in">
+                    <div className="bg-white rounded-[2rem] p-5 sm:p-8 w-full max-w-5xl max-h-[96vh] overflow-y-auto shadow-2xl border border-white/20">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                             <div>
-                                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                                    <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600"><PackageCheck className="w-6 h-6" /></div>
+                                <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-3">
+                                    <div className="p-2 sm:p-3 rounded-2xl bg-emerald-50 text-emerald-600"><PackageCheck className="w-5 h-5 sm:w-6 h-6" /></div>
                                     Receive Delivery
                                 </h2>
-                                <p className="text-sm font-bold text-gray-500 mt-2 tracking-wide">Ref. PO: <span className="text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">{selectedPO.po_number}</span></p>
+                                <p className="text-[10px] sm:text-sm font-bold text-gray-500 mt-2 tracking-wide">Ref. PO: <span className="text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">{selectedPO.po_number}</span></p>
                             </div>
-                            <button onClick={() => setShowReceiveModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95">
-                                <X className="w-6 h-6" />
+                            <button onClick={() => setShowReceiveModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95 ml-auto sm:ml-0">
+                                <X className="w-5 h-5 sm:w-6 h-6" />
                             </button>
                         </div>
 
@@ -1070,39 +1069,38 @@ const PurchaseManager = () => {
                 </div>
             )}
 
-            {/* RECORD PAYMENT MODAL (CASHIER TARGET) */}
             {showPaymentModal && selectedPO && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-                    <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl border border-white/20">
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                                <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600"><DollarSign className="w-6 h-6" /></div>
+                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in">
+                    <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-lg max-h-[95vh] overflow-y-auto shadow-2xl border border-white/20">
+                        <div className="flex justify-between items-center mb-6 sm:mb-8">
+                            <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-3">
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-indigo-50 text-indigo-600"><DollarSign className="w-5 h-5 sm:w-6 h-6" /></div>
                                 Finance Disbursement
                             </h2>
                             <button onClick={() => setShowPaymentModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95">
-                                <X className="w-6 h-6" />
+                                <X className="w-5 h-5 sm:w-6 h-6" />
                             </button>
                         </div>
 
                         <div className="space-y-6">
-                            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-3xl shadow-xl shadow-indigo-200 text-white relative overflow-hidden">
-                                <div className="absolute -right-6 -bottom-6 opacity-10"><DollarSign className="w-40 h-40" /></div>
-                                <p className="text-[10px] text-indigo-200 font-black uppercase tracking-widest mb-1 relative z-10">Authorized Payables Amount</p>
-                                <p className="text-4xl font-black relative z-10">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                <div className="mt-4 flex gap-4 text-xs font-bold text-indigo-100 relative z-10">
-                                    <span className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">PO: {selectedPO.po_number}</span>
-                                    <span className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 line-clamp-1">{selectedPO.supplier?.name}</span>
+                            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-5 sm:p-6 rounded-3xl shadow-xl shadow-indigo-200 text-white relative overflow-hidden">
+                                <div className="absolute -right-6 -bottom-6 opacity-10"><DollarSign className="w-32 h-32 sm:w-40 h-40" /></div>
+                                <p className="text-[9px] sm:text-[10px] text-indigo-200 font-black uppercase tracking-widest mb-1 relative z-10">Authorized Payables Amount</p>
+                                <p className="text-2xl sm:text-4xl font-black relative z-10">ETB {(Number(selectedPO.total_amount) - Number(selectedPO.total_paid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                <div className="mt-4 flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs font-bold text-indigo-100 relative z-10">
+                                    <span className="bg-white/10 px-2.5 py-1.5 rounded-lg border border-white/10">PO: {selectedPO.po_number}</span>
+                                    <span className="bg-white/10 px-2.5 py-1.5 rounded-lg border border-white/10 truncate max-w-[120px]">{selectedPO.supplier?.name}</span>
                                 </div>
                             </div>
 
                             <div className="space-y-5 px-1 pt-2">
-                                <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100 gap-1">
+                                <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100 gap-1 overflow-x-auto hide-scrollbar">
                                     {(['CASH', 'SYSTEM_ACCOUNT', 'CHEQUE'] as const).map((method) => (
                                         <button
                                             key={method}
                                             type="button"
                                             onClick={() => setPaymentMethod(method)}
-                                            className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
+                                            className={`flex-1 whitespace-nowrap px-3 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
                                         >
                                             {method.replace('_', ' ')}
                                         </button>
@@ -1188,36 +1186,34 @@ const PurchaseManager = () => {
                 </div>
             )}
 
-            {/* RECEIVED GOODS HISTORY MODAL */}
             {showReceivedHistoryModal && selectedPO && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in">
-                    <div className="bg-white rounded-[2rem] p-8 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-white/20">
-                        <div className="flex justify-between items-center mb-6">
+                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in">
+                    <div className="bg-white rounded-[2rem] p-5 sm:p-8 w-full max-w-4xl max-h-[96vh] overflow-hidden flex flex-col shadow-2xl border border-white/20 text-gray-900">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                             <div>
-                                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                                    <div className="p-3 rounded-2xl bg-gray-100 text-gray-600"><Eye className="w-6 h-6" /></div>
+                                <h2 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-3">
+                                    <div className="p-2 sm:p-3 rounded-2xl bg-gray-100 text-gray-600"><Eye className="w-5 h-5 sm:w-6 h-6" /></div>
                                     Receipt Manifest
                                 </h2>
-                                <p className="text-sm font-bold text-gray-500 mt-2 tracking-wide">Ref. PO: <span className="text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">{selectedPO.po_number}</span></p>
+                                <p className="text-[10px] sm:text-sm font-bold text-gray-500 mt-2 tracking-wide">Ref. PO: <span className="text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">{selectedPO.po_number}</span></p>
                             </div>
-                            <button onClick={() => setShowReceivedHistoryModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95">
-                                <X className="w-6 h-6" />
+                            <button onClick={() => setShowReceivedHistoryModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-xl transition-colors active:scale-95 ml-auto sm:ml-0">
+                                <X className="w-5 h-5 sm:w-6 h-6" />
                             </button>
                         </div>
 
                         {selectedPO.payment_status !== 'PAID' && selectedPO.payment_due_date && (
-                            <div className={`mb-4 p-3 rounded-2xl flex items-center justify-between border animate-in slide-in-from-top-4 duration-300 ${
-                                new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0))
-                                    ? 'bg-rose-50 border-rose-100 text-rose-700' 
+                            <div className={`mb-4 p-3 rounded-2xl flex items-center justify-between border animate-in slide-in-from-top-4 duration-300 ${new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                    ? 'bg-rose-50 border-rose-100 text-rose-700'
                                     : 'bg-indigo-50 border-indigo-100 text-indigo-700'
-                            }`}>
+                                }`}>
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0)) ? 'bg-rose-100' : 'bg-indigo-100'}`}>
+                                    <div className={`p-2 rounded-xl ${new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0, 0, 0, 0)) ? 'bg-rose-100' : 'bg-indigo-100'}`}>
                                         <Clock className="w-5 h-5" />
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                            {new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0,0,0,0)) ? 'Overdue Payment' : 'Upcoming Payment'}
+                                            {new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0, 0, 0, 0)) ? 'Overdue Payment' : 'Upcoming Payment'}
                                         </p>
                                         <p className="text-sm font-black">
                                             Due Date: {formatDate(selectedPO.payment_due_date)}
@@ -1226,12 +1222,11 @@ const PurchaseManager = () => {
                                 </div>
                                 <div className="text-right">
                                     {(() => {
-                                        const diff = new Date(selectedPO.payment_due_date).getTime() - new Date().setHours(0,0,0,0);
+                                        const diff = new Date(selectedPO.payment_due_date).getTime() - new Date().setHours(0, 0, 0, 0);
                                         const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
                                         return (
-                                            <span className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-tight ${
-                                                days < 0 ? 'bg-rose-600 text-white shadow-lg shadow-rose-100' : 'bg-indigo-600 text-white'
-                                            }`}>
+                                            <span className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-tight ${days < 0 ? 'bg-rose-600 text-white shadow-lg shadow-rose-100' : 'bg-indigo-600 text-white'
+                                                }`}>
                                                 {days === 0 ? 'Due Today' : (days < 0 ? `${Math.abs(days)} Days Overdue` : `${days} Days Remaining`)}
                                             </span>
                                         );
