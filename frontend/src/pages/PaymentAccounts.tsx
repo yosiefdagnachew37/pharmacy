@@ -43,10 +43,10 @@ export default function PaymentAccounts() {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [transferForm, setTransferForm] = useState({ from_account_id: '', to_account_id: '', amount: '', reason: '' });
   const [transferSaving, setTransferSaving] = useState(false);
-  
+
   const [transferRequests, setTransferRequests] = useState<any[]>([]);
   const [showTransferRequests, setShowTransferRequests] = useState(false);
-  
+
   const [activeAccounts, setActiveAccounts] = useState<any[]>([]);
 
   const getErrorMessage = (error: any, fallback: string): string => {
@@ -190,7 +190,7 @@ export default function PaymentAccounts() {
   const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferForm.from_account_id || !transferForm.to_account_id || !transferForm.amount) return;
-    
+
     setTransferSaving(true);
     try {
       await client.post('/payment-accounts/transfer-request', {
@@ -294,13 +294,13 @@ export default function PaymentAccounts() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative">
         {/* Mobile View Switcher (Tabs) */}
         <div className="lg:hidden flex p-1 bg-gray-100 rounded-xl gap-1">
-          <button 
+          <button
             onClick={() => setSelectedAccount(null)}
             className={`flex-1 py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${!selectedAccount ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
           >
             Accounts
           </button>
-          <button 
+          <button
             disabled={!selectedAccount}
             className={`flex-1 py-2 px-3 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${selectedAccount ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-300'}`}
           >
@@ -337,7 +337,7 @@ export default function PaymentAccounts() {
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(acc.id, acc.name); }} className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-3 mb-3">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold shrink-0 ${typeColors[acc.type] || typeColors.OTHER}`}>
                       {typeIcons[acc.type] || '💳'}
@@ -347,7 +347,7 @@ export default function PaymentAccounts() {
                       <p className="text-[8px] font-black uppercase text-gray-400 leading-none mt-0.5">{acc.type.replace('_', ' ')} {acc.is_active ? '' : '• Inactive'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col gap-2.5">
                     <div>
                       <p className="text-[8px] font-black uppercase text-gray-400">Current Balance</p>
@@ -358,7 +358,7 @@ export default function PaymentAccounts() {
                       {(isAdmin || acc.allow_transfer) && (
                         <button onClick={(e) => { e.stopPropagation(); setTransferForm({ from_account_id: acc.id, to_account_id: '', amount: '', reason: '' }); setShowTransferForm(true); }} className="flex-1 min-w-[80px] justify-center py-2 flex items-center gap-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-[9px] font-black uppercase tracking-wide transition-all active:scale-95"><Send className="w-3.5 h-3.5" /> Transfer</button>
                       )}
-                      
+
                       {isAdmin && (
                         <button onClick={(e) => { e.stopPropagation(); setWithdrawAcc(acc); setWithdrawForm({ amount: '', reason: '' }); setShowWithdraw(true); }} className="flex-1 min-w-[80px] justify-center py-2 flex items-center gap-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg text-[9px] font-black uppercase tracking-wide transition-all active:scale-95"><ArrowUpCircle className="w-3.5 h-3.5" /> Withdraw</button>
                       )}
@@ -382,7 +382,7 @@ export default function PaymentAccounts() {
               <>
                 <div className="p-3 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50/50 gap-2">
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button 
+                    <button
                       onClick={() => setSelectedAccount(null)}
                       className="lg:hidden p-1.5 -ml-1 text-gray-400 hover:text-indigo-600 transition-colors"
                     >
@@ -471,7 +471,7 @@ export default function PaymentAccounts() {
 
             <div className="col-span-2 pt-2 border-t border-gray-100 flex flex-col gap-2">
               <label className="flex items-center gap-2.5 cursor-pointer p-2 bg-gray-50 rounded-lg border border-gray-100/50 hover:bg-gray-100 transition-colors">
-                <input type="checkbox" checked={form.is_visible_to_cashier} onChange={e => setForm({...form, is_visible_to_cashier: e.target.checked})} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" />
+                <input type="checkbox" checked={form.is_visible_to_cashier} onChange={e => setForm({ ...form, is_visible_to_cashier: e.target.checked })} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" />
                 <div>
                   <span className="block text-[11px] font-bold text-gray-800">Is Visible to Cashier</span>
                   <span className="text-[9px] text-gray-500 leading-tight block">Hide from cashier dashboards if unchecked.</span>
@@ -479,7 +479,7 @@ export default function PaymentAccounts() {
               </label>
 
               <label className="flex items-center gap-2.5 cursor-pointer p-2 bg-gray-50 rounded-lg border border-gray-100/50 hover:bg-gray-100 transition-colors">
-                <input type="checkbox" checked={form.allow_transfer} onChange={e => setForm({...form, allow_transfer: e.target.checked})} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" />
+                <input type="checkbox" checked={form.allow_transfer} onChange={e => setForm({ ...form, allow_transfer: e.target.checked })} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" />
                 <div>
                   <span className="block text-[11px] font-bold text-gray-800">Allow Cashier Transfers</span>
                   <span className="text-[9px] text-gray-500 leading-tight block">Enable EOD balance transfers for cashiers.</span>
@@ -512,12 +512,12 @@ export default function PaymentAccounts() {
 
           <div className="space-y-3">
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Amount (ETB) *</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Amount (ETB) *</label>
               <input type="number" step="0.01" min="0" required value={withdrawForm.amount} onChange={e => setWithdrawForm({ ...withdrawForm, amount: e.target.value })} className="w-full text-base font-black text-gray-900 bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-rose-500 transition-all outline-none" placeholder="0.00" />
             </div>
 
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Reason / Note</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Reason / Note</label>
               <input type="text" value={withdrawForm.reason} onChange={e => setWithdrawForm({ ...withdrawForm, reason: e.target.value })} className="w-full text-xs font-medium text-gray-900 bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-rose-500 transition-all outline-none" placeholder="e.g. Bank deposit..." />
             </div>
           </div>
@@ -535,7 +535,7 @@ export default function PaymentAccounts() {
         <form onSubmit={handleTransferSubmit} className="pt-2 space-y-3">
           <div className="space-y-3">
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">From Account</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">From Account</label>
               <div className="w-full bg-gray-100 border border-gray-200 rounded-lg p-2.5 text-xs font-medium text-gray-600 flex justify-between items-center">
                 <span className="truncate pr-4">{accounts.find(a => a.id === transferForm.from_account_id)?.name}</span>
                 <span className="font-black text-indigo-600 opacity-70 shrink-0">Bal: {Number(accounts.find(a => a.id === transferForm.from_account_id)?.balance || 0).toLocaleString()} ETB</span>
@@ -543,7 +543,7 @@ export default function PaymentAccounts() {
             </div>
 
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">To Account *</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">To Account *</label>
               <select required value={transferForm.to_account_id} onChange={e => setTransferForm({ ...transferForm, to_account_id: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-xs font-medium focus:ring-2 focus:ring-indigo-100 outline-none">
                 <option value="">Select destination account...</option>
                 {activeAccounts.filter(a => a.id !== transferForm.from_account_id).map(a => (
@@ -553,17 +553,17 @@ export default function PaymentAccounts() {
             </div>
 
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Amount (ETB) *</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Amount (ETB) *</label>
               <div className="relative">
                 <input type="number" step="0.01" min="0" required value={transferForm.amount} onChange={e => setTransferForm({ ...transferForm, amount: e.target.value })} className="w-full text-base font-black text-gray-900 bg-white border border-gray-200 rounded-lg p-2.5 pr-14 focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="0.00" />
                 {transferForm.from_account_id && (
-                  <button type="button" onClick={() => setTransferForm({...transferForm, amount: Number(accounts.find(a => a.id === transferForm.from_account_id)?.balance || 0).toString()})} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-2 py-1 rounded transition-colors active:scale-95">MAX</button>
+                  <button type="button" onClick={() => setTransferForm({ ...transferForm, amount: Number(accounts.find(a => a.id === transferForm.from_account_id)?.balance || 0).toString() })} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-2 py-1 rounded transition-colors active:scale-95">MAX</button>
                 )}
               </div>
             </div>
 
             <div>
-              <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Reason / Note</label>
+              <label className="block text-[9px] font-black text-gray-700 uppercase tracking-widest mb-1 ml-1">Reason / Note</label>
               <input type="text" value={transferForm.reason} onChange={e => setTransferForm({ ...transferForm, reason: e.target.value })} className="w-full text-xs font-medium text-gray-900 bg-white border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-100 outline-none" placeholder="e.g. End of day cash drop" />
             </div>
           </div>
@@ -589,11 +589,10 @@ export default function PaymentAccounts() {
               <div key={tr.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 flex flex-col gap-2.5">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest ${
-                      tr.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-widest ${tr.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
                       tr.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' :
-                      'bg-amber-100 text-amber-700'
-                    }`}>
+                        'bg-amber-100 text-amber-700'
+                      }`}>
                       {tr.status}
                     </span>
                     <p className="text-[9px] text-gray-400 mt-1">{new Date(tr.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</p>
