@@ -59,6 +59,7 @@ export class BatchesController {
             entity: 'batches',
             entity_id: result.id,
             new_values: { batch_number: result.batch_number, medicine_id: result.medicine_id, initial_quantity: result.initial_quantity },
+            description: `New batch "${result.batch_number}" added (Qty: ${result.initial_quantity}, Expiry: ${result.expiry_date ? new Date(result.expiry_date).toLocaleDateString() : 'N/A'})`,
         });
         return result;
     }
@@ -97,12 +98,14 @@ export class BatchesController {
     @Roles(UserRole.ADMIN, UserRole.PHARMACIST)
     async update(@Param('id') id: string, @Body() updateBatchDto: UpdateBatchDto, @Request() req: any) {
         const result = await this.batchesService.update(id, updateBatchDto);
+        const changedFields = Object.keys(updateBatchDto as any);
         await this.auditService.log({
             user_id: req.user.userId,
             action: AuditAction.UPDATE,
             entity: 'batches',
             entity_id: id,
             new_values: updateBatchDto,
+            description: `Updated batch ID "${id}" — fields changed: ${changedFields.join(', ')}`,
         });
         return result;
     }
@@ -118,6 +121,7 @@ export class BatchesController {
             entity: 'batches',
             entity_id: id,
             old_values: { batch_number: batch.batch_number },
+            description: `Deleted batch "${batch.batch_number}" from inventory`,
         });
     }
 

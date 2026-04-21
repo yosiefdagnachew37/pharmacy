@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import client from '../api/client';
-import { User, Clock, ShieldCheck, Search } from 'lucide-react';
+import { User, Clock, ShieldCheck, Search, FileText } from 'lucide-react';
 import ColumnFilter from '../components/ColumnFilter';
 import { formatDate } from '../utils/dateUtils';
 
@@ -8,10 +8,26 @@ interface AuditLog {
   id: string;
   action: string;
   entity: string;
+  description: string;
   user_id: string;
   user: { username: string };
   created_at: string;
 }
+
+const ACTION_COLORS: Record<string, string> = {
+  CREATE:       'bg-blue-50 text-blue-700',
+  UPDATE:       'bg-amber-50 text-amber-700',
+  DELETE:       'bg-red-50 text-red-700',
+  SELL:         'bg-emerald-50 text-emerald-700',
+  REFUND:       'bg-rose-50 text-rose-700',
+  PAYMENT:      'bg-violet-50 text-violet-700',
+  PURCHASE:     'bg-cyan-50 text-cyan-700',
+  TRANSFER:     'bg-indigo-50 text-indigo-700',
+  STOCK_ADJUST: 'bg-orange-50 text-orange-700',
+  LOGIN:        'bg-gray-100 text-gray-600',
+  LOGOUT:       'bg-gray-100 text-gray-500',
+  DISPENSE:     'bg-teal-50 text-teal-700',
+};
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -50,9 +66,11 @@ const AuditLogs = () => {
     return logs.filter(log => {
       const username = log.user?.username || 'Unknown';
       const logDate = formatDate(log.created_at);
-      const matchesSearch = username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            log.entity.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+        username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (log.description || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesUser = columnFilters.user.length === 0 || columnFilters.user.includes(username);
       const matchesAction = columnFilters.action.length === 0 || columnFilters.action.includes(log.action);
@@ -71,17 +89,20 @@ const AuditLogs = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Audit Trail</h1>
-        <div className="flex items-center gap-4">
-          <div className="relative max-w-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Audit Trail</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Complete history of all critical system activities</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search logs..."
+              placeholder="Search logs, details..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 rounded-full text-xs focus:ring-2 focus:ring-indigo-100 outline-none"
+              className="pl-9 pr-4 py-1.5 bg-white border border-gray-200 rounded-full text-xs focus:ring-2 focus:ring-indigo-100 outline-none w-52"
             />
           </div>
           {activeFilterCount > 0 && (
@@ -97,6 +118,19 @@ const AuditLogs = () => {
             Secured Logging Active
           </div>
         </div>
+      </div>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {['CREATE','SELL','PAYMENT','DELETE'].map(action => {
+          const count = logs.filter(l => l.action === action).length;
+          return (
+            <div key={action} className={`px-4 py-3 rounded-xl border flex items-center justify-between ${ACTION_COLORS[action] || 'bg-gray-50 text-gray-600'} border-current/20`}>
+              <span className="text-xs font-bold uppercase tracking-wider">{action}</span>
+              <span className="text-lg font-black">{count}</span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible">
@@ -123,12 +157,12 @@ const AuditLogs = () => {
                   onFilterChange={(v) => updateFilter('action', v)}
                 />
                 <ColumnFilter
-                  label="Component"
+                  label="Module"
                   options={uniqueComponents}
                   selectedValues={columnFilters.component}
                   onFilterChange={(v) => updateFilter('component', v)}
                 />
-                <th className="px-6 py-4 text-right">Hash</th>
+                <th className="px-6 py-4 text-left">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -143,9 +177,9 @@ const AuditLogs = () => {
               ) : (
                 filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                    <td className="px-6 py-4 text-xs font-medium text-gray-600 whitespace-nowrap">
                       <div className="flex items-center">
-                        <Clock className="w-3.5 h-3.5 mr-2 text-gray-300" />
+                        <Clock className="w-3.5 h-3.5 mr-2 text-gray-300 flex-shrink-0" />
                         <div className="flex flex-col">
                           <span className="font-bold">{formatDate(log.created_at)}</span>
                           <span className="text-[10px] text-gray-400">{new Date(log.created_at).toLocaleTimeString()}</span>
@@ -154,24 +188,27 @@ const AuditLogs = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center text-sm font-bold text-gray-800">
-                        <User className="w-3.5 h-3.5 mr-2 text-indigo-400" />
+                        <User className="w-3.5 h-3.5 mr-2 text-indigo-400 flex-shrink-0" />
                         {log.user?.username || 'Unknown'}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        log.action === 'CREATE' ? 'bg-blue-50 text-blue-600' :
-                        log.action === 'DELETE' ? 'bg-red-50 text-red-600' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-600'}`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 text-xs text-gray-500 font-mono">
                       {log.entity}
                     </td>
-                    <td className="px-6 py-4 text-right text-[10px] text-gray-300 font-mono">
-                      {log.id.slice(0, 12)}...
+                    <td className="px-6 py-4 max-w-xs">
+                      {log.description ? (
+                        <div className="flex items-start gap-2">
+                          <FileText className="w-3.5 h-3.5 text-indigo-300 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-700 leading-relaxed">{log.description}</p>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-gray-300 font-mono">{log.id.slice(0, 12)}...</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -184,6 +221,13 @@ const AuditLogs = () => {
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <div className="px-6 py-3 border-t border-gray-50 flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Showing <span className="font-bold text-gray-600">{filteredLogs.length}</span> of <span className="font-bold text-gray-600">{logs.length}</span> log entries
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,10 @@ export enum AuditAction {
     DISPENSE = 'DISPENSE',
     SELL = 'SELL',
     REFUND = 'REFUND',
+    PAYMENT = 'PAYMENT',
+    PURCHASE = 'PURCHASE',
+    TRANSFER = 'TRANSFER',
+    STOCK_ADJUST = 'STOCK_ADJUST',
 }
 
 @Entity('audit_logs')
@@ -48,6 +52,9 @@ export class AuditLog {
 
     @Column({ default: false })
     is_controlled_transaction: boolean;
+
+    @Column({ type: 'text', nullable: true })
+    description: string;
 
     @CreateDateColumn()
     created_at: Date;

@@ -29,6 +29,7 @@ export class MedicinesController {
             entity: 'medicines',
             entity_id: result.id,
             new_values: createMedicineDto,
+            description: `Added new medicine "${result.name}" to inventory (Category: ${(createMedicineDto as any).category || 'N/A'}, Unit: ${(createMedicineDto as any).unit || 'N/A'})`,
         });
         return result;
     }
@@ -50,6 +51,7 @@ export class MedicinesController {
     async update(@Param('id') id: string, @Body() updateMedicineDto: UpdateMedicineDto, @Request() req: any) {
         const oldMedicine = await this.medicinesService.findOne(id);
         const result = await this.medicinesService.update(id, updateMedicineDto);
+        const changedFields = Object.keys(updateMedicineDto as any);
         await this.auditService.log({
             user_id: req.user.userId,
             action: AuditAction.UPDATE,
@@ -57,6 +59,7 @@ export class MedicinesController {
             entity_id: id,
             old_values: { name: oldMedicine.name, category: oldMedicine.category, unit: oldMedicine.unit },
             new_values: updateMedicineDto,
+            description: `Updated medicine "${oldMedicine.name}" — fields changed: ${changedFields.join(', ')}`,
         });
         return result;
     }
@@ -72,6 +75,7 @@ export class MedicinesController {
             entity: 'medicines',
             entity_id: id,
             old_values: { name: medicine.name },
+            description: `Deleted medicine "${medicine.name}" from the system`,
         });
     }
 

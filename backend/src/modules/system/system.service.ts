@@ -74,14 +74,15 @@ export class SystemService implements OnModuleInit {
         try {
             // For simplicity in a local-first system, we'll assume we can overwrite.
             // In a real prod environment, we would drop/recreate the DB or use pg_restore with --clean.
-            // Since we are using plain SQL format (-F p), we use psql.
-            const command = `psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.username} -d ${dbConfig.database} -f "${filePath}"`;
-            await execPromise(command, { env });
+            // Since we are using plain SQL format (-F p), we use psql. We pass -q to quiet normal output
+            // to prevent maxBuffer (1MB) overflow, and increase the buffer to 50MB just in case.
+            const command = `psql -h ${dbConfig.host} -p ${dbConfig.port} -U ${dbConfig.username} -d ${dbConfig.database} -q -f "${filePath}"`;
+            await execPromise(command, { env, maxBuffer: 1024 * 1024 * 50 });
             this.logger.log(`Database restored successfully from: ${filename}`);
             return { message: 'Restore successful', filename };
-        } catch (error) {
-            this.logger.error(`Restore failed: ${error.message}`);
-            throw error;
+        } catch (error: any) {
+            this.logger.error(`Restore failed: ${error.message} - Stderr: ${error.stderr || 'No stderr'}`);
+            throw new Error(`Restore failed. Make sure it's a valid backup file. Details: ${error.stderr || error.message}`);
         }
     }
 
@@ -93,6 +94,34 @@ export class SystemService implements OnModuleInit {
             platform: process.platform,
             backupCount: (await this.listBackups()).length,
         };
+    }
+
+    /**
+     * Returns the full validated path of a backup file.
+     * Prevents path traversal attacks by using path.basename.
+     */
+    getBackupFilePath(filename: string): string {
+        const safeName = path.basename(filename);
+        const filePath = path.join(this.backupDir, safeName);
+        if (!fs.existsSync(filePath)) {
+            throw new Error('Backup file not found');
+        }
+        return filePath;
+    }
+
+    /**
+     * Restores from an in-memory file buffer uploaded by the user.
+     * Writes the buffer to a temp file in the backups directory, then restores.
+     */
+    async restoreFromUpload(buffer: Buffer, originalname: string): Promise<{ message: string; filename: string }> {
+        const safeName = path.basename(originalname).replace(/[^a-zA-Z0-9._-]/g, '_');
+        const savedFilename = `uploaded-${Date.now()}-${safeName}`;
+        const filePath = path.join(this.backupDir, savedFilename);
+
+        fs.writeFileSync(filePath, buffer);
+        this.logger.log(`Uploaded backup file saved: ${savedFilename}`);
+
+        return await this.restoreBackup(savedFilename);
     }
 
     generateLicense(hwid: string, expiry?: string, plan?: string) {

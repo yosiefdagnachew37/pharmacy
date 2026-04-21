@@ -33,6 +33,7 @@ export class SalesController {
             entity: 'sale_orders',
             entity_id: order.id,
             new_values: { order_number: order.order_number, total_amount: order.total_amount, items_count: order.items?.length },
+            description: `Sale order #${order.order_number} created with ${order.items?.length ?? '?'} item(s) totaling ETB ${Number(order.total_amount).toFixed(2)}`,
         });
         return order;
     }
@@ -67,6 +68,7 @@ export class SalesController {
             entity_id: sale.id,
             new_values: { total_amount: sale.total_amount, payment_account: dto.payment_account_name },
             is_controlled_transaction: sale.is_controlled_transaction,
+            description: `Sale completed — ${sale.items?.length ?? '?'} item(s) totaling ETB ${Number(sale.total_amount).toFixed(2)} (Payment: ${dto.payment_account_name || dto.payment_method || 'N/A'})`,
         });
         return sale;
     }
@@ -93,6 +95,7 @@ export class SalesController {
             entity_id: result.id,
             new_values: { total_amount: result.total_amount, items_count: result.items?.length },
             is_controlled_transaction: result.is_controlled_transaction,
+            description: `Direct sale completed — ETB ${Number(result.total_amount).toFixed(2)} for ${result.items?.length ?? '?'} item(s)`,
         });
         return result;
     }
@@ -121,6 +124,7 @@ export class SalesController {
             entity: 'sales',
             entity_id: id,
             new_values: { amount: createRefundDto.amount, medicine_id: createRefundDto.medicine_id },
+            description: `Refund of ETB ${createRefundDto.amount} processed for sale ID ${id}`,
         });
         return result;
     }

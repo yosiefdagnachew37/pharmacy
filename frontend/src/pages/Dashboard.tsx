@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import {
   TrendingUp,
   AlertTriangle,
@@ -33,8 +34,13 @@ import {
   Cell
 } from 'recharts';
 
+// Paths the Cashier role is allowed to navigate to
+const CASHIER_ALLOWED_PATHS = ['/sales', '/medicines', '/patients', '/pos'];
+
 const Dashboard = () => {
-  const navigate = useNavigate();
+  const rawNavigate = useNavigate();
+  const { role } = useAuth();
+  const [accessMsg, setAccessMsg] = useState('');
   const [stats, setStats] = useState({
     todaySalesCount: 0,
     todaySalesAmount: 0,
@@ -57,6 +63,16 @@ const Dashboard = () => {
   const [expandedStock, setExpandedStock] = useState(false);
   const [supplierRanking, setSupplierRanking] = useState<any[]>([]);
   const [turnover, setTurnover] = useState<any>(null);
+
+  // Role-aware navigation: Cashier is restricted to allowed pages only
+  const navigate = (path: string) => {
+    if (role === 'CASHIER' && !CASHIER_ALLOWED_PATHS.some(a => path === a || path.startsWith(a + '/'))) {
+      setAccessMsg('Access Restricted — you do not have permission to navigate to this section.');
+      setTimeout(() => setAccessMsg(''), 3500);
+      return;
+    }
+    rawNavigate(path);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -152,6 +168,13 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Access Restricted Banner for Cashier */}
+      {accessMsg && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-amber-700 font-semibold text-sm shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          {accessMsg}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-800">Dashboard Overview</h1>
@@ -617,7 +640,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {expiryData.top_10_risks.map((risk: any) => (
+                    {[...expiryData.top_10_risks].sort((a: any, b: any) => a.days_until_expiry - b.days_until_expiry).map((risk: any) => (
                       <tr key={risk.batch_id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="py-3 px-2 font-medium text-gray-800">{risk.medicine_name}</td>
                         <td className="py-3 px-2 text-gray-500 font-mono text-xs">{risk.batch_number}</td>
@@ -644,7 +667,7 @@ const Dashboard = () => {
 
               {/* Mobile Card View for Expiry Risks */}
               <div className="md:hidden space-y-3 mt-4">
-                {expiryData.top_10_risks.map((risk: any) => (
+                {[...expiryData.top_10_risks].sort((a: any, b: any) => a.days_until_expiry - b.days_until_expiry).map((risk: any) => (
                   <div key={risk.batch_id} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col gap-2">
                     <div className="flex justify-between items-start">
                       <div>

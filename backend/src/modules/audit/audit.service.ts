@@ -18,6 +18,7 @@ export class AuditService {
         entity_id: string;
         old_values?: any;
         new_values?: any;
+        description?: string;
         ip_address?: string;
         is_controlled_transaction?: boolean;
     }) {

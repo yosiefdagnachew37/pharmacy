@@ -15,6 +15,7 @@ import { SuppliersModule } from '../suppliers/suppliers.module';
 import { PaymentAccount } from '../payment-accounts/entities/payment-account.entity';
 import { PaymentAccountTransaction } from '../payment-accounts/entities/payment-account-transaction.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
     imports: [
@@ -33,6 +34,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
         OrganizationsModule,
         SuppliersModule,
         NotificationsModule,
+        AuditModule,
     ],
     controllers: [PurchaseOrdersController],
     providers: [PurchaseOrdersService],

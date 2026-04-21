@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -16,7 +16,9 @@ import {
   Plus,
   Lock,
   Check,
-  ShieldOff
+  ShieldOff,
+  Upload,
+  FolderOpen
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import Modal from '../components/Modal';
@@ -147,6 +149,76 @@ const System = () => {
       toastError('Restore failed', 'Could not restore from backup.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // ─── Backup Download & Upload-Restore ────────────────────────
+  const restoreFileRef = useRef<HTMLInputElement>(null);
+  const [restoreFileLoading, setRestoreFileLoading] = useState(false);
+
+  const handleDownloadBackup = async (filename: string) => {
+    try {
+      const response = await client.get(`/system/backups/${encodeURIComponent(filename)}/download`, {
+        responseType: 'blob',
+      } as any);
+      
+      // Try using modern File System Access API to show "Save As" dialog
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: filename,
+            types: [{
+              description: 'SQL Backup File',
+              accept: { 'application/sql': ['.sql'] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(response.data);
+          await writable.close();
+          toastSuccess('Download complete', `${filename} was saved successfully.`);
+          return;
+        } catch (err: any) {
+          if (err.name === 'AbortError') return; // User cancelled the dialog
+          console.warn('File picker failed, falling back to default download:', err);
+        }
+      }
+
+      // Fallback: automatic download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', filename);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toastSuccess('Download started', `${filename} is being saved to your computer.`);
+    } catch (err) {
+      toastError('Download failed', 'Could not download the backup file.');
+    }
+  };
+
+  const handleRestoreFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.sql')) {
+      toastError('Invalid file', 'Please select a valid .sql backup file.');
+      return;
+    }
+    if (!confirm('Are you sure you want to restore from this file? This will overwrite your current database.')) return;
+    setRestoreFileLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await client.post('/system/restore/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      } as any);
+      toastSuccess('Restore successful', 'System restored from uploaded file. Please restart the application.');
+    } catch (err) {
+      toastError('Restore failed', 'Could not restore from the selected file.');
+    } finally {
+      setRestoreFileLoading(false);
+      if (restoreFileRef.current) restoreFileRef.current.value = '';
     }
   };
 
@@ -314,6 +386,39 @@ const System = () => {
             </div>
           </div>
 
+          {/* SuperAdmin-only: Restore from External File */}
+          {isSuperAdmin && (
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                <div className="flex-shrink-0 bg-violet-50 p-4 rounded-xl">
+                  <FolderOpen className="w-7 h-7 text-violet-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">Restore from External File</h3>
+                  <p className="text-sm text-gray-500 mt-1">Select a <span className="font-mono font-bold">.sql</span> backup file from your computer to restore the database. This will overwrite current data.</p>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <input
+                    ref={restoreFileRef}
+                    type="file"
+                    accept=".sql"
+                    className="hidden"
+                    onChange={handleRestoreFromFile}
+                  />
+                  <button
+                    onClick={() => restoreFileRef.current?.click()}
+                    disabled={restoreFileLoading || actionLoading}
+                    className="bg-violet-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-violet-100 hover:bg-violet-700 flex items-center transition-all disabled:opacity-50 active:scale-95"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {restoreFileLoading ? 'Restoring...' : 'Choose File & Restore'}
+                  </button>
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Supports .sql format only</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SuperAdmin-only: Backup History */}
           {isSuperAdmin ? (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -343,13 +448,24 @@ const System = () => {
                           <td className="px-6 py-4 text-sm">{new Date(backup.createdAt).toLocaleString()}</td>
                           <td className="px-6 py-4 text-center text-sm">{formatSize(backup.size)}</td>
                           <td className="px-6 py-4 text-right">
-                            <button 
-                               onClick={() => setRestoreConfirm(backup.filename)}
-                               disabled={actionLoading}
-                               className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center ml-auto transition-colors disabled:opacity-50"
-                            >
-                              <RotateCcw className="w-4 h-4 mr-2" /> Restore
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleDownloadBackup(backup.filename)}
+                                disabled={actionLoading}
+                                className="text-emerald-600 hover:text-emerald-800 font-bold px-3 py-1 flex items-center transition-colors disabled:opacity-50 hover:bg-emerald-50 rounded-lg"
+                                title="Download backup to your computer"
+                              >
+                                <Download className="w-4 h-4 mr-1.5" /> Download
+                              </button>
+                              <button 
+                                 onClick={() => setRestoreConfirm(backup.filename)}
+                                 disabled={actionLoading}
+                                 className="text-indigo-600 hover:text-indigo-800 font-bold px-3 py-1 flex items-center transition-colors disabled:opacity-50 hover:bg-indigo-50 rounded-lg"
+                                 title="Restore system from this backup"
+                              >
+                                <RotateCcw className="w-4 h-4 mr-2" /> Restore
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
