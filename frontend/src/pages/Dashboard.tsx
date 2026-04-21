@@ -78,21 +78,22 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const [statsRes, trendRes, revRes, expiryRes, wcRes, expRes, rankRes, turnRes] = await Promise.all([
-          client.get('/reporting/dashboard'),
-          client.get('/reporting/trending-medicines?limit=10'),
-          client.get('/reporting/revenue-comparison'),
+          client.get('/reporting/dashboard').catch(() => ({ data: null })),
+          client.get('/reporting/trending-medicines?limit=10').catch(() => ({ data: [] })),
+          client.get('/reporting/revenue-comparison').catch(() => ({ data: null })),
           client.get('/stock/expiry-dashboard').catch(() => ({ data: null })),
           client.get('/reporting/working-capital').catch(() => ({ data: null })),
           client.get('/reporting/expected-daily-expense').catch(() => ({ data: null })),
           client.get('/suppliers/ranking?limit=5').catch(() => ({ data: [] })),
           client.get('/reporting/inventory-turnover').catch(() => ({ data: null })),
         ]);
-        setStats(statsRes.data);
-        setTrending(trendRes.data);
+        if (statsRes.data) Object.assign(stats, statsRes.data); // Merge to keep defaults if missing
+        setStats({ ...stats });
+        setTrending(trendRes.data || []);
         setRevenue(revRes.data);
         setExpiryData(expiryRes.data);
-        setWorkingCapital(wcRes.data || { net_working_capital: 0, inventory_valuation: 0, outstanding_receivables: 0, outstanding_payables: 0 });
-        setDailyExpense(expRes.data || { total_expected_daily: 0, expenses: [] });
+        setWorkingCapital(wcRes.data || null);
+        setDailyExpense(expRes.data || null);
         setSupplierRanking((rankRes as any).data || []);
         setTurnover(turnRes.data);
       } catch (error) {
