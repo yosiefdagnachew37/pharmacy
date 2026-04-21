@@ -43,6 +43,7 @@ interface CartItem {
   batch_number?: string;
   expiry_date?: string;
   is_fefo_default?: boolean;
+  max_qty?: number;
 }
 
 interface PaymentAccount {
@@ -212,6 +213,7 @@ const PharmacistPOS = () => {
         batch_number: batch?.batch_number,
         expiry_date: batch?.expiry_date,
         is_fefo_default: isFefo,
+        max_qty: batch ? batch.quantity_remaining : med.total_stock,
       }]);
     }
     setShowBatchModal(false);
@@ -239,11 +241,22 @@ const PharmacistPOS = () => {
   };
 
   const updateQuantity = (medicine_id: string, batch_id: string | undefined, delta: number) => {
+    let warningShown = false;
     setCart(cart.map(item => {
       if (item.medicine_id === medicine_id && item.batch_id === batch_id) {
-        const med = medicines.find(m => m.id === medicine_id);
         const newQty = item.quantity + delta;
-        if (newQty > 0 && med && newQty <= med.total_stock) return { ...item, quantity: newQty };
+        
+        if (newQty > 0) {
+           const limit = item.max_qty ?? Infinity;
+           if (newQty > limit) {
+             if (!warningShown) {
+               toastWarning('Insufficient Stock', `Only ${limit} items available in this batch.`);
+               warningShown = true; // prevent multiple toasts if map runs multiple times (React StrictMode)
+             }
+             return item; // Do not update quantity
+           }
+           return { ...item, quantity: newQty };
+        }
       }
       return item;
     }));
@@ -287,6 +300,16 @@ const PharmacistPOS = () => {
       toastWarning('Prescription required', 'Please attach a prescription for controlled substances.');
       return;
     }
+
+    // Client-side validation for stock limits before sending to cashier
+    for (const item of cart) {
+      const limit = item.max_qty ?? Infinity;
+      if (item.quantity > limit) {
+        toastError('Insufficient Stock', `Cannot send order. Batch ${item.batch_number || ''} of ${item.name} only has ${limit} available, but ${item.quantity} requested.`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const res = await client.post('/sales/orders', {
