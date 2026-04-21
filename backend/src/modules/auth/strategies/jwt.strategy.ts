@@ -23,6 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             subscription_status: payload.subscription_status,
             subscription_features: payload.subscription_features || [],
             subscription_expiry_date: payload.subscription_expiry_date,
+            can_checkout: payload.can_checkout,
         };
     }
 }

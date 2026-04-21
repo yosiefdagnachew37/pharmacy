@@ -24,6 +24,9 @@ export class User {
     @Column({ default: true })
     is_active: boolean;
 
+    @Column({ default: false })
+    can_checkout: boolean;
+
     @Column({ nullable: true })
     manager_pin: string;
 

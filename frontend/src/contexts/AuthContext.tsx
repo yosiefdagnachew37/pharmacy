@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-export type UserRole = 'ADMIN' | 'PHARMACIST' | 'CASHIER' | 'AUDITOR' | 'SUPER_ADMIN';
+export type UserRole = 'ADMIN' | 'PHARMACY_MANAGER' | 'PHARMACIST' | 'CASHIER' | 'AUDITOR' | 'SUPER_ADMIN';
 
 interface AuthUser {
   id: string;
@@ -11,6 +11,7 @@ interface AuthUser {
   subscription_status?: string;
   subscription_features?: string[];
   subscription_expiry_date?: string;
+  can_checkout?: boolean;
 }
 
 interface AuthContextType {

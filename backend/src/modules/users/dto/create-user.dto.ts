@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MinLength, IsBoolean } from 'class-validator';
 import { UserRole } from '../../../common/enums/user-role.enum';
 
 export class CreateUserDto {
@@ -21,4 +21,8 @@ export class CreateUserDto {
     @IsString()
     @IsOptional()
     organization_id?: string;
+
+    @IsBoolean()
+    @IsOptional()
+    can_checkout?: boolean;
 }

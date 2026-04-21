@@ -45,6 +45,7 @@ interface User {
   role: string;
   is_active: boolean;
   manager_pin: string | null;
+  can_checkout?: boolean;
 }
 
 const System = () => {
@@ -68,7 +69,8 @@ const System = () => {
     username: '',
     password: '',
     role: 'CASHIER',
-    manager_pin: ''
+    manager_pin: '',
+    can_checkout: false
   });
 
   // ─── Column Filters ──────────────────────────────────────────
@@ -308,7 +310,7 @@ const System = () => {
               <button 
                 onClick={() => {
                   setEditingUser(null);
-                  setUserFormData({ username: '', password: '', role: 'CASHIER', manager_pin: '' });
+                  setUserFormData({ username: '', password: '', role: 'CASHIER', manager_pin: '', can_checkout: false });
                   setShowUserModal(true);
                 }}
                 className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 flex items-center transition-all"
@@ -572,7 +574,8 @@ const System = () => {
                                   username: u.username,
                                   password: '',
                                   role: u.role,
-                                  manager_pin: u.manager_pin || ''
+                                  manager_pin: u.manager_pin || '',
+                                  can_checkout: u.can_checkout || false
                                 });
                                 setShowUserModal(true);
                               }}
@@ -652,6 +655,22 @@ const System = () => {
                 <option value="AUDITOR">AUDITOR</option>
               </select>
             </div>
+            {userFormData.role === 'PHARMACIST' && (
+              <div className="col-span-2">
+                <label className="flex items-center gap-3 cursor-pointer p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                    checked={userFormData.can_checkout}
+                    onChange={(e) => setUserFormData({ ...userFormData, can_checkout: e.target.checked })}
+                  />
+                  <div>
+                    <span className="block text-sm font-bold text-indigo-900">Allow Direct Checkout</span>
+                    <span className="block text-xs text-indigo-600">Grants this pharmacist the ability to bypass the cashier queue and collect payment directly.</span>
+                  </div>
+                </label>
+              </div>
+            )}
             <div className="col-span-2">
               <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Manager Authorization PIN</label>
               <div className="relative">

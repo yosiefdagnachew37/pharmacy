@@ -68,6 +68,7 @@ const allMenuItems: MenuItem[] = [
 
 const roleBadgeColors: Record<UserRole, string> = {
   ADMIN: 'bg-red-500',
+  PHARMACY_MANAGER: 'bg-red-500',
   PHARMACIST: 'bg-emerald-500',
   CASHIER: 'bg-amber-500',
   AUDITOR: 'bg-sky-500',

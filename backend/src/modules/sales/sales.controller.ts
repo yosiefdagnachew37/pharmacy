@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { CreateRefundDto } from './dto/create-refund.dto';
@@ -54,12 +54,16 @@ export class SalesController {
 
     /** Step 2: Cashier confirms the order, selects payment account, stock deducted */
     @Post('orders/:id/confirm')
-    @Roles(UserRole.ADMIN, UserRole.CASHIER)
+    @Roles(UserRole.ADMIN, UserRole.CASHIER, UserRole.PHARMACIST)
     async confirmOrder(
         @Param('id') id: string,
         @Body() dto: ConfirmSaleOrderDto,
         @Request() req: any,
     ) {
+        if (req.user.role === UserRole.PHARMACIST && !req.user.can_checkout) {
+            throw new ForbiddenException('You do not have direct checkout privileges.');
+        }
+        
         const sale = await this.salesService.confirmOrder(id, dto, req.user.userId);
         await this.auditService.log({
             user_id: req.user.userId,

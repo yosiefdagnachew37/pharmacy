@@ -99,7 +99,8 @@ export class AuthService {
             organizationName: user.organizationName,
             subscription_status: user.subscription_status,
             subscription_features: user.subscription_features || [],
-            subscription_expiry_date: user.subscription_expiry_date || null
+            subscription_expiry_date: user.subscription_expiry_date || null,
+            can_checkout: user.can_checkout
         };
         return {
             access_token: this.jwtService.sign(payload),
@@ -108,7 +109,8 @@ export class AuthService {
                 organizationName: user.organizationName,
                 subscription_status: user.subscription_status,
                 subscription_features: user.subscription_features || [],
-                subscription_expiry_date: user.subscription_expiry_date || null
+                subscription_expiry_date: user.subscription_expiry_date || null,
+                can_checkout: user.can_checkout
             },
         };
     }

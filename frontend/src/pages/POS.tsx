@@ -95,6 +95,19 @@ const PharmacistPOS = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products');
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null);
 
+  const { user } = useAuth();
+  const isPharmacist = user?.role === 'PHARMACIST';
+  const canCheckout = user?.role === 'ADMIN' || user?.role === 'PHARMACY_MANAGER' || (isPharmacist && user?.can_checkout === true);
+
+  // Direct checkout state
+  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
+  const [showDirectCheckoutModal, setShowDirectCheckoutModal] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'CREDIT' | 'SPLIT'>('CASH');
+  const [amountPaid, setAmountPaid] = useState<number | ''>('');
+  const [confirmedSale, setConfirmedSale] = useState<any>(null);
+  const [showAttachment, setShowAttachment] = useState(false);
+
   // Batch picker state
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [pendingMedForBatch, setPendingMedForBatch] = useState<Medicine | null>(null);
@@ -119,13 +132,15 @@ const PharmacistPOS = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const [medRes, patientRes, custRes, orgRes] = await Promise.all([
+      const [medRes, patientRes, custRes, orgRes, accRes] = await Promise.all([
         client.get('/medicines'),
         client.get('/patients').catch(() => ({ data: [] })),
         client.get('/credit/customers').catch(() => ({ data: [] })),
         client.get('/organizations/my-org').catch(() => ({ data: null })),
+        canCheckout ? client.get('/payment-accounts/active').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
       ]);
       if (orgRes?.data) setOrgInfo(orgRes.data);
+      if (accRes?.data) setPaymentAccounts(accRes.data);
       if (medRes?.data) {
         setMedicines(medRes.data.map((m: any) => ({ ...m, selling_price: Number(m.selling_price || 0) })));
       }
@@ -136,7 +151,7 @@ const PharmacistPOS = () => {
       creditList.forEach((c: any) => { if (!mergedMap.has(c.name.toLowerCase())) mergedMap.set(c.name.toLowerCase(), c); });
       setCustomers(Array.from(mergedMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err) { console.error('Error fetching POS data:', err); }
-  }, []);
+  }, [canCheckout]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -336,6 +351,83 @@ const PharmacistPOS = () => {
       toastError('Failed', extractErrorMessage(err, 'Could not send order to cashier.'));
     } finally { setLoading(false); }
   };
+
+  const handleDirectCheckoutConfirm = async () => {
+    if (paymentMode === 'CASH' && !selectedAccount) return toastError('Error', 'Please select a payment account for cash receipt.');
+    if (paymentMode === 'CREDIT' && !patientId) return toastError('Error', 'Patient is required for credit transactions.');
+    if (paymentMode === 'SPLIT') {
+      if (!selectedAccount) return toastError('Error', 'Please select a payment account for the upfront portion.');
+      if (!patientId) return toastError('Error', 'Patient is required for the credit portion.');
+      if (!amountPaid || amountPaid <= 0 || amountPaid >= total) return toastError('Error', 'Invalid upfront amount.');
+    }
+
+    setLoading(true);
+    try {
+      const payload: any = {
+        items: cart.map(i => ({ medicine_id: i.medicine_id, name: i.name, quantity: i.quantity, unit_price: i.unit_price, batch_id: i.batch_id, batch_number: i.batch_number, expiry_date: i.expiry_date })),
+        total_amount: total,
+        discount: discountAmount,
+        patient_id: patientId || undefined,
+        prescription_image_url: prescriptionUrl || undefined,
+        is_controlled_transaction: hasControlledItems,
+      };
+
+      // We first create the order, then immediately confirm it
+      const orderRes = await client.post('/sales/orders', payload);
+      const confirmPayload: any = { payment_method: paymentMode };
+      if (paymentMode === 'CASH') {
+         confirmPayload.payment_account_id = selectedAccount?.id;
+         confirmPayload.payment_account_name = selectedAccount?.name;
+      } else if (paymentMode === 'SPLIT') {
+         confirmPayload.payment_account_id = selectedAccount?.id;
+         confirmPayload.payment_account_name = selectedAccount?.name;
+         confirmPayload.amount_paid = Number(amountPaid);
+      }
+      
+      const res = await client.post(`/sales/orders/${orderRes.data.id}/confirm`, confirmPayload);
+      setConfirmedSale(res.data);
+      setShowDirectCheckoutModal(false);
+      toastSuccess('Direct Checkout Complete', `Sale confirmed successfully.`);
+    } catch (err: any) {
+      toastError('Checkout Failed', extractErrorMessage(err, 'Could not complete direct checkout.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const accountTypeIcon = (type: string) => {
+    if (type === 'CASH') return <Wallet className="w-5 h-5" />;
+    if (type === 'MOBILE_MONEY') return <Banknote className="w-5 h-5" />;
+    if (type === 'BANK') return <Building2 className="w-5 h-5" />;
+    return <CreditCard className="w-5 h-5" />;
+  };
+
+  const accountTypeColor = (type: string) => {
+    if (type === 'CASH') return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+    if (type === 'MOBILE_MONEY') return 'bg-blue-50 border-blue-200 text-blue-700';
+    if (type === 'BANK') return 'bg-indigo-50 border-indigo-200 text-indigo-700';
+    return 'bg-gray-50 border-gray-200 text-gray-700';
+  };
+
+  // ── "Direct Action Success" screen ──────────────────────────────────────────
+  if (confirmedSale) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center px-4">
+        <CheckCircle className="w-16 h-16 text-emerald-500 mb-3" />
+        <h2 className="text-xl font-black text-gray-800">Sale Confirmed!</h2>
+        <p className="text-gray-500 mt-1 text-sm tracking-tight">Receipt <strong>{confirmedSale.receipt_number}</strong> generated.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+          <button onClick={() => { setConfirmedSale(null); setCart([]); setPatientId(''); setCartDiscount(''); setCartDiscountValue(''); setPrescriptionUrl(null); fetchData(); }} className="w-full justify-center bg-gray-100 text-gray-600 px-6 py-2.5 rounded-xl font-black text-xs hover:bg-gray-200 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Sale
+          </button>
+          <button onClick={() => setShowAttachment(true)} className="w-full justify-center bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2">
+            <Printer className="w-4 h-4" /> Print Receipt
+          </button>
+        </div>
+        <AttachmentModal isOpen={showAttachment} onClose={() => setShowAttachment(false)} sale={confirmedSale} orgInfo={orgInfo} />
+      </div>
+    );
+  }
 
   // ── "Waiting for cashier" screen ──────────────────────────────────────────
   if (sentOrder) {
@@ -543,14 +635,35 @@ const PharmacistPOS = () => {
             </div>
           </div>
 
-          <button
-            disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl) || isDiscountExceeding}
-            onClick={handleSendToCashier}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-50 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none transition-all mt-1 flex items-center justify-center gap-2"
-          >
-            <Send className="w-3.5 h-3.5" />
-            {loading ? 'Sending…' : `Send to Cashier`}
-          </button>
+          <div className="flex gap-2.5 mt-1">
+            <button
+              disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl) || isDiscountExceeding}
+              onClick={handleSendToCashier}
+              className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-black text-xs shadow-lg shadow-indigo-50 hover:bg-indigo-700 hover:-translate-y-0.5 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5" />
+              {canCheckout ? 'Queue' : 'Send to Cashier'}
+            </button>
+            {canCheckout && (
+               <button
+                 disabled={cart.length === 0 || loading || (hasControlledItems && !prescriptionUrl) || isDiscountExceeding}
+                 onClick={() => {
+                    // pre-validate
+                    for (const item of cart) {
+                      const limit = item.max_qty ?? Infinity;
+                      if (item.quantity > limit) return toastError('Insufficient Stock', `Batch limit reached for ${item.name}`);
+                    }
+                    setSelectedAccount(null);
+                    setPaymentMode('CASH');
+                    setAmountPaid('');
+                    setShowDirectCheckoutModal(true);
+                 }}
+                 className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg font-black text-xs shadow-lg shadow-emerald-50 hover:bg-emerald-700 hover:-translate-y-0.5 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+               >
+                 <Wallet className="w-3.5 h-3.5" /> Direct Checkout
+               </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -638,6 +751,87 @@ const PharmacistPOS = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Direct Checkout Modal */}
+      <Modal isOpen={showDirectCheckoutModal} onClose={() => setShowDirectCheckoutModal(false)} title={`Direct Checkout`}>
+        <div className="space-y-3.5">
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div className="flex justify-between font-black text-base">
+              <span className="text-black text-[11px] tracking-widest self-center uppercase">Total Due</span>
+              <span className="text-indigo-700">ETB {Number(total || 0).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex bg-gray-100 p-1 rounded-lg mb-3.5 text-[10px] font-black uppercase tracking-tight">
+              <button onClick={() => setPaymentMode('CASH')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'CASH' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Full Cash</button>
+              <button onClick={() => setPaymentMode('CREDIT')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'CREDIT' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Full Credit</button>
+              <button onClick={() => setPaymentMode('SPLIT')} className={`flex-1 py-1.5 rounded-md transition-all ${paymentMode === 'SPLIT' ? 'bg-white shadow-sm text-gray-900 border border-gray-50' : 'text-gray-500 hover:text-gray-700'}`}>Split Payment</button>
+            </div>
+
+            {paymentMode !== 'CASH' && !patientId && (
+              <div className="bg-rose-50 text-rose-600 border border-rose-100 p-2.5 rounded-lg text-[10px] font-black tracking-tight mb-3.5 flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> Cannot issue credit: No patient attached to cart.
+              </div>
+            )}
+
+            {paymentMode === 'SPLIT' && (
+              <div className="mb-3.5">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Upfront Amount Paid (ETB)</label>
+                <input type="number" step="0.01" min="0" max={total} value={amountPaid} onChange={e => setAmountPaid(e.target.value ? Number(e.target.value) : '')} className="w-full text-base font-black text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-50 transition-all outline-none" placeholder="0.00" />
+                {amountPaid && amountPaid > 0 && amountPaid < total && (
+                  <p className="text-[9px] font-black text-indigo-500 ml-1 mt-1 uppercase tracking-tight">Remaining ETB {(total - (amountPaid as number)).toFixed(2)} will be credited.</p>
+                )}
+              </div>
+            )}
+
+            {paymentMode !== 'CREDIT' && (
+              <>
+                <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-2 ml-1">Select Payment Account</p>
+                {paymentAccounts.length === 0 ? (
+                  <div className="text-center py-5 text-gray-400 text-[11px] font-bold italic border border-dashed rounded-lg bg-gray-50">
+                    No payment accounts defined.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                    {paymentAccounts.map(acc => (
+                      <button key={acc.id} onClick={() => setSelectedAccount(acc)}
+                        className={`w-full text-left p-2 rounded-lg border-2 transition-all flex items-center gap-2.5 ${selectedAccount?.id === acc.id ? 'border-indigo-500 bg-indigo-50' : `${accountTypeColor(acc.type)} hover:border-indigo-200`}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${selectedAccount?.id === acc.id ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-100 shadow-sm'}`}>
+                          <div className="scale-75">{accountTypeIcon(acc.type)}</div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-gray-900 text-xs truncate leading-tight">{acc.name}</p>
+                          {acc.account_number && <p className="text-[10px] font-bold text-gray-400 truncate tracking-tight">{acc.account_number}</p>}
+                        </div>
+                        {selectedAccount?.id === acc.id && <CheckCircle className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-1.5">
+            <button onClick={() => setShowDirectCheckoutModal(false)} className="flex-1 py-2.5 bg-gray-50 text-gray-500 font-bold rounded-lg border border-gray-100 hover:bg-gray-100 transition-all text-xs uppercase tracking-widest">Cancel</button>
+            <button
+              disabled={
+                loading ||
+                (paymentMode !== 'CREDIT' && !selectedAccount) ||
+                (paymentMode !== 'CASH' && !patientId) ||
+                (paymentMode === 'SPLIT' && (!amountPaid || amountPaid <= 0 || amountPaid >= total))
+              }
+              onClick={handleDirectCheckoutConfirm}
+              className="flex-1 py-2.5 bg-emerald-600 text-white font-black rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-50 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest active:scale-95"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {loading ? 'Completing…' : 'Complete Sale'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 };

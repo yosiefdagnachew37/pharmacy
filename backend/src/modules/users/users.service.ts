@@ -16,7 +16,7 @@ export class UsersService {
     ) { }
 
     async create(createUserDto: CreateUserDto): Promise<User> {
-        const { username, password, role, manager_pin, organization_id } = createUserDto;
+        const { username, password, role, manager_pin, organization_id, can_checkout } = createUserDto;
 
         const existingUser = await this.usersRepository.findOne({ 
             where: { username, organization_id } 
@@ -34,6 +34,7 @@ export class UsersService {
             role,
             manager_pin,
             organization_id,
+            can_checkout: can_checkout ?? false,
         });
 
         return this.usersRepository.save(user);
