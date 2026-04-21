@@ -537,7 +537,8 @@ const Batches = () => {
                   <div
                     key={med.id}
                     className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-indigo-50 transition-colors border-b border-gray-50 last:border-0"
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent input from losing focus immediately
                       setFormData({ ...formData, medicine_id: med.id });
                       setMedicineSearch(med.name);
                       setMedicineDropdownOpen(false);
