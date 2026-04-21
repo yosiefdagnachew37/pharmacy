@@ -11,13 +11,13 @@ export class AuditController {
     constructor(private readonly auditService: AuditService) { }
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.AUDITOR)
+    @Roles(UserRole.ADMIN, UserRole.AUDITOR, UserRole.SUPER_ADMIN)
     findAll() {
         return this.auditService.findAll();
     }
 
     @Get('user/:userId')
-    @Roles(UserRole.ADMIN, UserRole.AUDITOR)
+    @Roles(UserRole.ADMIN, UserRole.AUDITOR, UserRole.SUPER_ADMIN)
     findByUser(@Param('userId') userId: string) {
         return this.auditService.findByUser(userId);
     }

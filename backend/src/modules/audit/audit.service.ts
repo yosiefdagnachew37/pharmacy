@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog, AuditAction } from './entities/audit-log.entity';
-import { getTenantId } from '../../common/utils/tenant-query';
+import { getTenantId, tenantStorage } from '../../common/utils/tenant-query';
 
 @Injectable()
 export class AuditService {
@@ -30,16 +30,22 @@ export class AuditService {
     }
 
     async findAll() {
+        const store = tenantStorage.getStore();
+        const whereClause = store?.isSuperAdmin ? {} : { organization_id: getTenantId() };
+        
         return await this.auditRepository.find({
-            where: { organization_id: getTenantId() },
+            where: whereClause,
             relations: ['user'],
             order: { created_at: 'DESC' },
         });
     }
 
     async findByUser(userId: string) {
+        const store = tenantStorage.getStore();
+        const whereClause = store?.isSuperAdmin ? { user_id: userId } : { user_id: userId, organization_id: getTenantId() };
+        
         return await this.auditRepository.find({
-            where: { user_id: userId, organization_id: getTenantId() },
+            where: whereClause,
             order: { created_at: 'DESC' },
         });
     }
