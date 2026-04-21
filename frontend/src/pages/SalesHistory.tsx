@@ -6,6 +6,7 @@ import ColumnFilter from '../components/ColumnFilter';
 import { toastSuccess, toastError } from '../components/Toast';
 import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
+import AttachmentModal from '../components/AttachmentModal';
 
 interface Sale {
     id: string;
@@ -34,6 +35,8 @@ const SalesHistory = () => {
     const [refundReason, setRefundReason] = useState('');
     const [refundItem, setRefundItem] = useState<{ medicine_id: string, name: string, quantity: number, price: number } | null>(null);
     const [exporting, setExporting] = useState(false);
+    const [showAttachment, setShowAttachment] = useState(false);
+    const [orgInfo, setOrgInfo] = useState<any>(null);
 
     // ─── Column Filters ──────────────────────────────────────────
     const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({
@@ -48,8 +51,12 @@ const SalesHistory = () => {
     const fetchSales = async () => {
         setLoading(true);
         try {
-            const response = await client.get('/sales');
-            setSales(response.data);
+            const [salesRes, orgRes] = await Promise.all([
+               client.get('/sales'),
+               client.get('/organizations/my-org').catch(() => ({ data: null }))
+            ]);
+            setSales(salesRes.data);
+            if (orgRes?.data) setOrgInfo(orgRes.data);
         } catch (error) {
             console.error('Error fetching sales:', error);
         } finally {
@@ -456,13 +463,28 @@ const SalesHistory = () => {
                             </div>
                         </div>
 
-                        <div className="pt-3 border-t border-dashed border-gray-200 flex justify-between items-center mt-auto">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Transaction</span>
-                            <span className="font-black text-indigo-600 text-lg tracking-tight">ETB {Number(selectedSale.total_amount).toFixed(2)}</span>
+                        <div className="pt-3 border-t border-dashed border-gray-200 flex flex-col sm:flex-row justify-between items-center mt-auto gap-3">
+                            <button
+                                onClick={() => setShowAttachment(true)}
+                                className="w-full sm:w-auto px-4 py-2 bg-indigo-50 text-indigo-700 font-black rounded-lg border border-indigo-100 hover:bg-indigo-100 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px] transition-all"
+                            >
+                                <Printer className="w-3.5 h-3.5" /> Generate Attachment
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Transaction</span>
+                                <span className="font-black text-indigo-600 text-lg tracking-tight">ETB {Number(selectedSale.total_amount).toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
                 )}
             </Modal>
+            
+            <AttachmentModal 
+                isOpen={showAttachment} 
+                onClose={() => setShowAttachment(false)} 
+                sale={selectedSale} 
+                orgInfo={orgInfo} 
+            />
 
             {/* Refund Processing Modal */}
             <Modal isOpen={isRefundModalOpen} onClose={() => setIsRefundModalOpen(false)} title="Process Return">

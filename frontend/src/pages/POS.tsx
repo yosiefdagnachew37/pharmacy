@@ -12,6 +12,7 @@ import { toastError, toastWarning, toastSuccess } from '../components/Toast';
 import { formatDate } from '../utils/dateUtils';
 import { extractErrorMessage } from '../utils/errorUtils';
 import { useAuth } from '../contexts/AuthContext';
+import AttachmentModal from '../components/AttachmentModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -655,15 +656,19 @@ const CashierPOS = () => {
   const [amountPaid, setAmountPaid] = useState<number | ''>('');
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmedSale, setConfirmedSale] = useState<any>(null);
+  const [showAttachment, setShowAttachment] = useState(false);
+  const [orgInfo, setOrgInfo] = useState<any>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
-      const [ordersRes, accountsRes] = await Promise.all([
+      const [ordersRes, accountsRes, orgRes] = await Promise.all([
         client.get('/sales/orders/pending'),
         client.get('/payment-accounts/active'),
+        client.get('/organizations/my-org').catch(() => ({ data: null })),
       ]);
       setPendingOrders(ordersRes.data || []);
       setPaymentAccounts(accountsRes.data || []);
+      if (orgRes?.data) setOrgInfo(orgRes.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }, []);
@@ -755,7 +760,21 @@ const CashierPOS = () => {
         <h2 className="text-xl font-black text-gray-800">Payment Confirmed!</h2>
         <p className="text-gray-500 mt-1 text-sm tracking-tight">Receipt <strong>{confirmedSale.receipt_number}</strong> generated.</p>
         <div className="mt-2 text-xs text-gray-400">Pharmacist notified to dispense medicine.</div>
-        <button onClick={() => setConfirmedSale(null)} className="mt-6 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Back to Queue</button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+          <button onClick={() => setConfirmedSale(null)} className="w-full justify-center bg-gray-100 text-gray-600 px-6 py-2.5 rounded-xl font-black text-xs hover:bg-gray-200 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" /> Back to Queue
+          </button>
+          <button onClick={() => setShowAttachment(true)} className="w-full justify-center bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2">
+            <Printer className="w-4 h-4" /> Generate Attachment
+          </button>
+        </div>
+
+        <AttachmentModal 
+          isOpen={showAttachment} 
+          onClose={() => setShowAttachment(false)} 
+          sale={confirmedSale} 
+          orgInfo={orgInfo} 
+        />
       </div>
     );
   }
