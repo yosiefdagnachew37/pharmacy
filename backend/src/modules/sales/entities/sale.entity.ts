@@ -54,6 +54,12 @@ export class Sale {
     @Column('jsonb', { nullable: true })
     split_payments: { method: PaymentMethod; amount: number }[];
 
+    @Column({ nullable: true })
+    payment_account_id: string;
+
+    @Column({ nullable: true })
+    payment_account_name: string;
+
     @ManyToOne(() => User)
     @JoinColumn({ name: 'created_by' })
     user: User;

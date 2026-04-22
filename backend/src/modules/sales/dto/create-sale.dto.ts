@@ -60,4 +60,12 @@ export class CreateSaleDto {
     @ValidateNested({ each: true })
     @Type(() => SplitPaymentDto)
     split_payments?: SplitPaymentDto[];
+
+    @IsString()
+    @IsOptional()
+    payment_account_id?: string;
+
+    @IsString()
+    @IsOptional()
+    payment_account_name?: string;
 }

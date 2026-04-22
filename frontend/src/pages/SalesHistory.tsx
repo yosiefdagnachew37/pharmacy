@@ -53,8 +53,8 @@ const SalesHistory = () => {
         setLoading(true);
         try {
             const [salesRes, orgRes] = await Promise.all([
-               client.get('/sales'),
-               client.get('/organizations/my-org').catch(() => ({ data: null }))
+                client.get('/sales'),
+                client.get('/organizations/my-org').catch(() => ({ data: null }))
             ]);
             setSales(salesRes.data);
             if (orgRes?.data) setOrgInfo(orgRes.data);
@@ -318,7 +318,7 @@ const SalesHistory = () => {
                         </tbody>
                     </table>
                 </div>
-                
+
                 {/* Mobile Card View */}
                 <div className="md:hidden p-3 space-y-2">
                     {loading ? (
@@ -376,28 +376,28 @@ const SalesHistory = () => {
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100 text-[11px]">
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Receipt #</p>
+                                <p className="text-gray-600 font-black uppercase tracking-widest mb-1 shadow-sm">Receipt #</p>
                                 <p className="font-mono font-black text-indigo-600 text-sm tracking-widest">{selectedSale.receipt_number}</p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Timestamp</p>
+                                <p className="text-gray-600 font-black uppercase tracking-widest mb-1 shadow-sm">Timestamp</p>
                                 <p className="font-bold text-gray-700">{formatDate(selectedSale.created_at)} <span className="text-gray-400 px-1">·</span> {new Date(selectedSale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Served By (Staff)</p>
+                                <p className="text-gray-600 font-black uppercase tracking-widest mb-1 shadow-sm">Served By (Staff)</p>
                                 <p className="font-bold text-gray-700 uppercase tracking-tighter flex items-center gap-1.5">
                                     <User className="w-3.5 h-3.5 text-gray-400" />
                                     {selectedSale.user?.name || selectedSale.user?.username || 'System'}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Patient / Customer</p>
+                                <p className="text-gray-600 font-black uppercase tracking-widest mb-1 shadow-sm">Patient / Customer</p>
                                 <p className="font-bold text-gray-700 uppercase tracking-tighter bg-white inline-flex px-2 py-0.5 rounded border border-gray-100">
                                     {selectedSale.patient?.name || 'Walk-in'}
                                 </p>
                             </div>
                             <div className="col-span-2 pt-2 border-t border-dashed border-gray-200">
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1">Payment Method & Source</p>
+                                <p className="text-gray-700 font-black uppercase tracking-widest mb-1">Payment Method & Source</p>
                                 <p className="font-black text-indigo-600 uppercase tracking-widest text-xs flex flex-wrap items-center gap-1.5">
                                     <span className="bg-indigo-50 px-2 py-0.5 rounded text-indigo-700 border border-indigo-100">{selectedSale.payment_method}</span>
                                     {selectedSale.payment_method === 'SPLIT' && selectedSale.split_payments ? (
@@ -416,7 +416,7 @@ const SalesHistory = () => {
                         </div>
 
                         {selectedSale.prescription_image_url && (
-                             <div className="space-y-2">
+                            <div className="space-y-2">
                                 <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-2">
                                     <ImageIcon className="w-3 h-3" /> Prescription Attached
                                 </h3>
@@ -439,7 +439,7 @@ const SalesHistory = () => {
                         )}
 
                         <div className="space-y-2">
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Line Items</h3>
+                            <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-widest px-1">Line Items</h3>
                             <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl bg-white overflow-hidden">
                                 {selectedSale.items?.map((item, idx) => (
                                     <div key={idx} className="p-2.5 flex justify-between items-center">
@@ -455,21 +455,20 @@ const SalesHistory = () => {
                                                 <div className="flex flex-col items-end">
                                                     <button
                                                         onClick={() => {
-                                                            const hasUnpaidCredit = (selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
-                                                                                   selectedSale.credit_records?.some(cr => cr.status !== 'PAID');
-                                                            
+                                                            const hasUnpaidCredit = (selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) &&
+                                                                selectedSale.credit_records?.some(cr => cr.status !== 'PAID');
+
                                                             if (hasUnpaidCredit) {
                                                                 toastError('Refund Restricted', 'Awaiting credit payment.');
                                                                 return;
                                                             }
                                                             handleOpenRefund(selectedSale, item);
                                                         }}
-                                                        className={`p-1.5 rounded-lg transition-all ${
-                                                            ((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) && 
-                                                             selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
-                                                            ? 'text-gray-200 cursor-not-allowed' 
+                                                        className={`p-1.5 rounded-lg transition-all ${((selectedSale.payment_method === 'CREDIT' || selectedSale.split_payments?.some(p => p.method === 'CREDIT')) &&
+                                                            selectedSale.credit_records?.some(cr => cr.status !== 'PAID'))
+                                                            ? 'text-gray-200 cursor-not-allowed'
                                                             : 'text-rose-400 hover:bg-rose-50'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <RotateCcw className="w-3.5 h-3.5" />
                                                     </button>
@@ -501,12 +500,12 @@ const SalesHistory = () => {
                     </div>
                 )}
             </Modal>
-            
-            <AttachmentModal 
-                isOpen={showAttachment} 
-                onClose={() => setShowAttachment(false)} 
-                sale={selectedSale} 
-                orgInfo={orgInfo} 
+
+            <AttachmentModal
+                isOpen={showAttachment}
+                onClose={() => setShowAttachment(false)}
+                sale={selectedSale}
+                orgInfo={orgInfo}
             />
 
             {/* Refund Processing Modal */}
