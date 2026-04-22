@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
-import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle, Edit2 } from 'lucide-react';
+import { Package, Plus, Calendar, AlertTriangle, Clock, Trash2, Search, Upload, CheckCircle2, Loader2, AlertCircle, Edit2, Eye, Building2, Receipt, FileText } from 'lucide-react';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
 import ColumnFilter from '../components/ColumnFilter';
@@ -28,6 +28,12 @@ interface Batch {
   selling_price: number;
   initial_quantity: number;
   quantity_remaining: number;
+  po_number?: string;
+  created_at: string;
+  supplier?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface ImportResult {
@@ -42,6 +48,7 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingBatch, setViewingBatch] = useState<Batch | null>(null);
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
     medicine_id: string;
@@ -392,6 +399,13 @@ const Batches = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button
+                          onClick={() => setViewingBatch(batch)}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleEdit(batch)}
                           className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Edit Batch"
@@ -478,6 +492,9 @@ const Batches = () => {
               </div>
 
               <div className="flex gap-2 pt-1 border-t border-gray-50">
+                <button onClick={() => setViewingBatch(batch)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-all">
+                  <Eye className="w-3.5 h-3.5" /> Details
+                </button>
                 <button onClick={() => handleEdit(batch)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-all">
                   <Edit2 className="w-3.5 h-3.5" /> Edit
                 </button>
@@ -690,6 +707,93 @@ const Batches = () => {
         title="Delete Batch"
         message="Are you sure you want to delete this batch? This action cannot be undone."
       />
+
+      {/* Batch Details Modal */}
+      <Modal
+        isOpen={!!viewingBatch}
+        onClose={() => setViewingBatch(null)}
+        title="Batch Traceability Details"
+      >
+        {viewingBatch && (
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-start gap-4">
+              <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                <Package className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">{viewingBatch.medicine?.name}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Batch Number:</span>
+                  <span className="text-sm font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{viewingBatch.batch_number}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  <Building2 className="w-3 h-3" /> Supplier
+                </div>
+                <p className="text-sm font-bold text-gray-800">{viewingBatch.supplier?.name || <span className="text-gray-400 italic">Not Specified</span>}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  <Calendar className="w-3 h-3" /> Receive / Purchase Date
+                </div>
+                <p className="text-sm font-bold text-gray-800">{formatDate(viewingBatch.created_at)}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  <Receipt className="w-3 h-3" /> Reference / PO Number
+                </div>
+                <p className="text-sm font-bold text-gray-800">{viewingBatch.po_number || <span className="text-gray-400 italic">Not Specified</span>}</p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  <Clock className="w-3 h-3" /> Expiry Date
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm font-bold ${isExpired(viewingBatch.expiry_date) ? 'text-red-600' : isExpiringSoon(viewingBatch.expiry_date) ? 'text-amber-600' : 'text-gray-800'}`}>
+                    {viewingBatch.expiry_date ? formatDate(viewingBatch.expiry_date) : <span className="text-gray-400 italic">Non-expirable</span>}
+                  </p>
+                  {isExpired(viewingBatch.expiry_date) && <span className="text-[9px] bg-red-100 text-red-600 px-1.5 rounded uppercase font-black tracking-wider">Expired</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Initial Qty</p>
+                <p className="text-lg font-black text-gray-700">{viewingBatch.initial_quantity}</p>
+              </div>
+              <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Remaining Qty</p>
+                <p className="text-lg font-black text-indigo-700">{viewingBatch.quantity_remaining}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Buy Price</p>
+                <p className="text-sm font-bold text-gray-700">ETB {Number(viewingBatch.purchase_price).toLocaleString()}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sell Price</p>
+                <p className="text-sm font-black text-gray-900">ETB {Number(viewingBatch.selling_price).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setViewingBatch(null)}
+                className="px-6 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-md active:scale-95"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

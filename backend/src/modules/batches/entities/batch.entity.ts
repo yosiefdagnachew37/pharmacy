@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, Index, DeleteDateColumn, Unique } from 'typeorm';
 import { Medicine } from '../../medicines/entities/medicine.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { Supplier } from '../../suppliers/entities/supplier.entity';
 
 @Entity('batches')
 export class Batch {
@@ -39,8 +40,15 @@ export class Batch {
     @Column({ default: false })
     is_quarantined: boolean; // Manual hold flag by pharmacist/admin
 
+    @ManyToOne(() => Supplier, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'supplier_id' })
+    supplier: Supplier;
+
     @Column({ nullable: true })
-    supplier_id: string; // FK to Supplier (Phase 2)
+    supplier_id: string; // FK to Supplier
+
+    @Column({ nullable: true })
+    po_number: string; // Traceability: Reference to the PO that created this batch
 
     @Column({ type: 'text', nullable: true })
     notes: string; // Batch-level notes

@@ -38,13 +38,14 @@ export class BatchesService {
     async findAll(): Promise<Batch[]> {
         return await this.batchesRepository.find({ 
             where: { organization_id: getTenantId() },
-            relations: ['medicine'] 
+            relations: ['medicine', 'supplier'] 
         });
     }
 
     async findByMedicine(medicineId: string): Promise<Batch[]> {
         return await this.batchesRepository
             .createQueryBuilder('b')
+            .leftJoinAndSelect('b.supplier', 'supplier')
             .where('b.medicine_id = :medicineId', { medicineId })
             .andWhere('b.organization_id = :orgId', { orgId: getTenantId() })
             .orderBy('CASE WHEN b.expiry_date IS NULL THEN 1 ELSE 0 END', 'ASC')
@@ -55,7 +56,7 @@ export class BatchesService {
     async findOne(id: string): Promise<Batch> {
         const batch = await this.batchesRepository.findOne({
             where: { id, organization_id: getTenantId() },
-            relations: ['medicine'],
+            relations: ['medicine', 'supplier'],
         });
         if (!batch) {
             throw new NotFoundException(`Batch with ID ${id} not found`);

@@ -187,6 +187,7 @@ export class PurchaseOrdersService {
                         initial_quantity: Number(item.quantity),
                         quantity_remaining: Number(item.quantity),
                         supplier_id: data.supplier_id,
+                        po_number: po.po_number,
                         organization_id,
                     }));
                 }
@@ -374,6 +375,7 @@ export class PurchaseOrdersService {
                             initial_quantity: item.quantity_received,
                             quantity_remaining: item.quantity_received,
                             supplier_id: po.supplier_id,
+                            po_number: po.po_number,
                             organization_id,
                         });
                         savedBatch = await manager.save(batch);
