@@ -227,6 +227,14 @@ const PurchaseManager = () => {
         }
     };
 
+    const handlePaymentMethodChange = (method: 'CASH' | 'SYSTEM_ACCOUNT' | 'CHEQUE') => {
+        setPaymentMethod(method);
+        setSelectedPaymentAccount('');
+        setChequeBank('');
+        setChequeNumber('');
+        setChequeDueDate('');
+    };
+
     const resetForm = () => {
         setSupplierId('');
         setNotes('');
@@ -500,8 +508,7 @@ const PurchaseManager = () => {
                                                 onClick={() => {
                                                     setSelectedPO(po);
                                                     setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
-                                                    setPaymentMethod('CASH');
-                                                    setSelectedPaymentAccount('');
+                                                    handlePaymentMethodChange('CASH');
                                                     setShowPaymentModal(true);
                                                 }}
                                                 className="mt-1.5 px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all font-bold text-[10px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
@@ -571,8 +578,7 @@ const PurchaseManager = () => {
                                 <button onClick={() => {
                                     setSelectedPO(po);
                                     setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
-                                    setPaymentMethod('CASH');
-                                    setSelectedPaymentAccount('');
+                                    handlePaymentMethodChange('CASH');
                                     setShowPaymentModal(true);
                                 }}
                                     className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
@@ -912,7 +918,7 @@ const PurchaseManager = () => {
                                                         {(['CASH', 'SYSTEM_ACCOUNT', 'CHEQUE'] as const).map((method) => (
                                                             <button
                                                                 key={method}
-                                                                onClick={() => setPaymentMethod(method)}
+                                                                onClick={() => handlePaymentMethodChange(method)}
                                                                 className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
                                                             >
                                                                 {method.replace('_', ' ')}
@@ -1165,7 +1171,7 @@ const PurchaseManager = () => {
                                         <button
                                             key={method}
                                             type="button"
-                                            onClick={() => setPaymentMethod(method)}
+                                            onClick={() => handlePaymentMethodChange(method)}
                                             className={`flex-1 whitespace-nowrap px-2.5 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
                                         >
                                             {method.replace('_', ' ')}
