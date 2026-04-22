@@ -13,6 +13,7 @@ interface Sale {
     receipt_number: string;
     total_amount: number;
     payment_method: string;
+    payment_account_name?: string;
     created_at: string;
     is_refunded: boolean;
     refund_amount: number;
@@ -373,22 +374,44 @@ const SalesHistory = () => {
             <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Transaction Details">
                 {selectedSale && (
                     <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100 text-[11px]">
+                        <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100 text-[11px]">
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Receipt</p>
-                                <p className="font-mono font-black text-indigo-600">{selectedSale.receipt_number}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Receipt #</p>
+                                <p className="font-mono font-black text-indigo-600 text-sm tracking-widest">{selectedSale.receipt_number}</p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Timestamp</p>
-                                <p className="font-bold text-gray-700">{formatDate(selectedSale.created_at)} · {new Date(selectedSale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Timestamp</p>
+                                <p className="font-bold text-gray-700">{formatDate(selectedSale.created_at)} <span className="text-gray-400 px-1">·</span> {new Date(selectedSale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Staff</p>
-                                <p className="font-bold text-gray-700 uppercase tracking-tighter">{selectedSale.user?.name || 'N/A'}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Served By (Staff)</p>
+                                <p className="font-bold text-gray-700 uppercase tracking-tighter flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-gray-400" />
+                                    {selectedSale.user?.name || selectedSale.user?.username || 'System'}
+                                </p>
                             </div>
                             <div>
-                                <p className="text-gray-400 font-black uppercase tracking-widest mb-0.5">Mode</p>
-                                <p className="font-black text-indigo-600 uppercase tracking-widest">{selectedSale.payment_method}</p>
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1 shadow-sm">Patient / Customer</p>
+                                <p className="font-bold text-gray-700 uppercase tracking-tighter bg-white inline-flex px-2 py-0.5 rounded border border-gray-100">
+                                    {selectedSale.patient?.name || 'Walk-in'}
+                                </p>
+                            </div>
+                            <div className="col-span-2 pt-2 border-t border-dashed border-gray-200">
+                                <p className="text-gray-400 font-black uppercase tracking-widest mb-1">Payment Method & Source</p>
+                                <p className="font-black text-indigo-600 uppercase tracking-widest text-xs flex flex-wrap items-center gap-1.5">
+                                    <span className="bg-indigo-50 px-2 py-0.5 rounded text-indigo-700 border border-indigo-100">{selectedSale.payment_method}</span>
+                                    {selectedSale.payment_method === 'SPLIT' && selectedSale.split_payments ? (
+                                        <span className="text-gray-500 font-bold tracking-tighter">
+                                            ({selectedSale.split_payments.map(p => `${p.method}: ETB ${p.amount}`).join(' + ')})
+                                        </span>
+                                    ) : (
+                                        selectedSale.payment_account_name && (
+                                            <span className="text-gray-500 font-bold tracking-tighter">
+                                                via <span className="text-gray-700">{selectedSale.payment_account_name}</span>
+                                            </span>
+                                        )
+                                    )}
+                                </p>
                             </div>
                         </div>
 
