@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
     Plus, Search, ShoppingBag, Eye, PackageCheck,
-    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign, History, Calendar
+    Building2, FileText, X, CheckCircle, Clock, AlertCircle, DollarSign, History, Calendar,
+    CheckSquare, AlertTriangle, Banknote
 } from 'lucide-react';
 import client from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -263,6 +264,7 @@ const PurchaseManager = () => {
             case 'PAID': return 'bg-emerald-100 text-emerald-700';
             case 'PARTIALLY_PAID': return 'bg-amber-100 text-amber-700';
             case 'UNPAID': return 'bg-rose-100 text-rose-700 shadow-sm';
+            case 'CHEQUE_ISSUED': return 'bg-orange-100 text-orange-700 border border-orange-200';
             default: return 'bg-gray-100 text-gray-500';
         }
     };
@@ -295,6 +297,28 @@ const PurchaseManager = () => {
 
     const updateFilter = (column: string, values: string[]) => {
         setColumnFilters(prev => ({ ...prev, [column]: values }));
+    };
+
+    const handleConfirmChequeClearance = async (po: any) => {
+        if (!window.confirm(`Confirm that the cheque for PO ${po.po_number} has been successfully cleared by the bank?`)) return;
+        try {
+            await client.post(`/purchase-orders/${po.id}/cheque-clear`);
+            fetchData();
+            toastSuccess('Cheque Cleared', `PO ${po.po_number} is now fully settled.`);
+        } catch (err: any) {
+            toastError('Error', extractErrorMessage(err, 'Failed to confirm cheque clearance.'));
+        }
+    };
+
+    const handleBounceCheque = async (po: any) => {
+        if (!window.confirm(`Mark the cheque for PO ${po.po_number} as BOUNCED? This will reset the payment status to UNPAID.`)) return;
+        try {
+            await client.post(`/purchase-orders/${po.id}/cheque-bounce`);
+            fetchData();
+            toastWarning('Cheque Bounced', `PO ${po.po_number} payment has been reset to UNPAID.`);
+        } catch (err: any) {
+            toastError('Error', extractErrorMessage(err, 'Failed to record cheque bounce.'));
+        }
     };
 
     const activeFilterCount = Object.values(columnFilters).reduce((sum, arr) => sum + (arr.length > 0 ? 1 : 0), 0);
@@ -419,8 +443,17 @@ const PurchaseManager = () => {
                                     <td className="px-4 py-2.5">
                                         <div className="flex flex-col items-start gap-1">
                                             <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md ${getPaymentStatusBadge(po.payment_status)}`}>
-                                                {po.payment_status || 'UNPAID'}
+                                                {po.payment_status === 'CHEQUE_ISSUED' ? '🏦 CHEQUE ISSUED' : (po.payment_status || 'UNPAID')}
                                             </span>
+                                            {po.payment_status === 'CHEQUE_ISSUED' && po.cheque_due_date && (() => {
+                                                const diff = new Date(po.cheque_due_date).getTime() - new Date().setHours(0,0,0,0);
+                                                const days = Math.ceil(diff / (1000*60*60*24));
+                                                return (
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${days <= 0 ? 'bg-rose-100 text-rose-700' : days <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600'}`}>
+                                                        {days === 0 ? 'Due Today' : days < 0 ? `${Math.abs(days)}d Overdue` : `Due in ${days}d`}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
                                     </td>
                                     <td className="px-4 py-2.5">
@@ -444,7 +477,25 @@ const PurchaseManager = () => {
                                                 <Eye className="w-3 h-3" /> Details
                                             </button>
                                         )}
-                                        {po.payment_status !== 'PAID' && role === 'ADMIN' && (
+                                        {/* Post-dated cheque actions */}
+                                        {po.payment_status === 'CHEQUE_ISSUED' && po.cheque_status === 'PENDING' && role === 'ADMIN' && (
+                                            <div className="mt-1.5 flex flex-col gap-1">
+                                                <button
+                                                    onClick={() => handleConfirmChequeClearance(po)}
+                                                    className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all font-bold text-[10px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
+                                                >
+                                                    <CheckSquare className="w-2.5 h-2.5" /> Confirm Clearance
+                                                </button>
+                                                <button
+                                                    onClick={() => handleBounceCheque(po)}
+                                                    className="px-3 py-1.5 bg-rose-600 text-white hover:bg-rose-700 rounded-lg transition-all font-bold text-[10px] uppercase shadow-md active:scale-95 w-full flex items-center justify-center gap-1"
+                                                >
+                                                    <AlertTriangle className="w-2.5 h-2.5" /> Bounce
+                                                </button>
+                                            </div>
+                                        )}
+                                        {/* Standard deferred payment */}
+                                        {po.payment_status !== 'PAID' && po.payment_status !== 'CHEQUE_ISSUED' && role === 'ADMIN' && (
                                             <button
                                                 onClick={() => {
                                                     setSelectedPO(po);
@@ -505,22 +556,29 @@ const PurchaseManager = () => {
                                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
                                 <Eye className="w-3.5 h-3.5" /> Details
                             </button>
-                            {/* Hidden for now as per user request
-                            <button onClick={() => { setSelectedPO(po); setShowHistoryModal(true); }}
-                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-100 transition-colors">
-                                <History className="w-3.5 h-3.5" /> Receipts
-                            </button>
-                            */}
-                            <button onClick={() => {
-                                setSelectedPO(po);
-                                setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
-                                setPaymentMethod('CASH');
-                                setSelectedPaymentAccount('');
-                                setShowPaymentModal(true);
-                            }}
-                                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
-                                <DollarSign className="w-3.5 h-3.5" /> Process Payment
-                            </button>
+                            {po.payment_status === 'CHEQUE_ISSUED' && po.cheque_status === 'PENDING' && role === 'ADMIN' ? (
+                                <>
+                                    <button onClick={() => handleConfirmChequeClearance(po)}
+                                        className="flex items-center justify-center gap-1 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors">
+                                        <CheckSquare className="w-3.5 h-3.5" /> Cleared
+                                    </button>
+                                    <button onClick={() => handleBounceCheque(po)}
+                                        className="col-span-2 flex items-center justify-center gap-1 px-3 py-2 bg-rose-100 text-rose-700 rounded-xl text-xs font-bold hover:bg-rose-200 transition-colors">
+                                        <AlertTriangle className="w-3.5 h-3.5" /> Bounce Cheque
+                                    </button>
+                                </>
+                            ) : po.payment_status !== 'PAID' && po.payment_status !== 'CHEQUE_ISSUED' && role === 'ADMIN' ? (
+                                <button onClick={() => {
+                                    setSelectedPO(po);
+                                    setPaymentAmount(Number(po.total_amount) - Number(po.total_paid || 0));
+                                    setPaymentMethod('CASH');
+                                    setSelectedPaymentAccount('');
+                                    setShowPaymentModal(true);
+                                }}
+                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                    <DollarSign className="w-3.5 h-3.5" /> Process Payment
+                                </button>
+                            ) : null}
                             {(po.status === 'DRAFT' || po.status === 'SENT') && (role === 'ADMIN' || role === 'PHARMACIST') && (
                                 <button onClick={() => handleUpdateStatus(po.id, 'PENDING_PAYMENT')}
                                     className="col-span-2 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all">
@@ -862,9 +920,15 @@ const PurchaseManager = () => {
                                                         ))}
                                                     </div>
 
-                                                    {paymentMethod !== 'SYSTEM_ACCOUNT' && (
+                                                    {paymentMethod === 'CASH' && (
                                                         <p className="text-[10px] bg-amber-50 text-amber-700 p-2 rounded-lg border border-amber-100 font-bold">
-                                                            Note: {paymentMethod === 'CASH' ? 'Cash' : 'Cheque'} payment will be recorded as a manual reference note.
+                                                            Note: Cash payment will be recorded as a manual reference note outside system accounts.
+                                                        </p>
+                                                    )}
+                                                    {paymentMethod === 'CHEQUE' && (
+                                                        <p className="text-[10px] bg-orange-50 text-orange-700 p-2 rounded-lg border border-orange-100 font-bold flex items-start gap-1.5">
+                                                            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                                            <span>Set a <strong>future due date</strong> below to issue a post-dated cheque (tracked as pending until cleared). Leave the date empty or use today for immediate settlement.</span>
                                                         </p>
                                                     )}
 
@@ -896,13 +960,24 @@ const PurchaseManager = () => {
                                                                 className="px-5 py-4 bg-white rounded-2xl border border-gray-100 outline-none text-sm font-bold"
                                                             />
                                                             <div className="col-span-2">
-                                                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Due Date</label>
+                                                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Cheque Clearance / Due Date</label>
                                                                 <input
                                                                     type="date"
                                                                     value={chequeDueDate}
                                                                     onChange={e => setChequeDueDate(e.target.value)}
                                                                     className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-100 outline-none text-sm font-bold"
                                                                 />
+                                                                {chequeDueDate && new Date(chequeDueDate) > new Date(new Date().setHours(0,0,0,0)) ? (
+                                                                    <p className="text-[9px] text-orange-600 font-black mt-1.5 px-1 flex items-center gap-1">
+                                                                        <AlertTriangle className="w-3 h-3" /> POST-DATED CHEQUE &mdash; Will be tracked as pending until you confirm clearance on the due date.
+                                                                    </p>
+                                                                ) : chequeDueDate ? (
+                                                                    <p className="text-[9px] text-emerald-600 font-black mt-1.5 px-1 flex items-center gap-1">
+                                                                        <CheckSquare className="w-3 h-3" /> IMMEDIATE CHEQUE &mdash; Purchase will be marked as paid now.
+                                                                    </p>
+                                                                ) : (
+                                                                    <p className="text-[9px] text-gray-400 font-bold mt-1.5 px-1">Leave empty for immediate settlement, or set a future date for a post-dated cheque.</p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
@@ -1202,7 +1277,62 @@ const PurchaseManager = () => {
                             </button>
                         </div>
 
-                        {selectedPO.payment_status !== 'PAID' && selectedPO.payment_due_date && (
+                        {/* Cheque Tracking Card (shown for post-dated cheques) */}
+                        {selectedPO.payment_method === 'CHEQUE' && selectedPO.cheque_status && (
+                            <div className={`mb-3.5 p-3 rounded-xl border animate-in slide-in-from-top-4 duration-300 ${
+                                selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-50 border-emerald-200'
+                                : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-50 border-rose-200'
+                                : 'bg-orange-50 border-orange-200'
+                            }`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Banknote className={`w-4 h-4 ${
+                                            selectedPO.cheque_status === 'CLEARED' ? 'text-emerald-600'
+                                            : selectedPO.cheque_status === 'BOUNCED' ? 'text-rose-600'
+                                            : 'text-orange-600'
+                                        }`} />
+                                        <span className="text-xs font-black uppercase tracking-widest text-gray-700">Post-Dated Cheque</span>
+                                    </div>
+                                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${
+                                        selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-600 text-white'
+                                        : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-600 text-white'
+                                        : 'bg-orange-500 text-white'
+                                    }`}>
+                                        {selectedPO.cheque_status === 'CLEARED' ? '✅ CLEARED' : selectedPO.cheque_status === 'BOUNCED' ? '🚨 BOUNCED' : '🕐 PENDING'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                                    <div><p className="text-gray-400 font-black uppercase">Bank</p><p className="font-bold text-gray-800">{selectedPO.cheque_bank_name || '—'}</p></div>
+                                    <div><p className="text-gray-400 font-black uppercase">Cheque #</p><p className="font-bold text-gray-800 font-mono">{selectedPO.cheque_number || '—'}</p></div>
+                                    <div><p className="text-gray-400 font-black uppercase">Amount</p><p className="font-bold text-gray-800">ETB {Number(selectedPO.cheque_amount || selectedPO.total_amount).toLocaleString()}</p></div>
+                                    <div>
+                                        <p className="text-gray-400 font-black uppercase">Due Date</p>
+                                        <p className="font-bold text-gray-800">{selectedPO.cheque_due_date ? formatDate(selectedPO.cheque_due_date) : '—'}</p>
+                                        {selectedPO.cheque_due_date && selectedPO.cheque_status === 'PENDING' && (() => {
+                                            const diff = new Date(selectedPO.cheque_due_date).getTime() - new Date().setHours(0,0,0,0);
+                                            const days = Math.ceil(diff / (1000*60*60*24));
+                                            return <p className={`text-[9px] font-black mt-0.5 ${ days <= 0 ? 'text-rose-600' : days <= 3 ? 'text-orange-600' : 'text-blue-600' }`}>
+                                                {days === 0 ? 'Due Today' : days < 0 ? `${Math.abs(days)}d Overdue` : `${days}d remaining`}
+                                            </p>;
+                                        })()}
+                                    </div>
+                                </div>
+                                {selectedPO.cheque_status === 'PENDING' && role === 'ADMIN' && (
+                                    <div className="mt-3 flex gap-2">
+                                        <button onClick={() => { handleConfirmChequeClearance(selectedPO); setShowReceivedHistoryModal(false); }}
+                                            className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-1.5">
+                                            <CheckSquare className="w-3.5 h-3.5" /> Confirm Clearance
+                                        </button>
+                                        <button onClick={() => { handleBounceCheque(selectedPO); setShowReceivedHistoryModal(false); }}
+                                            className="flex-1 py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-black uppercase hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-1.5">
+                                            <AlertTriangle className="w-3.5 h-3.5" /> Bounce Cheque
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {selectedPO.payment_status !== 'PAID' && selectedPO.payment_status !== 'CHEQUE_ISSUED' && selectedPO.payment_due_date && (
                             <div className={`mb-3.5 p-2 rounded-xl flex items-center justify-between border animate-in slide-in-from-top-4 duration-300 ${new Date(selectedPO.payment_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
                                 ? 'bg-rose-50 border-rose-100 text-rose-700'
                                 : 'bg-indigo-50 border-indigo-100 text-indigo-700'

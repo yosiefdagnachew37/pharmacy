@@ -29,6 +29,13 @@ export enum POPaymentStatus {
     PENDING = 'PENDING',
     PARTIALLY_PAID = 'PARTIALLY_PAID',
     UNPAID = 'UNPAID',
+    CHEQUE_ISSUED = 'CHEQUE_ISSUED', // Post-dated cheque issued, pending clearance
+}
+
+export enum ChequeStatus {
+    PENDING = 'PENDING',   // Cheque issued, awaiting clearance date
+    CLEARED = 'CLEARED',  // Admin confirmed cheque was honoured
+    BOUNCED = 'BOUNCED',  // Cheque was returned/bounced
 }
 
 @Entity('purchase_orders')
@@ -133,6 +140,10 @@ export class PurchaseOrder {
 
     @Column('decimal', { precision: 12, scale: 2, nullable: true })
     cheque_amount: number;
+
+    // Tracks whether a post-dated cheque has been cleared, bounced, or is still pending
+    @Column({ type: 'enum', enum: ChequeStatus, nullable: true })
+    cheque_status: ChequeStatus | null;
 
     @OneToMany(() => PurchaseOrderItem, item => item.purchase_order, { cascade: false })
     items: PurchaseOrderItem[];

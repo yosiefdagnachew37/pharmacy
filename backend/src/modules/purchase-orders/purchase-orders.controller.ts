@@ -125,4 +125,34 @@ export class PurchaseOrdersController {
         });
         return result;
     }
+
+    @Post(':id/cheque-clear')
+    @Roles(UserRole.ADMIN)
+    async confirmChequeClearance(@Param('id') id: string, @Request() req: any) {
+        const result = await this.poService.confirmChequeClearance(id, req.user.userId);
+        await this.auditService.log({
+            user_id: req.user.userId,
+            action: AuditAction.PAYMENT,
+            entity: 'purchase_orders',
+            entity_id: id,
+            new_values: { cheque_status: 'CLEARED', payment_status: 'PAID' },
+            description: `Cheque cleared and confirmed for purchase order #${id}`,
+        });
+        return result;
+    }
+
+    @Post(':id/cheque-bounce')
+    @Roles(UserRole.ADMIN)
+    async bounceCheque(@Param('id') id: string, @Request() req: any) {
+        const result = await this.poService.bounceCheque(id, req.user.userId);
+        await this.auditService.log({
+            user_id: req.user.userId,
+            action: AuditAction.PAYMENT,
+            entity: 'purchase_orders',
+            entity_id: id,
+            new_values: { cheque_status: 'BOUNCED', payment_status: 'UNPAID' },
+            description: `Cheque bounced/returned for purchase order #${id} — payment reset to UNPAID`,
+        });
+        return result;
+    }
 }

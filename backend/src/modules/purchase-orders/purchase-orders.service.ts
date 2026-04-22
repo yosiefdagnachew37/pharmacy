@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PurchaseOrder, POStatus, POPaymentMethod, POPaymentStatus } from './entities/purchase-order.entity';
+import { PurchaseOrder, POStatus, POPaymentMethod, POPaymentStatus, ChequeStatus } from './entities/purchase-order.entity';
 import { PurchaseOrderItem } from './entities/purchase-order-item.entity';
 import { GoodsReceipt } from './entities/goods-receipt.entity';
 import { Batch } from '../batches/entities/batch.entity';
@@ -112,6 +112,11 @@ export class PurchaseOrdersService {
                 totalAmount = itemsSubtotal + vatAmount;
             }
 
+            // 3. Determine cheque scenario
+            const isPostDatedCheque = data.payment_method === POPaymentMethod.CHEQUE
+                && !!data.cheque_due_date
+                && new Date(data.cheque_due_date) > new Date(new Date().setHours(0, 0, 0, 0));
+
             // 3. Create PO
             const po = manager.create(PurchaseOrder, {
                 po_number: poNumber,
@@ -123,12 +128,15 @@ export class PurchaseOrdersService {
                 is_vat_inclusive: data.is_vat_inclusive || false,
                 total_amount: totalAmount,
                 notes: data.notes,
-                status: POStatus.REGISTERED, // Simplified workflow
+                status: POStatus.REGISTERED,
                 payment_method: data.payment_method || POPaymentMethod.CASH,
-                payment_status: POPaymentStatus.UNPAID,
+                // Post-dated cheque: mark as CHEQUE_ISSUED (liability, not settled)
+                payment_status: isPostDatedCheque ? POPaymentStatus.CHEQUE_ISSUED : POPaymentStatus.UNPAID,
                 cheque_bank_name: data.cheque_bank_name,
                 cheque_number: data.cheque_number,
                 cheque_due_date: data.cheque_due_date ? new Date(data.cheque_due_date) : undefined,
+                cheque_status: isPostDatedCheque ? ChequeStatus.PENDING : null,
+                cheque_amount: isPostDatedCheque ? totalAmount : undefined,
                 payment_due_date: data.payment_due_date ? new Date(data.payment_due_date) : undefined,
                 created_by: userId,
                 organization_id,
@@ -196,7 +204,9 @@ export class PurchaseOrdersService {
             }
 
             // 5. Atomic Payment Handling (optional)
-            if (data.amount_paid_now && data.amount_paid_now > 0) {
+            // If post-dated cheque was issued during registration, we already set CHEQUE_ISSUED above.
+            // Only process immediate payments (non post-dated cheques) here.
+            if (data.amount_paid_now && data.amount_paid_now > 0 && !isPostDatedCheque) {
                 const amount = Number(data.amount_paid_now);
                 savedPO.total_paid = amount;
                 
@@ -234,6 +244,10 @@ export class PurchaseOrdersService {
                 } else {
                     savedPO.payment_status = POPaymentStatus.PARTIALLY_PAID;
                 }
+                await manager.save(savedPO);
+            } else if (isPostDatedCheque) {
+                // Post-dated cheque: record the cheque amount as "pledged" but not yet cleared
+                savedPO.cheque_amount = totalAmount;
                 await manager.save(savedPO);
             }
 
@@ -475,48 +489,75 @@ export class PurchaseOrdersService {
         const organization_id = getTenantId();
         today.setHours(0, 0, 0, 0);
 
+        // Fetch POs that are either unpaid/partially-paid with a due date,
+        // OR have a pending cheque (CHEQUE_ISSUED status) — these need clearance reminders.
         const unpaidPOs = await this.poRepo
             .createQueryBuilder('po')
             .leftJoinAndSelect('po.supplier', 'supplier')
             .where('po.organization_id = :organization_id', { organization_id })
             .andWhere('po.status NOT IN (:...exclude)', { exclude: [POStatus.CANCELLED] })
-            .andWhere('po.payment_status != :paid', { paid: POPaymentStatus.PAID })
-            .andWhere('(po.cheque_due_date IS NOT NULL OR po.payment_due_date IS NOT NULL)')
+            .andWhere(
+                '(po.payment_status IN (:...unpaidStatuses) AND (po.cheque_due_date IS NOT NULL OR po.payment_due_date IS NOT NULL))',
+                { unpaidStatuses: [POPaymentStatus.UNPAID, POPaymentStatus.PARTIALLY_PAID, POPaymentStatus.CHEQUE_ISSUED] }
+            )
             .getMany();
 
         let alertsCreated = 0;
 
         for (const po of unpaidPOs) {
-            const dueDateRaw = po.payment_due_date || po.cheque_due_date;
+            const isCheque = po.payment_method === POPaymentMethod.CHEQUE;
+            const isPostDatedCheque = po.payment_status === POPaymentStatus.CHEQUE_ISSUED;
+
+            // For post-dated cheques: use cheque_due_date; for deferred payments: use payment_due_date
+            const dueDateRaw = isPostDatedCheque ? po.cheque_due_date : (po.payment_due_date || po.cheque_due_date);
             if (!dueDateRaw) continue;
 
             const dueDate = new Date(dueDateRaw);
             dueDate.setHours(0, 0, 0, 0);
             const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-            let alertMessage: string | null = null;
-            const isCheque = po.payment_method === POPaymentMethod.CHEQUE;
-            const itemType = isCheque ? 'Cheque' : 'Payment';
+            // Reminder days: 7, 6, 5, 4, 3, 2 days before, and on the due date (0)
+            const REMINDER_DAYS = [7, 6, 5, 4, 3, 2, 0];
+            if (!REMINDER_DAYS.includes(daysUntilDue) && daysUntilDue >= 0) continue;
 
-            if (daysUntilDue === 7) {
-                alertMessage = `⚠️ ${itemType} Due in 7 Days: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
-            } else if (daysUntilDue === 3) {
-                alertMessage = `🔔 ${itemType} Due in 3 Days: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Due: ${dueDate.toLocaleDateString()}`;
-            } else if (daysUntilDue === 0) {
-                alertMessage = `🚨 ${itemType} DUE TODAY: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${po.total_amount}. Action required!`;
-            } else if (daysUntilDue < 0) {
-                alertMessage = `🚨 OVERDUE ${itemType}: PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, was due ${dueDate.toLocaleDateString()}. ETB ${po.total_amount}`;
+            let alertMessage: string | null = null;
+            let alertTitle: string;
+
+            if (isPostDatedCheque) {
+                // Post-dated cheque reminders — focus on ensuring funds are available before clearance
+                if (daysUntilDue > 0) {
+                    alertTitle = `🔔 Cheque Clearance in ${daysUntilDue} Day${daysUntilDue > 1 ? 's' : ''}`;
+                    alertMessage = `Post-dated cheque for PO ${po.po_number} (Supplier: ${po.supplier?.name || 'N/A'}) is due for clearance in ${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''} on ${dueDate.toLocaleDateString()}. Cheque: ${po.cheque_bank_name || 'N/A'} #${po.cheque_number || 'N/A'}, Amount: ETB ${Number(po.cheque_amount || po.total_amount).toLocaleString()}. Ensure sufficient funds are available.`;
+                } else if (daysUntilDue === 0) {
+                    alertTitle = '🚨 Cheque Due TODAY — Confirm Clearance';
+                    alertMessage = `The post-dated cheque for PO ${po.po_number} (Supplier: ${po.supplier?.name || 'N/A'}) is due for clearance TODAY. Cheque: ${po.cheque_bank_name || 'N/A'} #${po.cheque_number || 'N/A'}, Amount: ETB ${Number(po.cheque_amount || po.total_amount).toLocaleString()}. Please confirm clearance or report a bounce in the system.`;
+                } else {
+                    alertTitle = '🚨 Overdue Cheque Clearance';
+                    alertMessage = `OVERDUE: Post-dated cheque for PO ${po.po_number} was due ${Math.abs(daysUntilDue)} day(s) ago. Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${Number(po.cheque_amount || po.total_amount).toLocaleString()}. Confirm clearance or bounce immediately.`;
+                }
+            } else {
+                // Regular deferred payment reminders
+                const itemType = isCheque ? 'Cheque Payment' : 'Payment';
+                if (daysUntilDue > 0) {
+                    alertTitle = `⚠️ ${itemType} Due in ${daysUntilDue} Day${daysUntilDue > 1 ? 's' : ''}`;
+                    alertMessage = `${itemType} for PO ${po.po_number} — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${Number(po.total_amount).toLocaleString()}. Due: ${dueDate.toLocaleDateString()}.`;
+                } else if (daysUntilDue === 0) {
+                    alertTitle = `🚨 ${itemType} DUE TODAY`;
+                    alertMessage = `${itemType} for PO ${po.po_number} is due TODAY — Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${Number(po.total_amount).toLocaleString()}. Action required!`;
+                } else {
+                    alertTitle = `🚨 OVERDUE ${itemType}`;
+                    alertMessage = `OVERDUE: ${itemType} for PO ${po.po_number} was due ${dueDate.toLocaleDateString()}. Supplier: ${po.supplier?.name || 'N/A'}, Amount: ETB ${Number(po.total_amount).toLocaleString()}.`;
+                }
             }
 
             if (alertMessage) {
                 console.log('[PAYMENT REMINDER]', alertMessage);
-                // Also create a system notification for the creator/admins
                 await this.notificationsService.create({
-                    title: `${itemType} Reminder`,
+                    title: alertTitle,
                     message: alertMessage,
                     type: NotificationType.PURCHASE_ORDER,
                     organization_id,
-                    user_id: po.created_by, // Send to the person who created the PO
+                    user_id: po.created_by,
                 }).catch(() => {});
                 alertsCreated++;
             }
@@ -582,17 +623,44 @@ export class PurchaseOrdersService {
                 po.cheque_number = data.cheque_number || null;
                 po.cheque_due_date = data.cheque_due_date ? new Date(data.cheque_due_date) : null;
                 po.payment_account_id = null;
+
+                // Determine if this is a post-dated cheque (future due date)
+                const isPostDated = !!data.cheque_due_date
+                    && new Date(data.cheque_due_date) > new Date(new Date().setHours(0, 0, 0, 0));
+
+                if (isPostDated) {
+                    // Post-dated: treat as a liability, not settled yet
+                    po.cheque_status = ChequeStatus.PENDING;
+                    po.cheque_amount = amount;
+                    po.total_paid = Number(po.total_paid) + amount;
+                    po.paid_by = cashierUserId;
+                    po.payment_method = data.payment_method;
+                    po.payment_status = POPaymentStatus.CHEQUE_ISSUED;
+                    await manager.save(po);
+
+                    if (po.created_by) {
+                        this.notificationsService.create({
+                            title: 'Post-Dated Cheque Issued',
+                            message: `A post-dated cheque of ETB ${amount.toLocaleString()} has been issued for PO ${po.po_number}. Cheque due: ${data.cheque_due_date}. Confirm clearance on or after that date.`,
+                            type: NotificationType.PURCHASE_ORDER,
+                            user_id: po.created_by,
+                            organization_id,
+                        }).catch(err => console.error('Cheque notification error:', err));
+                    }
+
+                    return po;
+                }
             } else {
                 // Physical Cash / Other - recorded as note if outside system accounts
                 po.notes = (po.notes ? po.notes + "\n" : "") + `Note: Post-registration ${data.payment_method} payment of ETB ${amount} recorded.`;
                 po.payment_account_id = null;
             }
 
-            // Update PO payment status
+            // Update PO payment status (for immediate/non-post-dated payments)
             po.total_paid = Number(po.total_paid) + amount;
             po.paid_by = cashierUserId;
             po.payment_method = data.payment_method;
-            
+
             if (po.total_paid >= po.total_amount) {
                 po.payment_status = POPaymentStatus.PAID;
                 if (po.status === POStatus.PENDING_PAYMENT || po.status === POStatus.REGISTERED) {
@@ -625,5 +693,61 @@ export class PurchaseOrdersService {
             relations: ['supplier', 'created_by_user'],
             order: { created_at: 'ASC' },
         });
+    }
+
+    // ─── Cheque Clearance ─────────────────────────────────────────────────
+    async confirmChequeClearance(poId: string, userId: string) {
+        const organization_id = getTenantId();
+        const po = await this.poRepo.findOne({ where: { id: poId, organization_id } });
+        if (!po) throw new NotFoundException('Purchase order not found');
+        if (po.cheque_status !== ChequeStatus.PENDING) {
+            throw new BadRequestException('This purchase order does not have a pending cheque to clear.');
+        }
+
+        po.cheque_status = ChequeStatus.CLEARED;
+        po.payment_status = POPaymentStatus.PAID;
+        if (po.status === POStatus.REGISTERED || po.status === POStatus.PENDING_PAYMENT) {
+            po.status = POStatus.CONFIRMED;
+        }
+        const saved = await this.poRepo.save(po);
+
+        if (po.created_by) {
+            this.notificationsService.create({
+                title: '✅ Cheque Cleared',
+                message: `Cheque for PO ${po.po_number} (ETB ${Number(po.cheque_amount || po.total_amount).toLocaleString()}) has been confirmed as cleared. Payment is now fully settled.`,
+                type: NotificationType.PURCHASE_ORDER,
+                user_id: po.created_by,
+                organization_id,
+            }).catch(() => {});
+        }
+
+        return saved;
+    }
+
+    async bounceCheque(poId: string, userId: string) {
+        const organization_id = getTenantId();
+        const po = await this.poRepo.findOne({ where: { id: poId, organization_id } });
+        if (!po) throw new NotFoundException('Purchase order not found');
+        if (po.cheque_status !== ChequeStatus.PENDING) {
+            throw new BadRequestException('This purchase order does not have a pending cheque.');
+        }
+
+        po.cheque_status = ChequeStatus.BOUNCED;
+        // Revert payment: cheque bounced means the amount was never collected
+        po.payment_status = POPaymentStatus.UNPAID;
+        po.total_paid = 0;
+        const saved = await this.poRepo.save(po);
+
+        if (po.created_by) {
+            this.notificationsService.create({
+                title: '🚨 Cheque Bounced',
+                message: `The cheque for PO ${po.po_number} has been returned/bounced. Payment status has been reset to UNPAID. Please arrange an alternative payment method.`,
+                type: NotificationType.PURCHASE_ORDER,
+                user_id: po.created_by,
+                organization_id,
+            }).catch(() => {});
+        }
+
+        return saved;
     }
 }
