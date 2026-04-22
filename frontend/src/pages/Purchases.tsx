@@ -446,8 +446,8 @@ const PurchaseManager = () => {
                                                 {po.payment_status === 'CHEQUE_ISSUED' ? '🏦 CHEQUE ISSUED' : (po.payment_status || 'UNPAID')}
                                             </span>
                                             {po.payment_status === 'CHEQUE_ISSUED' && po.cheque_due_date && (() => {
-                                                const diff = new Date(po.cheque_due_date).getTime() - new Date().setHours(0,0,0,0);
-                                                const days = Math.ceil(diff / (1000*60*60*24));
+                                                const diff = new Date(po.cheque_due_date).getTime() - new Date().setHours(0, 0, 0, 0);
+                                                const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
                                                 return (
                                                     <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${days <= 0 ? 'bg-rose-100 text-rose-700' : days <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-600'}`}>
                                                         {days === 0 ? 'Due Today' : days < 0 ? `${Math.abs(days)}d Overdue` : `Due in ${days}d`}
@@ -870,11 +870,11 @@ const PurchaseManager = () => {
                             </div>
 
                             {/* Summary & Payment Logic - Sticky Footer */}
-                            <div className="mt-2 pt-2 border-t-2 border-gray-100 bg-white z-20 sticky bottom-0">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                                    <div className="bg-gray-50 p-2 rounded-xl border border-gray-100 shadow-sm">
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex items-center gap-2">
+                            <div className="mt-1 pt-1 border-t border-gray-100 bg-white z-20 sticky bottom-0">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+                                    <div className="bg-gray-50 p-1.5 rounded-lg border border-gray-100 shadow-sm">
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex items-center gap-1.5">
                                                 <input
                                                     type="checkbox"
                                                     id="pay-now"
@@ -883,37 +883,37 @@ const PurchaseManager = () => {
                                                         setPayNow(e.target.checked);
                                                         if (e.target.checked) setAmountPaidNow(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate / 100) : 1));
                                                     }}
-                                                    className="w-5 h-5 text-indigo-600 rounded-lg cursor-pointer"
+                                                    className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
                                                 />
-                                                <label htmlFor="pay-now" className="text-xs font-black text-gray-900 cursor-pointer uppercase tracking-tight">Process Payment Now</label>
+                                                <label htmlFor="pay-now" className="text-[10px] font-black text-gray-900 cursor-pointer uppercase tracking-tight">Process Payment Now</label>
                                             </div>
 
                                             {!payNow && (
-                                                <div className="bg-white p-2 rounded-xl border border-indigo-100 shadow-sm animate-in zoom-in-95 duration-200">
-                                                    <label className="block text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                                <div className="bg-white p-1.5 rounded-lg border border-indigo-100 shadow-sm animate-in zoom-in-95 duration-200 flex flex-col gap-1">
+                                                    <label className="block text-[8px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
                                                         <Calendar className="w-2.5 h-2.5" /> SET DUE DATE *
                                                     </label>
                                                     <input
                                                         type="date"
                                                         value={paymentDueDate}
                                                         onChange={e => setPaymentDueDate(e.target.value)}
-                                                        className="w-full px-3 py-2 bg-indigo-50/30 rounded-lg border border-transparent focus:border-indigo-200 outline-none text-xs font-bold text-indigo-700"
+                                                        className="w-full px-2 py-1 bg-indigo-50/30 rounded border border-transparent focus:border-indigo-200 outline-none text-[10px] font-bold text-indigo-700"
                                                         required
                                                     />
-                                                    <p className="text-[9px] text-gray-400 mt-1 flex items-center gap-1.5 px-1 font-bold">
-                                                        <AlertCircle className="w-2.5 h-2.5" /> Notificaiton will be sent on this date.
+                                                    <p className="text-[8px] text-gray-400 flex items-center gap-1 px-1 font-bold">
+                                                        <AlertCircle className="w-2.5 h-2.5" /> Notification on this date.
                                                     </p>
                                                 </div>
                                             )}
 
                                             {payNow && (
-                                                <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-                                                    <div className="flex bg-white/50 p-1.5 rounded-2xl border border-gray-200/50 gap-1">
+                                                <div className="space-y-1.5 animate-in slide-in-from-top-4 duration-300">
+                                                    <div className="flex bg-white/50 p-0.5 rounded-lg border border-gray-200/50 gap-0.5">
                                                         {(['CASH', 'SYSTEM_ACCOUNT', 'CHEQUE'] as const).map((method) => (
                                                             <button
                                                                 key={method}
                                                                 onClick={() => setPaymentMethod(method)}
-                                                                className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
+                                                                className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase tracking-tight transition-all ${paymentMethod === method ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-white hover:text-gray-800'}`}
                                                             >
                                                                 {method.replace('_', ' ')}
                                                             </button>
@@ -921,14 +921,14 @@ const PurchaseManager = () => {
                                                     </div>
 
                                                     {paymentMethod === 'CASH' && (
-                                                        <p className="text-[10px] bg-amber-50 text-amber-700 p-2 rounded-lg border border-amber-100 font-bold">
-                                                            Note: Cash payment will be recorded as a manual reference note outside system accounts.
+                                                        <p className="text-[8px] bg-amber-50 text-amber-700 p-1.5 rounded border border-amber-100 font-bold leading-tight">
+                                                            Note: Cash payment recorded outside system accounts.
                                                         </p>
                                                     )}
                                                     {paymentMethod === 'CHEQUE' && (
-                                                        <p className="text-[10px] bg-orange-50 text-orange-700 p-2 rounded-lg border border-orange-100 font-bold flex items-start gap-1.5">
-                                                            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                                                            <span>Set a <strong>future due date</strong> below to issue a post-dated cheque (tracked as pending until cleared). Leave the date empty or use today for immediate settlement.</span>
+                                                        <p className="text-[8px] bg-orange-50 text-orange-700 p-1.5 rounded border border-orange-100 font-bold flex items-start gap-1 leading-tight">
+                                                            <AlertTriangle className="w-3 h-3 shrink-0" />
+                                                            <span>Future due date = Post-dated (pending). Blank/Today = Immediate settlement.</span>
                                                         </p>
                                                     )}
 
@@ -936,7 +936,7 @@ const PurchaseManager = () => {
                                                         <select
                                                             value={selectedPaymentAccount}
                                                             onChange={e => setSelectedPaymentAccount(e.target.value)}
-                                                            className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-100 shadow-sm outline-none text-base font-bold text-gray-800 focus:ring-4 focus:ring-indigo-100 transition-all"
+                                                            className="w-full px-2 py-1.5 bg-white rounded-lg border border-gray-100 shadow-sm outline-none text-[10px] font-bold text-gray-800 focus:ring-2 focus:ring-indigo-100 transition-all"
                                                         >
                                                             <option value="">-- Choose Account --</option>
                                                             {paymentAccounts.filter(p => p.is_active).map(acc => <option key={acc.id} value={acc.id}>{acc.name} (Bal: ETB {Number(acc.balance).toLocaleString()})</option>)}
@@ -944,53 +944,42 @@ const PurchaseManager = () => {
                                                     )}
 
                                                     {paymentMethod === 'CHEQUE' && (
-                                                        <div className="grid grid-cols-2 gap-3 animate-in fade-in duration-300">
+                                                        <div className="grid grid-cols-2 gap-1.5 animate-in fade-in duration-300">
                                                             <input
                                                                 type="text"
                                                                 placeholder="Bank Name"
                                                                 value={chequeBank}
                                                                 onChange={e => setChequeBank(e.target.value)}
-                                                                className="px-5 py-4 bg-white rounded-2xl border border-gray-100 outline-none text-sm font-bold"
+                                                                className="px-2 py-1.5 bg-white rounded-lg border border-gray-100 outline-none text-[10px] font-bold"
                                                             />
                                                             <input
                                                                 type="text"
                                                                 placeholder="Cheque Number"
                                                                 value={chequeNumber}
                                                                 onChange={e => setChequeNumber(e.target.value)}
-                                                                className="px-5 py-4 bg-white rounded-2xl border border-gray-100 outline-none text-sm font-bold"
+                                                                className="px-2 py-1.5 bg-white rounded-lg border border-gray-100 outline-none text-[10px] font-bold"
                                                             />
-                                                            <div className="col-span-2">
-                                                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Cheque Clearance / Due Date</label>
+                                                            <div className="col-span-2 flex items-center gap-1.5">
+                                                                <label className="text-[9px] font-black text-gray-400 uppercase w-16 shrink-0 leading-tight">Due Date</label>
                                                                 <input
                                                                     type="date"
                                                                     value={chequeDueDate}
                                                                     onChange={e => setChequeDueDate(e.target.value)}
-                                                                    className="w-full px-5 py-4 bg-white rounded-2xl border border-gray-100 outline-none text-sm font-bold"
+                                                                    className="w-full px-2 py-1 bg-white rounded-lg border border-gray-100 outline-none text-[10px] font-bold"
                                                                 />
-                                                                {chequeDueDate && new Date(chequeDueDate) > new Date(new Date().setHours(0,0,0,0)) ? (
-                                                                    <p className="text-[9px] text-orange-600 font-black mt-1.5 px-1 flex items-center gap-1">
-                                                                        <AlertTriangle className="w-3 h-3" /> POST-DATED CHEQUE &mdash; Will be tracked as pending until you confirm clearance on the due date.
-                                                                    </p>
-                                                                ) : chequeDueDate ? (
-                                                                    <p className="text-[9px] text-emerald-600 font-black mt-1.5 px-1 flex items-center gap-1">
-                                                                        <CheckSquare className="w-3 h-3" /> IMMEDIATE CHEQUE &mdash; Purchase will be marked as paid now.
-                                                                    </p>
-                                                                ) : (
-                                                                    <p className="text-[9px] text-gray-400 font-bold mt-1.5 px-1">Leave empty for immediate settlement, or set a future date for a post-dated cheque.</p>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
 
-                                                    <div className="relative">
-                                                        <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1">Settlement Amount (ETB)</label>
-                                                        <div className="relative flex items-center">
-                                                            <span className="absolute left-5 font-black text-gray-500 text-lg">ETB</span>
+                                                    <div className="relative flex items-center">
+                                                        <label className="text-[9px] font-black text-gray-400 uppercase w-16 shrink-0 leading-tight">Amount</label>
+                                                        <div className="relative flex items-center flex-1">
+                                                            <span className="absolute left-2 font-black text-gray-400 text-[10px]">ETB</span>
                                                             <input
                                                                 type="number"
                                                                 value={amountPaidNow}
                                                                 onChange={e => setAmountPaidNow(Number(e.target.value))}
-                                                                className="w-full pl-16 pr-5 py-3.5 bg-white rounded-2xl border-2 border-transparent focus:border-indigo-400 outline-none text-xl font-black text-indigo-700 shadow-xl shadow-indigo-100/20 transition-all"
+                                                                className="w-full pl-8 pr-2 py-1 bg-white rounded-lg border border-transparent focus:border-indigo-400 outline-none text-xs font-black text-indigo-700 shadow-sm transition-all"
                                                             />
                                                         </div>
                                                     </div>
@@ -999,33 +988,35 @@ const PurchaseManager = () => {
                                         </div>
                                     </div>
 
-                                    <div className="bg-white p-3 rounded-xl border-2 border-indigo-50 shadow-2xl shadow-indigo-100 flex flex-col gap-1">
-                                        <div className="flex justify-between items-center text-sm font-black text-gray-400 uppercase tracking-widest">
-                                            <span>Subtotal</span>
-                                            <span className="text-gray-900 border-b-2 border-indigo-50 pb-1">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        {isVatInclusive && (
-                                            <div className="flex justify-between items-center text-sm font-black text-indigo-400 uppercase tracking-widest">
-                                                <span>VAT ({vatRate}%)</span>
-                                                <span className="border-b-2 border-indigo-50 pb-1">ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                    <div className="bg-white p-2 rounded-lg border border-indigo-50 shadow-md flex flex-col justify-between">
+                                        <div className="space-y-0.5">
+                                            <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                <span>Subtotal</span>
+                                                <span className="text-gray-900 border-b border-indigo-50">ETB {orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                             </div>
-                                        )}
-                                        <div className="mt-4 flex flex-col sm:flex-row justify-between items-stretch sm:items-end border-t-2 border-gray-50 pt-4 gap-4">
+                                            {isVatInclusive && (
+                                                <div className="flex justify-between items-center text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                                                    <span>VAT ({vatRate}%)</span>
+                                                    <span className="border-b border-indigo-50">ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (vatRate / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="mt-1 flex flex-col sm:flex-row justify-between items-stretch sm:items-end border-t border-gray-50 pt-1.5 gap-2">
                                             <div className="flex flex-col">
-                                                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-1">Final Payable</p>
-                                                <p className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter">
+                                                <p className="text-[8px] font-black text-indigo-600 uppercase tracking-[0.2em]">Final Payable</p>
+                                                <p className="text-sm sm:text-base font-black text-gray-900 tracking-tighter">
                                                     ETB {(orderItems.reduce((s, i) => s + (i.quantity * i.unit_price), 0) * (isVatInclusive ? (1 + vatRate / 100) : 1)).toLocaleString(undefined, { minimumFractionDigits: 0 })}
                                                 </p>
                                             </div>
                                             <button
                                                 onClick={handleRegisterPurchase}
                                                 disabled={!supplierId || orderItems.some(i => !i.medicine_id)}
-                                                className={`px-6 py-4 rounded-2xl text-sm font-black text-white shadow-2xl transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-4 flex items-center justify-center gap-3 ${poModalTab === 'COSMETIC'
-                                                    ? 'bg-pink-600 hover:bg-pink-700 border-pink-900 shadow-pink-100'
-                                                    : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-950 shadow-indigo-100'
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black text-white shadow-sm transition-all active:scale-95 active:shadow-none disabled:opacity-20 disabled:grayscale border-b-2 flex items-center justify-center gap-1.5 ${poModalTab === 'COSMETIC'
+                                                    ? 'bg-pink-600 hover:bg-pink-700 border-pink-900'
+                                                    : 'bg-indigo-600 hover:bg-indigo-700 border-indigo-950'
                                                     }`}
                                             >
-                                                <PackageCheck className="w-5 h-5" /> REGISTER TO STOCK
+                                                <PackageCheck className="w-3.5 h-3.5" /> REGISTER TO STOCK
                                             </button>
                                         </div>
                                     </div>
@@ -1279,25 +1270,22 @@ const PurchaseManager = () => {
 
                         {/* Cheque Tracking Card (shown for post-dated cheques) */}
                         {selectedPO.payment_method === 'CHEQUE' && selectedPO.cheque_status && (
-                            <div className={`mb-3.5 p-3 rounded-xl border animate-in slide-in-from-top-4 duration-300 ${
-                                selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-50 border-emerald-200'
-                                : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-50 border-rose-200'
-                                : 'bg-orange-50 border-orange-200'
-                            }`}>
+                            <div className={`mb-3.5 p-3 rounded-xl border animate-in slide-in-from-top-4 duration-300 ${selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-50 border-emerald-200'
+                                    : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-50 border-rose-200'
+                                        : 'bg-orange-50 border-orange-200'
+                                }`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <Banknote className={`w-4 h-4 ${
-                                            selectedPO.cheque_status === 'CLEARED' ? 'text-emerald-600'
-                                            : selectedPO.cheque_status === 'BOUNCED' ? 'text-rose-600'
-                                            : 'text-orange-600'
-                                        }`} />
+                                        <Banknote className={`w-4 h-4 ${selectedPO.cheque_status === 'CLEARED' ? 'text-emerald-600'
+                                                : selectedPO.cheque_status === 'BOUNCED' ? 'text-rose-600'
+                                                    : 'text-orange-600'
+                                            }`} />
                                         <span className="text-xs font-black uppercase tracking-widest text-gray-700">Post-Dated Cheque</span>
                                     </div>
-                                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${
-                                        selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-600 text-white'
-                                        : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-600 text-white'
-                                        : 'bg-orange-500 text-white'
-                                    }`}>
+                                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${selectedPO.cheque_status === 'CLEARED' ? 'bg-emerald-600 text-white'
+                                            : selectedPO.cheque_status === 'BOUNCED' ? 'bg-rose-600 text-white'
+                                                : 'bg-orange-500 text-white'
+                                        }`}>
                                         {selectedPO.cheque_status === 'CLEARED' ? '✅ CLEARED' : selectedPO.cheque_status === 'BOUNCED' ? '🚨 BOUNCED' : '🕐 PENDING'}
                                     </span>
                                 </div>
@@ -1309,9 +1297,9 @@ const PurchaseManager = () => {
                                         <p className="text-gray-400 font-black uppercase">Due Date</p>
                                         <p className="font-bold text-gray-800">{selectedPO.cheque_due_date ? formatDate(selectedPO.cheque_due_date) : '—'}</p>
                                         {selectedPO.cheque_due_date && selectedPO.cheque_status === 'PENDING' && (() => {
-                                            const diff = new Date(selectedPO.cheque_due_date).getTime() - new Date().setHours(0,0,0,0);
-                                            const days = Math.ceil(diff / (1000*60*60*24));
-                                            return <p className={`text-[9px] font-black mt-0.5 ${ days <= 0 ? 'text-rose-600' : days <= 3 ? 'text-orange-600' : 'text-blue-600' }`}>
+                                            const diff = new Date(selectedPO.cheque_due_date).getTime() - new Date().setHours(0, 0, 0, 0);
+                                            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                                            return <p className={`text-[9px] font-black mt-0.5 ${days <= 0 ? 'text-rose-600' : days <= 3 ? 'text-orange-600' : 'text-blue-600'}`}>
                                                 {days === 0 ? 'Due Today' : days < 0 ? `${Math.abs(days)}d Overdue` : `${days}d remaining`}
                                             </p>;
                                         })()}
