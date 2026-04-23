@@ -176,6 +176,9 @@ export class PurchaseOrdersService {
                     existingBatch.quantity_remaining = Number(existingBatch.quantity_remaining) + Number(item.quantity);
                     if (Number(item.selling_price) > 0) existingBatch.selling_price = item.selling_price;
                     existingBatch.purchase_price = item.unit_price;
+                    // Backfill traceability fields if missing
+                    if (!existingBatch.supplier_id) existingBatch.supplier_id = data.supplier_id;
+                    if (!existingBatch.po_number) existingBatch.po_number = po.po_number;
                     savedBatch = await manager.save(existingBatch);
                 } else {
                     savedBatch = await manager.save(manager.create(Batch, {
@@ -363,6 +366,9 @@ export class PurchaseOrdersService {
                         }
                         // Update purchase price to latest
                         existingBatch.purchase_price = poItem.unit_price;
+                        // Backfill traceability fields if missing
+                        if (!existingBatch.supplier_id) existingBatch.supplier_id = po.supplier_id;
+                        if (!existingBatch.po_number) existingBatch.po_number = po.po_number;
                         savedBatch = await manager.save(existingBatch);
                     } else {
                         // Create new batch
