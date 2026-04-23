@@ -62,6 +62,44 @@ const fs = require('fs');
 
 const isDev = !app.isPackaged;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Preset Config Bootstrap
+// ─────────────────────────────────────────────────────────────────────────────
+// When the LAN Client installer bundles a preset-config.json in resources,
+// this function copies it to the user's AppData config.json on first launch.
+//
+// This means:
+//   Desktop installer  → no preset-config.json → config.json defaults to 'desktop'
+//   LAN Client installer → has preset-config.json → config.json = 'lan-client'
+//                          No manual file creation needed by the user!
+//
+// Called BEFORE app.whenReady() logic reads the config.
+function bootstrapPresetConfig() {
+    if (isDev) return; // No preset injection in dev mode
+
+    const userDataPath = app.getPath('userData');
+    const configPath = path.join(userDataPath, 'config.json');
+
+    // Only apply preset if user hasn't already configured a mode
+    if (fs.existsSync(configPath)) return;
+
+    // Look for bundled preset-config.json in app resources
+    const presetPath = path.join(process.resourcesPath, 'preset-config.json');
+    if (!fs.existsSync(presetPath)) return;
+
+    try {
+        // Ensure userData directory exists
+        if (!fs.existsSync(userDataPath)) {
+            fs.mkdirSync(userDataPath, { recursive: true });
+        }
+        fs.copyFileSync(presetPath, configPath);
+        console.log('[App] Preset config applied:', presetPath, '→', configPath);
+    } catch (e) {
+        console.warn('[App] Could not apply preset config:', e.message);
+    }
+}
+
+
 let mainWindow = null;
 let splashWindow = null;
 let backendProcess = null;
@@ -427,13 +465,43 @@ function createMainWindow(initialHash = '') {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+    // ── Step 0: Apply preset config if this is first launch (LAN client installer)
+    // Must happen BEFORE config.json is read below.
+    bootstrapPresetConfig();
+
     // In dev mode: Vite server + backend are started separately — just open the window
     if (isDev) {
         createMainWindow();
         return;
     }
 
-    // ── Packaged (offline) mode ──────────────────────────────────────────────
+    // ── Packaged mode: detect deployment mode from config.json ───────────────
+    // Default is 'desktop' (existing behaviour).
+    // If mode is 'lan-client', skip ALL local services and go straight to the app.
+    const configPath = path.join(app.getPath('userData'), 'config.json');
+    let deploymentMode = 'desktop';
+    if (fs.existsSync(configPath)) {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            deploymentMode = cfg.mode || 'desktop';
+        } catch (e) {
+            console.warn('[App] Failed to parse config.json — defaulting to desktop mode:', e.message);
+        }
+    }
+    console.log('[App] Deployment mode:', deploymentMode);
+
+    // ── LAN Client Mode ───────────────────────────────────────────────────────
+    // This PC connects to a remote LAN server — no local DB or backend needed.
+    // Open the main window directly; the React app handles the /lan-setup route.
+    if (deploymentMode === 'lan-client') {
+        console.log('[App] LAN Client mode — skipping local services, opening window.');
+        // Open at root; React's LicenseGate will skip license check (lan_server_url set).
+        // If the user has never configured the server, LanSetup page will be shown.
+        createMainWindow();
+        return;
+    }
+
+    // ── Desktop Mode (default) — EXISTING STARTUP SEQUENCE (unchanged) ────────
     createSplash();
 
     // 1. Check Node.js
@@ -477,8 +545,8 @@ app.whenReady().then(async () => {
         console.error('[App] Startup failed:', err);
         if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
 
-        const errorMessage = err 
-            ? (err.stack || err.message || JSON.stringify(err, null, 2)) 
+        const errorMessage = err
+            ? (err.stack || err.message || JSON.stringify(err, null, 2))
             : 'Unknown error occurred (undefined rejection)';
 
         dialog.showErrorBox(

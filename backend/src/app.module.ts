@@ -35,6 +35,9 @@ import { SubscriptionPlansModule } from './modules/subscription-plans/subscripti
 import { LicenseModule } from './common/security/license.module';
 import { LicenseMiddleware } from './common/middlewares/license.middleware';
 import { PaymentAccountsModule } from './modules/payment-accounts/payment-accounts.module';
+// ── LAN Mode (additive — no-op in SaaS/Desktop) ──
+import { DeploymentModule } from './deployment/deployment.module';
+import { LanAuthModule } from './deployment/lan/lan-auth.module';
 
 /**
  * Main application module entry point - v2.0
@@ -79,6 +82,9 @@ import { PaymentAccountsModule } from './modules/payment-accounts/payment-accoun
     SubscriptionPlansModule,
     LicenseModule,
     PaymentAccountsModule,
+    // LAN Mode — DeploymentModule is @Global(), LanAuthModule registers its own middleware
+    DeploymentModule,
+    LanAuthModule,
   ],
   controllers: [AppController],
   providers: [

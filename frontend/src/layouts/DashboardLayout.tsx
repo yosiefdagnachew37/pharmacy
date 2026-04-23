@@ -31,6 +31,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
+import LanConnectionStatus from '../components/LanConnectionStatus';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import Modal from '../components/Modal';
 import SubscriptionModal from '../components/SubscriptionModal';
@@ -361,6 +362,8 @@ const DashboardLayout = () => {
                       : user?.organizationName || 'Pharmacy'}
                   </div>
                 </div>
+
+                <LanConnectionStatus />
 
                 <NotificationBell />
 

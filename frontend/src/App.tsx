@@ -35,6 +35,7 @@ import TenantDetails from './pages/super-admin/TenantDetails';
 import MasterInventory from './pages/super-admin/MasterInventory';
 import LicenseGenerator from './pages/super-admin/LicenseGenerator';
 import LicenseLock from './pages/LicenseLock';
+import LanSetup from './pages/LanSetup';
 import Settings from './pages/Settings';
 // System page is shared between Admin (read-only backup) and SuperAdmin (full access)
 // System is already imported above
@@ -64,13 +65,18 @@ const Router = isElectron ? HashRouter : BrowserRouter;
  * giving us double protection; this gate handles refreshes and edge cases.
  */
 const LicenseGate = ({ children }: { children: React.ReactNode }) => {
-  // Web mode: no license gate needed
+  // LAN client mode: skip all license checks — auth is handled by LAN secret + user credentials
+  // The license gate is only relevant for the single-machine Desktop mode.
+  const isLanClientMode = isElectron && !!localStorage.getItem('lan_server_url');
+
+  // Web mode or LAN client mode: no license gate needed
   const [gateState, setGateState] = useState<'checking' | 'ok' | 'locked'>(
-    isElectron ? 'checking' : 'ok'
+    (isElectron && !isLanClientMode) ? 'checking' : 'ok'
   );
 
   useEffect(() => {
-    if (!isElectron) return;
+    // Skip license check for: web mode OR LAN client mode
+    if (!isElectron || isLanClientMode) return;
 
     let cancelled = false;
 
@@ -156,7 +162,8 @@ function App() {
         <LicenseGate>
           <ToastContainer />
           <OfflineBanner />
-        <Routes>
+          <Routes>
+          <Route path="/lan-setup" element={<LanSetup />} />
           <Route path="/license-lock" element={<LicenseLock />} />
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />

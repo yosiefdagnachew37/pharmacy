@@ -2,6 +2,7 @@
 node_modules
 dist
 dist-electron
+dist-electron-lan-client
 build
 coverage
 private.pem
@@ -11,8 +12,10 @@ license.key
 
 # Backend
 backend/dist
+backend/dist-protected
 backend/node_modules
 backend/.env
+backend/lan-server.env
 backend/coverage
 
 # Frontend (for later)

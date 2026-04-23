@@ -1,0 +1,53 @@
+{
+  "appId": "com.pharmacy.system.lan-client",
+  "productName": "PharmacySystemLanClient",
+  "electronVersion": "33.4.11",
+  "electronDist": "e:/Pharmacy_system/temp_cache/unpacked",
+
+  "asar": true,
+  "asarUnpack": [],
+
+  "directories": {
+    "output": "dist-electron-lan-client"
+  },
+
+  "files": [
+    "dist/**/*",
+    "electron-main.cjs",
+    "package.json",
+    "node_modules/**/*",
+    "!node_modules/@embedded-postgres/**/*",
+    "!node_modules/embedded-postgres/**/*",
+    "!node_modules/@embedded-postgres",
+    "!node_modules/embedded-postgres"
+  ],
+
+  "extraResources": [
+    {
+      "from": "preset-configs/lan-client.json",
+      "to": "preset-config.json"
+    }
+  ],
+
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "forceCodeSigning": false,
+    "artifactName": "${productName}-Setup-${version}.${ext}"
+  },
+
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Pharmacy System LAN Client",
+    "installerHeaderIcon": "dist/favicon.ico",
+    "deleteAppDataOnUninstall": false,
+    "installerSidebar": "dist/favicon.ico"
+  }
+}
