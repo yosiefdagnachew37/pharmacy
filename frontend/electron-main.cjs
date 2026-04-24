@@ -495,9 +495,10 @@ app.whenReady().then(async () => {
     // Open the main window directly; the React app handles the /lan-setup route.
     if (deploymentMode === 'lan-client') {
         console.log('[App] LAN Client mode — skipping local services, opening window.');
-        // Open at root; React's LicenseGate will skip license check (lan_server_url set).
-        // If the user has never configured the server, LanSetup page will be shown.
-        createMainWindow();
+        // Always open at #/lan-setup.
+        // If already configured, LanSetup.tsx will instantly redirect to #/login.
+        // This prevents the 1.5s network timeout and "SYSTEM OFFLINE" flash.
+        createMainWindow('#/lan-setup');
         return;
     }
 

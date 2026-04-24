@@ -49,14 +49,29 @@ const OfflineBanner = () => {
         <WifiOff className="w-5 h-5 mr-3" />
         <span className="font-bold text-sm tracking-wide">{message}</span>
       </div>
-      <button
-        onClick={checkConnection}
-        disabled={checking}
-        className="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest flex items-center transition-all"
-      >
-        {checking ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-        Reconnect Now
-      </button>
+      <div className="flex items-center gap-2">
+        {isLanClient && (
+          <button
+            onClick={() => {
+              localStorage.removeItem('lan_server_url');
+              localStorage.removeItem('lan_secret');
+              window.location.hash = '#/lan-setup';
+              setIsOffline(false);
+            }}
+            className="bg-yellow-500/20 hover:bg-yellow-500/40 border border-yellow-400/50 text-yellow-100 px-4 py-1 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center transition-all"
+          >
+            Reconfigure LAN
+          </button>
+        )}
+        <button
+          onClick={checkConnection}
+          disabled={checking}
+          className="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest flex items-center transition-all"
+        >
+          {checking ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+          Reconnect Now
+        </button>
+      </div>
     </div>
   );
 };
