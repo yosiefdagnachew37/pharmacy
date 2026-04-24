@@ -97,11 +97,11 @@ const Cosmetics = () => {
     const handleSubmit = async () => {
         if (!form.sku?.trim()) { toastError('Validation', 'Item ID (SKU) is required.'); return; }
         if (!form.name?.trim()) { toastError('Validation', 'Product name is required.'); return; }
-        
+
         setSubmitting(true);
         try {
             const payload: any = { ...form, product_type: 'COSMETIC' };
-            
+
             // Convert numeric fields if present
             if (payload.initial_quantity !== undefined && payload.initial_quantity !== '') payload.initial_quantity = Number(payload.initial_quantity);
             if (payload.purchase_price !== undefined && payload.purchase_price !== '') payload.purchase_price = Number(payload.purchase_price);
@@ -109,10 +109,10 @@ const Cosmetics = () => {
 
             // If it's a new item but no batch/stock info provided at all, clean up
             if (!editItem && !payload.batch_number && !payload.initial_quantity && !payload.selling_price) {
-                delete payload.batch_number; 
-                delete payload.expiry_date; 
+                delete payload.batch_number;
+                delete payload.expiry_date;
                 delete payload.purchase_price;
-                delete payload.selling_price; 
+                delete payload.selling_price;
                 delete payload.initial_quantity;
             } else if (!payload.expiry_date || payload.expiry_date === "") {
                 delete payload.expiry_date;
@@ -141,17 +141,17 @@ const Cosmetics = () => {
         formData.append('file', file);
         setImporting(true);
         try {
-          const response = await client.post('/medicines/import?product_type=COSMETIC', formData, {
-             headers: { 'Content-Type': 'multipart/form-data' },
-          });
-          setImportResult(response.data);
-          setIsImportModalOpen(true);
-          fetchData();
+            const response = await client.post('/medicines/import?product_type=COSMETIC', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            setImportResult(response.data);
+            setIsImportModalOpen(true);
+            fetchData();
         } catch (err: any) {
-          toastError('Import Failed', extractErrorMessage(err, 'Failed to import.'));
+            toastError('Import Failed', extractErrorMessage(err, 'Failed to import.'));
         } finally {
-          setImporting(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
+            setImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -297,7 +297,7 @@ const Cosmetics = () => {
 
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left">
-                         <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
+                        <thead className="bg-pink-50/60 text-gray-500 text-[11px] uppercase font-bold tracking-wider">
                             <tr>
                                 <ColumnFilter label="Item ID" options={uniqueSkus} selectedValues={columnFilters.sku} onFilterChange={vals => updateFilter('sku', vals)} className="px-5 py-3 text-left text-[10px]" />
                                 <ColumnFilter label="Product" options={uniqueNames} selectedValues={columnFilters.name} onFilterChange={vals => updateFilter('name', vals)} className="px-5 py-3 text-left text-[10px]" />
@@ -401,7 +401,7 @@ const Cosmetics = () => {
                         </tbody>
                     </table>
                 </div>
-                
+
                 {/* Mobile Card View */}
                 <div className="md:hidden p-4 space-y-3">
                     {loading ? (

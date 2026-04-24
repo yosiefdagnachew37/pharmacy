@@ -98,14 +98,35 @@ const LicenseGate = ({ children }: { children: React.ReactNode }) => {
         if (err.response?.status === 402) {
           window.location.hash = '#/license-lock';
           setGateState('locked');
-        } else if (attempt < 12) {
-          // Backend may still be starting — retry every 1.5 s (max ~18 s total)
-          setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1500);
         } else {
-          // Exhausted retries — assume unlicensed to be safe
-          console.warn('[LicenseGate] Backend unreachable after retries — showing lock screen');
-          window.location.hash = '#/license-lock';
-          setGateState('locked');
+          const hasLanConfig = !!localStorage.getItem('lan_server_url');
+          const isNetworkError = !err.response; // ECONNREFUSED, no server
+
+          // Fast LAN client detection:
+          // If we're in Electron, backend is not responding (network error),
+          // no LAN server is configured yet, and we've had at least 1 retry
+          // → this is almost certainly the LAN client installer on first launch.
+          // Redirect to /lan-setup immediately (takes ~1.5s instead of 18s).
+          if (isElectron && isNetworkError && !hasLanConfig && attempt >= 1) {
+            console.info('[LicenseGate] No local backend + no LAN config → redirecting to LAN setup');
+            window.location.hash = '#/lan-setup';
+            setGateState('ok');
+          } else if (attempt < 12) {
+            // Backend may still be starting (Desktop mode) — keep retrying
+            setTimeout(() => { if (!cancelled) check(attempt + 1); }, 1500);
+          } else {
+            // Exhausted retries
+            const hasLanConfig2 = !!localStorage.getItem('lan_server_url');
+            if (isElectron && !hasLanConfig2) {
+              console.info('[LicenseGate] Exhausted retries, no LAN config → LAN setup');
+              window.location.hash = '#/lan-setup';
+              setGateState('ok');
+            } else {
+              console.warn('[LicenseGate] Backend unreachable after retries — showing lock screen');
+              window.location.hash = '#/license-lock';
+              setGateState('locked');
+            }
+          }
         }
       }
     };
@@ -159,12 +180,17 @@ function App() {
     <ThemeProvider>
     <AuthProvider>
       <Router>
-        <LicenseGate>
-          <ToastContainer />
-          <OfflineBanner />
-          <Routes>
+        {/* /lan-setup is intentionally OUTSIDE LicenseGate — it must render
+            before any server URL is configured, so the hardware license check
+            must never block it. */}
+        <Routes>
           <Route path="/lan-setup" element={<LanSetup />} />
-          <Route path="/license-lock" element={<LicenseLock />} />
+          <Route path="/*" element={
+            <LicenseGate>
+              <ToastContainer />
+              <OfflineBanner />
+              <Routes>
+              <Route path="/license-lock" element={<LicenseLock />} />
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route
@@ -341,8 +367,10 @@ function App() {
           </Route>
 
           <Route path="/login" element={<Login />} />
+              </Routes>
+            </LicenseGate>
+          } />
         </Routes>
-        </LicenseGate>
       </Router>
     </AuthProvider>
     </ThemeProvider>

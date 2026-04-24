@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAN Setup Page
@@ -203,7 +203,19 @@ const LanSetup: React.FC = () => {
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // If already configured, skip the setup screen and go straight to login.
+  // This handles the case where the LAN client has been set up before — the
+  // electron-main.cjs always opens to #/lan-setup in lan-client mode, so we
+  // need to self-redirect here if config already exists.
+  useEffect(() => {
+    const existingUrl = localStorage.getItem('lan_server_url');
+    if (existingUrl) {
+      window.location.hash = '#/login';
+    }
+  }, []);
+
   const serverUrl = `http://${ip}:${port}`;
+
 
   const handleTest = useCallback(async () => {
     if (!ip || !port) return;

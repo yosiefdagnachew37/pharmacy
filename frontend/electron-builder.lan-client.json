@@ -46,8 +46,6 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Pharmacy System LAN Client",
-    "installerHeaderIcon": "dist/favicon.ico",
-    "deleteAppDataOnUninstall": false,
-    "installerSidebar": "dist/favicon.ico"
+    "deleteAppDataOnUninstall": false
   }
 }
