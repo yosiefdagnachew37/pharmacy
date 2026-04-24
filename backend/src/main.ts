@@ -19,11 +19,20 @@ async function bootstrap() {
   // Global Exception Filter
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // LAN server must bind to 0.0.0.0 so it is reachable from other PCs on the network.
-  // Desktop (IS_DESKTOP_OFFLINE) and SaaS modes remain on localhost (no change).
+  // LAN server and cloud deployments (Railway) must bind to 0.0.0.0 so it is reachable.
+  // Desktop (desktop-offline) mode remains on localhost.
   const isLanServer = process.env.DEPLOYMENT_MODE === 'lan-server';
-  const host = isLanServer ? '0.0.0.0' : 'localhost';
-  const port = process.env.PORT ?? (isLanServer ? '3000' : '3001');
+  const isDesktopOffline = process.env.DEPLOYMENT_MODE === 'desktop-offline';
+  
+  let host = 'localhost';
+  if (isLanServer || process.env.NODE_ENV === 'production' || process.env.PORT) {
+    host = '0.0.0.0';
+  }
+  if (isDesktopOffline) {
+    host = 'localhost';
+  }
+  
+  const port = process.env.PORT || (isLanServer ? '3000' : '3001');
 
   await app.listen(port, host);
 
